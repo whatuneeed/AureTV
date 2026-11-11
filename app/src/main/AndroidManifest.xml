@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The launcher only runs on a TV, but the flags stay optional so the APK
+         still installs on a phone for development and screenshots. -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <!-- A TV may have only Ethernet, and the Wi-Fi name is a convenience the
+         tile can do without; the permissions must not filter such TVs out. -->
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
+    <!-- Aerial clips are streamed from Apple's public CDN. Nothing is uploaded;
+         the permission exists only for the saver's video requests. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Settings reports the active connection and its IPv4 address; the
+         permission grants no data access and no location. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Android TV apps publish "Continue Watching" and recommendation rows to
+         the system TV provider. Reading those public listings is what puts real
+         posters on the shelf; without it the provider refuses the query. The
+         provider declares it dangerous, so the first-run wizard asks once and
+         Settings shows the current state. Only rows apps published for the TV
+         home surface are read. -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- The Control Center's Wi-Fi tile reads the adapter state; the network
+         name itself is only requested when the tile is pressed. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Android 9+ treats the Wi-Fi name as location data. The grant is asked
+         for from the tile, never at first launch; without it the tile says
+         "Connected" instead of the name. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <!-- The accessibility switch recognises the TV's own launcher by
+             querying Home activities; without this entry Android 11+ hides
+             them from the query and the Home button would never be taken over. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <!-- The AirPlay receiver is a separate GPL-3.0 app. Package visibility
+             lets Settings detect it and open it; no code is linked. -->
+        <package android:name="io.github.besliky.airplaytv" />
+        <!-- API 30+ hides the system TV provider unless it is named here; the
+             Watch Next query above would silently return nothing. -->
+        <provider android:authorities="android.media.tv" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:banner="@drawable/tv_banner"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.OVisionTV">
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Launcher settings behave like an app: tvOS exposes Settings as a grid
+             icon (02_HOME_SCREEN §2), and a real activity keeps BACK, focus and
+             the language switch independent of the Home surface. Exported because
+             a leanback entry is listed in the system app row; kept non-exported
+             it would show up there and fail to start with a SecurityException.
+             The screen reads no intent data, so opening it from outside is safe. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:exported="true"
+            android:icon="@drawable/ic_settings"
+            android:label="@string/settings_tile_name"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- First run and "Run setup again" from Settings. No intent filter: it
+             is not an app tile, and nothing outside the launcher may open it. -->
+        <activity
+            android:name=".SetupActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true" />
+
+        <!-- The user turns this on in the TV's Accessibility settings. It opens
+             OVisionTV when the stock launcher appears and starts the chosen app
+             after boot or wake; the system binds it, the app never starts it. -->
+        <service
+            android:name=".OVisionAccessibilityService"
+            android:exported="true"
+            android:label="@string/accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/ovision_accessibility" />
+        </service>
+
+        <!-- Sleep Timer alarm. Not exported: only the app's own PendingIntent
+             sends this broadcast. -->
+        <receiver
+            android:name=".SleepReceiver"
+            android:exported="false" />
+
+        <!-- Force-lock device admin for Power Off and the Sleep Timer. Android
+             shows its own activation screen with the explanation from
+             EXTRA_ADD_EXPLANATION; the policy requests nothing but force-lock. -->
+        <receiver
+            android:name=".SleepReceiver$Admin"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+        </receiver>
+    </application>
+
+</manifest>

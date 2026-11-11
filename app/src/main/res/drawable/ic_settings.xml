@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Self-contained tile icon: the launcher draws icons alone on a dark card and
+     the folder preview puts them on a white cell, so the glyph cannot rely on
+     the surface colour behind it. Do not make the background transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#232329"
+        android:pathData="M24,0 H84 C97.255,0 108,10.745 108,24 V84 C108,97.255 97.255,108 84,108 H24 C10.745,108 0,97.255 0,84 V24 C0,10.745 10.745,0 24,0 Z" />
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M20,32 H88" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M20,54 H88" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M20,76 H88" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,32 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,54 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,76 m-9,0 a9,9 0,1 0,18 0 a9,9 0,1 0,-18 0" />
+</vector>

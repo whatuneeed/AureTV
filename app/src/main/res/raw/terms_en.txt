@@ -1,0 +1,31 @@
+Terms of Use
+
+OVisionTV Launcher is a home screen shell for Android TV. By installing and using it you agree to these terms.
+
+1. Purpose
+
+The launcher starts apps installed on your device, shows them on the home screen and lets you reorder, group and hide them. It is not an app store and does not install third-party content.
+
+2. Third-party apps
+
+Apps you start from the home screen belong to their developers. The launcher is not responsible for their content, behaviour, subscriptions or data handling. Hiding or removing an app from the launcher does not uninstall it.
+
+3. Aerials screen saver
+
+Aerial clips are streamed from Apple's public server and remain Apple's property. The launcher does not redistribute them or present them as its own content. Without a network connection the saver does not start and the home screen stays visible.
+
+4. Updates
+
+The launcher is updated by installing a new APK. There are no automatic updates and no remote control. The aerial catalogue can be refreshed manually in Updates.
+
+5. Warranty
+
+The launcher is provided as is, without warranties of fitness for a particular purpose. The authors are not liable for data loss or interruptions caused by its use.
+
+6. Licence
+
+The launcher source code is distributed under the Apache 2.0 licence. Open source licence texts are available in Legal & Privacy.
+
+7. Changes
+
+These terms may change together with the launcher. The current version is always available on this screen.

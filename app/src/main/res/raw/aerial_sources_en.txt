@@ -1,0 +1,19 @@
+Aerial Sources
+
+The Aerials screen saver uses clips from a built-in Apple catalogue compiled from the tvOS 27 idle screen resources.
+
+Catalogue
+
+The bundled aerial_catalog.json lists 100 clips with Russian and English names, a theme, and links to the video and a still frame. The catalogue can be refreshed manually in Updates; the refresh downloads data from Apple's public server and stores it only on the device.
+
+Video and stills
+
+Videos and preview stills are not part of the APK. They are fetched over HTTPS from sylvan.apple.com and cached on the TV for repeat playback. The connection is validated against Apple's root certificate.
+
+Rights
+
+Clips, names and stills belong to Apple. The launcher does not sell, modify or redistribute them apart from playing the screen saver. This project is not affiliated with or endorsed by Apple.
+
+Third-party assets
+
+Theme names and interface labels are translated by the project. Section icons come from the open Material Icons set (Apache 2.0). Full licence texts are in Open Source Licenses.

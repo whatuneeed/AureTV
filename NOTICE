@@ -1,0 +1,18 @@
+OVisionTV Launcher
+Copyright 2026 whatuneed
+
+Based on Hume Launcher by Petrobot (github.com/petrobot-admin/hume-launcher)
+Hume Launcher
+Copyright 2026 Petrobot
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes third-party components under their own licences:
+
+- Aerial clip catalogue (assets/aerial_catalog.json) — clip names, themes and
+  stream URLs are derived from AerialViews by Neil Turner
+  (github.com/theothernt/AerialViews), GPL-3.0. No AerialViews source code is
+  included. The aerial videos themselves are © Apple Inc. and are streamed from
+  Apple's CDN; they are not bundled with this app.
+
+No other third-party artwork, fonts or media are bundled.

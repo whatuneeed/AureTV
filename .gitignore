@@ -1,0 +1,23 @@
+# Build output
+build/
+app/build/
+.gradle/
+.kotlin/
+captures/
+
+# Machine-local config
+local.properties
+.idea/
+*.iml
+
+# Signing material never enters the repository
+*.jks
+*.keystore
+keystore.properties
+
+# Verification artifacts (166 MB of screenshots, regenerated on demand)
+screenshots/
+
+# OS noise
+.DS_Store
+Thumbs.db
