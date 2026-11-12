@@ -1,6 +1,6 @@
 # Architecture & Code Quality Audit — Kotlin 0.4.44
 
-Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этап 1 реализован в 0.4.45 / vc65, этап 2 — в 0.4.46 / vc66** — статус и доказательства ниже, этапы 3–5 не начаты.
+Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этапы 1–3 реализованы в 0.4.45–0.4.47 (vc65–vc67)** — статус и доказательства ниже, этапы 4–5 не начаты.
 
 Аудит read-only: production-код, интерфейс, applicationId, подпись, разрешения и зависимости не изменялись. Созданы только этот отчёт и его проверочные артефакты. Ключи подписи и tvOS не читались; сторонние приложения и контент для аудита не запускались.
 
@@ -8,7 +8,7 @@
 
 Исходное состояние зафиксировано в [source-baseline.json](file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/ARCHITECTURE_AUDIT/evidence/source-baseline.json): 168 текстовых файлов исходников/конфигурации Kotlin-проекта, SHA-256; повторная проверка не обнаружила изменений. Git-корень находится внутри Kotlin-проекта, ветка `master`; ранее внесённые изменения 0.4.44 не закоммичены. Не путать рабочее дерево с HEAD.
 
-## Статус реализации (0.4.45–0.4.46)
+## Статус реализации (0.4.45–0.4.47)
 
 Этап 1 («серьёзные ошибки и стабильность») реализован 12.11.2026. Production-код: `SettingsActivity.kt`, `SettingsScreen.kt`, `LauncherRoot.kt`, `ControlCenter.kt`, `SleepControls.kt`, `Profiles.kt`, `AerialRefresh.kt`, `BinaryPlist.kt`, `SaverPreviewImage.kt`, `KidsMode.kt`. Новые тесты: `KidsEntryGrantTest`, `ArtKeyTest`, `SampleForTest`, `KidsStoreTest`, `PinPadInputTest`; расширены `SettingsScreenTest`, `ControlCenterTest`, `SaverPreviewTest`, `BinaryPlistTest`, `ProfilesTest`, `KidsModeTest`, `KidsGateTest`.
 
@@ -37,7 +37,23 @@
 | AQ-12 пустой saver | реализовано: toggleTheme учитывает клипы/hidden | `SaverSettingsTest` (3) |
 | AQ-31 границы | изменения ограничены операциями профиля/загрузки/записи | — |
 
-Прогон 0.4.46: **324/324 debug + 324/324 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `9e8ea1dd…32cd`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.46». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.46/`, запись — `FIXES.md`. Этапы 3–5 не начаты; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+Прогон 0.4.46: **324/324 debug + 324/324 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `9e8ea1dd…32cd`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.46». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.46/`, запись — `FIXES.md`.
+
+Этап 3 («производительность и lifecycle») реализован в 0.4.47. Production-код: `LauncherRoot.kt`, `SettingsScreen.kt`, `HomeScreen.kt`, `AppRepository.kt`, `TopShelf.kt`, `SaverPreviewImage.kt`, `CitySearch.kt`, `Weather.kt`, `WatchNext.kt`, `StartupPreferences.kt`, новый `CacheBudget.kt`. Новые тесты: `CacheBudgetTest`; расширены `StartupPreferencesTest`, `WeatherRequestTest`.
+
+| Пункт | Статус | Проверка |
+|---|---|---|
+| AQ-08 Main I/O | реализовано: каталог и очистка кэшей на IO, публикация на Main | полный прогон; trace/detector — NOT TESTED |
+| AQ-15 capacity | реализовано: `resize` + 10% остаток после полного trim | `CacheBudgetTest` (3), `TopShelfTest` |
+| AQ-16 HTTP cancellation | реализовано: suspend-чтение, `ensureActive`, deadline | `WeatherRequestTest`; slow-drip — NOT TESTED |
+| AQ-18 bounded reader | реализовано: CitySearch 512 KiB, Weather 2 MiB + deadline | `CitySearchTest`, `WeatherRequestTest` |
+| AQ-19 Cursor traversal | реализовано: package selection, `runCatching`, лимит 500 | `WatchNextTest`/`TopShelfTest`; provider fault — NOT TESTED |
+| AQ-20 preview lifecycle | реализовано: `ON_STOP` закрывает preview | полный прогон; счётчики фона — NOT TESTED |
+| AQ-21 weather loop | реализовано: ключ `resumeTick, foreground` | полный прогон; число refresh — NOT TESTED |
+| AQ-27 startup policy | реализовано: reason + recheck onWake/Kids | `StartupPreferencesTest` (3) |
+| AQ-32 leanback-only | реализовано: fallback на `LEANBACK_LAUNCHER` | полный прогон; реальное приложение — NOT TESTED |
+
+Прогон 0.4.47: **330/330 debug + 330/330 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `7a26a32c…30e9`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.47». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.47/`, запись — `FIXES.md`. Этапы 4–5 не начаты; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
 
 ## Уровни доказательств
 
@@ -553,7 +569,7 @@ Artwork caches / Aerial catalogue / ExoPlayer / device services
 
 # F. Поэтапный план улучшений
 
-**План. Этапы 1–2 реализованы в 0.4.45–0.4.46 (см. «Статус реализации» выше); этапы 3–5 не начаты.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
+**План. Этапы 1–3 реализованы в 0.4.45–0.4.47 (см. «Статус реализации» выше); этапы 4–5 не начаты.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
 
 Общий gate микроэтапа: зафиксирован исходный working tree/backup → воспроизведение/RED → минимальное изменение → GREEN → полная регрессия → проверенный подписанный APK и установка на изолированный стенд → журнал/артефакты. Не использовать reset/удаление пользовательских данных или отключение тестов для получения зелёного результата.
 

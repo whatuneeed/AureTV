@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -77,18 +78,34 @@ internal object AerialPreviewStore {
 
     /** Thermal throttling may lower the profile after the caches were sized. */
     fun shrinkTo(bytes: Int, thumbBytes: Int) {
-        memory.trimToSize(bytes)
-        thumbMemory.trimToSize(thumbBytes)
+        val target = bytes.coerceAtLeast(1)
+        val thumbTarget = thumbBytes.coerceAtLeast(1)
+        if (target < memory.maxSize()) {
+            memory.resize(target)
+            memory.trimToSize(target)
+        }
+        if (thumbTarget < thumbMemory.maxSize()) {
+            thumbMemory.resize(thumbTarget)
+            thumbMemory.trimToSize(thumbTarget)
+        }
     }
 
     /** Drops decoded stills under pressure; the files on disk stay. */
     fun trim(percent: Int) {
         if (percent >= 100) {
+            val max = memory.maxSize()
+            val thumbMax = thumbMemory.maxSize()
             memory.evictAll()
             thumbMemory.evictAll()
+            memory.resize(trimmedCapacity(max, 100))
+            thumbMemory.resize(trimmedCapacity(thumbMax, 100))
         } else {
-            memory.trimToSize(memory.maxSize() * (100 - percent) / 100)
-            thumbMemory.trimToSize(thumbMemory.maxSize() * (100 - percent) / 100)
+            val target = trimmedCapacity(memory.maxSize(), percent)
+            val thumbTarget = trimmedCapacity(thumbMemory.maxSize(), percent)
+            memory.resize(target)
+            memory.trimToSize(target)
+            thumbMemory.resize(thumbTarget)
+            thumbMemory.trimToSize(thumbTarget)
         }
     }
 

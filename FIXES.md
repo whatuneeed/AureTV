@@ -209,8 +209,36 @@
 | Сбой записи каталога заставки возвращает UPDATED и может удалить старый файл | 0.4.46 (AQ-17) |
 | Скрыть все клипы темы A, затем отключить последнюю видимую B — playlist пуст | 0.4.46 (AQ-12) |
 | Redirect каталога заставки может увести на HTTP или чужой host | 0.4.46 (AQ-05) |
+| Каталог заставки читается и парсится на Main при первом кадре | 0.4.47 (AQ-08) |
+| После trim кэш возвращается к прежнему бюджету и refill не ограничен | 0.4.47 (AQ-15) |
+| Отмена поиска города не прерывает HTTP-чтение | 0.4.47 (AQ-16) |
+| Ответ Nominatim/погоды читается без общего deadline | 0.4.47 (AQ-18) |
+| Исключение провайдера в Cursor-обходе выходит наружу, dataset не ограничен | 0.4.47 (AQ-19) |
+| Превью заставки продолжает декодировать после ухода Settings в фон | 0.4.47 (AQ-20) |
+| Погодный цикл Home продолжает работу на pause | 0.4.47 (AQ-21) |
+| Отложенный startup запускает приложение после смены onWake/Kids-политики | 0.4.47 (AQ-27) |
+| Leanback-only приложение не находится для startup | 0.4.47 (AQ-32) |
 
 ## Записи
+
+### 12.11.2026 — 0.4.47: этап 3 архитектурного аудита (производительность и lifecycle)
+
+Статус: `versionCode 67` / `versionName 0.4.47`, APK **4 094 086 B**, SHA-256 **`7a26a32c54eadea8d706047bf15ca1de1aad059bc66dddf26d25691a77d830e9`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` (прежний), установлен на `hume-tv` API 34. Закрыты AQ-08/15/16/18/19/20/21/27/32; крупного рефакторинга и новых зависимостей нет.
+
+- **AQ-08 — Main I/O.** `LauncherRoot` читает каталог заставки в `LaunchedEffect` на `Dispatchers.IO` и публикует результат на Main; `SettingsScreen` так же загружает `clipList`. Очистка кэшей вынесена в IO, показывает busy и закрывает страницу только после завершения.
+- **AQ-15 — capacity после trim.** `trimmedCapacity` и `LruCache.resize` уменьшают сам бюджет, а не только текущий размер; полный trim сначала очищает кэш, затем оставляет 10% бюджета, чтобы refill не вернулся к старому размеру. Применено к `AppArtCache`, полке и превью заставки. Защита: `CacheBudgetTest` (3).
+- **AQ-16 — отмена HTTP.** `CitySearch.search/download` стали suspend, проверяют `ensureActive()` на каждом чанке и общий deadline 15 с; `Weather.get` и fetchers тоже suspend с deadline. Отменённый запрос не доходит до commit. Защита: `WeatherRequestTest` (commit guard) и полный прогон; slow-drip сервер не запускался.
+- **AQ-18 — bounded reader.** `Weather.localize` идёт через ограниченный `CitySearch` (512 KiB), а `Weather.get` ограничен 2 MiB и получил deadline; oversized ответ отклоняется. Защита: `WeatherRequestTest`, `CitySearchTest`; oversized chunked ответ вживую не подавался.
+- **AQ-19 — Cursor traversal.** Запросы Watch Next/Preview фильтруются по package, обход обёрнут в `runCatching` (частичный/пустой список вместо исключения), число строк ограничено 500. Защита: `WatchNextTest`/`TopShelfTest`; исключение реального провайдера не моделировалось.
+- **AQ-20 — preview lifecycle.** При `ON_STOP` Settings превью закрывается и освобождает decoder, вместо ожидания disposal композиции. Защита: полный UI-прогон; счётчики players/network в фоне не измерялись.
+- **AQ-21 — weather loop.** Цикл погоды Home ключуется на `resumeTick, foreground` и не работает при `foreground=false`; на возврате обновляется штатно. Защита: полный UI-прогон; число refresh на реальном pause не считалось.
+- **AQ-27 — startup policy.** `StartupReason` (BOOT/WAKE) сохраняется до отложенного callback; `fire` перепроверяет target, `onWake` для wake и `KidsMode.allowed` для текущего профиля. Защита: `StartupPreferencesTest` (3).
+- **AQ-32 — leanback-only.** Если `getLaunchIntentForPackage` не находит LAUNCHER-активность, startup разрешает `CATEGORY_LEANBACK_LAUNCHER` через `resolveActivity` и явный `ComponentName`. Защита: полный прогон; реальное leanback-only приложение не устанавливалось.
+- **Проверка.** `testDebugUnitTest`/`testReleaseUnitTest`: **330/330** на вариант, 0 failures/errors/skipped. `connectedDebugAndroidTest`: **207/207**, 0 failures/errors/skipped. `lintDebug`: **0 Error / 14 Warning / 5 Information**. `assembleRelease` — BUILD SUCCESSFUL. Установленный `base.apk` совпал с собранным по SHA-256. После очистки crash-буфера и smoke-прохода по Home/Settings новых записей нет.
+- **Живой smoke 0.4.47.** Чистая установка release, мастер RU до «Открыть Главную», Главная, «О системе 0.4.47». Кадры/XML — `UI_UX_UNIFICATION/evidence-0.4.47/`.
+- **Граница.** Main-thread I/O detector/trace не снимался; slow-drip сервер, реальное исключение провайдера, oversized chunked ответ и счётчики фонового preview не запускались. Реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+- **Не делать.** Не возвращать чтение каталога в `remember`/Main; не заменять `resize` на `trimToSize`; не убирать `ensureActive`/deadline; не снимать package-filter и лимит строк; не возвращать preview к жизни только через disposal.
+- **Доказательства.** `UI_UX_UNIFICATION/evidence-0.4.47/` (release-signature, кадры/XML), `temp/stage3-connected2.log`, `temp/stage3-unit.log`, `temp/stage3-release.log`, `temp/release-0.4.47-installed.apk`.
 
 ### 12.11.2026 — 0.4.46: этап 2 архитектурного аудита (ownership)
 

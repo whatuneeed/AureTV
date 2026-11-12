@@ -28,8 +28,8 @@ android {
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;
         // versionName names the batch of changes the build contains.
-        versionCode = 66
-        versionName = "0.4.46"
+        versionCode = 67
+        versionName = "0.4.47"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

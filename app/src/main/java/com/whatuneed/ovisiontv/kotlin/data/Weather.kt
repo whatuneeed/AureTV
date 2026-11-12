@@ -3,6 +3,8 @@ package com.whatuneed.ovisiontv.kotlin.data
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -253,7 +255,7 @@ object Weather {
         if (pending.get() && WeatherPreferences.enabled(app)) refresh(app, force = true)
     }
 
-    private fun runFetch(context: Context) {
+    private suspend fun runFetch(context: Context) {
         try {
             val manual = WeatherPreferences.manual(context)
             val language = language(context)
@@ -322,7 +324,7 @@ object Weather {
 
     // ---------------------------------------------------------------- sources
 
-    private fun fetchOpenMeteo(lat: Double, lon: Double, fahrenheit: Boolean): Data =
+    private suspend fun fetchOpenMeteo(lat: Double, lon: Double, fahrenheit: Boolean): Data =
         parseOpenMeteo(
             get(
                 "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
@@ -383,7 +385,7 @@ object Weather {
         return d
     }
 
-    private fun fetchMet(lat: Double, lon: Double, fahrenheit: Boolean): Data = parseMet(
+    private suspend fun fetchMet(lat: Double, lon: Double, fahrenheit: Boolean): Data = parseMet(
         get(
             String.format(
                 Locale.US,
@@ -454,7 +456,7 @@ object Weather {
         return d
     }
 
-    private fun fetchWttr(lat: Double, lon: Double, fahrenheit: Boolean): Data = parseWttr(
+    private suspend fun fetchWttr(lat: Double, lon: Double, fahrenheit: Boolean): Data = parseWttr(
         get(String.format(Locale.US, "https://wttr.in/%.4f,%.4f?format=j1", lat, lon)),
         fahrenheit,
         System.currentTimeMillis(),
@@ -614,7 +616,7 @@ object Weather {
     private data class Located(val place: String, val lat: Double, val lon: Double)
 
     /** Approximate location from the internet address, with the city in the UI language. */
-    private fun locate(language: String): Located {
+    private suspend fun locate(language: String): Located {
         val services = listOf(
             "https://ipapi.co/json/",
             "https://ipwho.is/",
@@ -639,7 +641,7 @@ object Weather {
      * The IP services answer with Latin city names whatever the language; the
      * capsule and Settings show the name in the current language.
      */
-    private fun localize(lat: Double, lon: Double, fallback: String, language: String): String {
+    private suspend fun localize(lat: Double, lon: Double, fallback: String, language: String): String {
         if (!foreignName(fallback, language == "en")) return fallback
         // Open-Meteo geocoding knows the name; take the result nearest the coordinates.
         runCatching {
@@ -690,7 +692,7 @@ object Weather {
 
     // ---------------------------------------------------------------- http
 
-    internal fun get(url: String): String {
+    internal suspend fun get(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_MS
         connection.readTimeout = READ_MS
@@ -701,9 +703,12 @@ object Weather {
                 error("HTTP ${connection.responseCode}")
             }
             val out = ByteArrayOutputStream()
+            val deadline = System.nanoTime() + READ_MS * 1_000_000L
             connection.inputStream.use { input: InputStream ->
                 val buffer = ByteArray(8 * 1024)
                 while (true) {
+                    currentCoroutineContext().ensureActive()
+                    if (System.nanoTime() > deadline) error("Response deadline")
                     val read = input.read(buffer)
                     if (read < 0) break
                     out.write(buffer, 0, read)

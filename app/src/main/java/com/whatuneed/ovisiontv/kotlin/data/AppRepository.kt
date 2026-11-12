@@ -48,15 +48,26 @@ internal object AppArtCache {
 
     /** Called from MemoryPressure; any artwork can be re-read from the APK. */
     fun trim(percent: Int) {
-        if (percent >= 100) cache.evictAll()
-        else cache.trimToSize(cache.maxSize() * (100 - percent) / 100)
+        if (percent >= 100) {
+            // Drop everything now, but keep a bounded budget for the refill.
+            val max = cache.maxSize()
+            cache.evictAll()
+            cache.resize(trimmedCapacity(max, 100))
+        } else {
+            // Resize, not just trim: a refill must not return to the old budget.
+            val target = trimmedCapacity(cache.maxSize(), percent)
+            cache.resize(target)
+            cache.trimToSize(target)
+        }
         epoch.intValue++
     }
 
     /** A lower profile (thermal, pressure) may shrink the budget after creation. */
     fun shrinkTo(kb: Int) {
-        if (kb < cache.maxSize()) {
-            cache.trimToSize(kb)
+        val target = kb.coerceAtLeast(1)
+        if (target < cache.maxSize()) {
+            cache.resize(target)
+            cache.trimToSize(target)
             epoch.intValue++
         }
     }

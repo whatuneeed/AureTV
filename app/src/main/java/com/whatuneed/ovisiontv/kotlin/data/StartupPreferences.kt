@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -13,6 +14,18 @@ import com.whatuneed.ovisiontv.kotlin.R
  * accessibility switch is one, so the wake launch works only with it on. The
  * boot launch fires once per process, either from Home or from the service.
  */
+internal enum class StartupReason { BOOT, WAKE }
+
+/** A delayed launch must still match the policy and the current profile. */
+internal fun shouldStart(
+    reason: StartupReason,
+    target: String,
+    onWake: Boolean,
+    kidsAllowed: Boolean,
+): Boolean = target.isNotEmpty() &&
+    (reason == StartupReason.BOOT || onWake) &&
+    kidsAllowed
+
 object StartupPreferences {
     const val NAME = "startup"
     const val KEY_TARGET = "target"
@@ -90,26 +103,31 @@ object StartupPreferences {
         if (bootHandled) return
         bootHandled = true
         if (target(context).isEmpty()) return
-        later(context, BOOT_DELAY_MS)
+        later(context, BOOT_DELAY_MS, StartupReason.BOOT)
     }
 
     fun onScreenOn(context: Context) {
         if (!opensOnWake(target(context), onWake(context))) return
-        later(context, WAKE_DELAY_MS)
+        later(context, WAKE_DELAY_MS, StartupReason.WAKE)
     }
 
-    private fun later(context: Context, delay: Long) {
+    private fun later(context: Context, delay: Long, reason: StartupReason) {
         val app = context.applicationContext
-        handler.postDelayed({ fire(app) }, delay)
+        handler.postDelayed({ fire(app, reason) }, delay)
     }
 
     /** Home and the service can both fire on wake; repeats within 10 s are dropped. */
     @Synchronized
-    fun fire(context: Context) {
+    internal fun fire(context: Context, reason: StartupReason) {
         val now = SystemClock.elapsedRealtime()
         if (lastFired != 0L && now - lastFired < DEDUP_MS) return
+        val target = target(context)
+        val packageName = appPackage(target) ?: return
+        // The policy may have changed while the delayed callback was waiting.
+        if (!shouldStart(reason, target, onWake(context), KidsMode.allowed(context, packageName))) {
+            return
+        }
         lastFired = now
-        val packageName = appPackage(target(context)) ?: return
         launch(context, packageName)
     }
 
@@ -124,9 +142,23 @@ object StartupPreferences {
         target.isNotEmpty() && onWake
 
     private fun launch(context: Context, packageName: String) {
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
+        val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+            ?: leanbackIntent(context, packageName)
+            ?: return
         runCatching {
             context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
+    }
+
+    /** A TV-only app has no LAUNCHER activity; resolve its LEANBACK entry. */
+    private fun leanbackIntent(context: Context, packageName: String): Intent? {
+        val probe = Intent(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+            .setPackage(packageName)
+        val resolved = runCatching {
+            context.packageManager.resolveActivity(probe, 0)
+        }.getOrNull() ?: return null
+        val activity = resolved.activityInfo ?: return null
+        return Intent(probe).setComponent(ComponentName(activity.packageName, activity.name))
     }
 }

@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
 import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
@@ -396,15 +397,24 @@ private val shelfArtEpoch = mutableIntStateOf(0)
 
 /** Called from MemoryPressure; the provider still holds every poster. */
 internal fun trimShelfArtCache(percent: Int) {
-    if (percent >= 100) shelfArtCache.evictAll()
-    else shelfArtCache.trimToSize(shelfArtCache.maxSize() * (100 - percent) / 100)
+    if (percent >= 100) {
+        val max = shelfArtCache.maxSize()
+        shelfArtCache.evictAll()
+        shelfArtCache.resize(trimmedCapacity(max, 100))
+    } else {
+        val target = trimmedCapacity(shelfArtCache.maxSize(), percent)
+        shelfArtCache.resize(target)
+        shelfArtCache.trimToSize(target)
+    }
     shelfArtEpoch.intValue++
 }
 
 /** Follows a profile downgrade: the entry budget may only shrink. */
 internal fun trimShelfArtCacheTo(entries: Int) {
-    if (entries < shelfArtCache.maxSize()) {
-        shelfArtCache.trimToSize(entries)
+    val target = entries.coerceAtLeast(1)
+    if (target < shelfArtCache.maxSize()) {
+        shelfArtCache.resize(target)
+        shelfArtCache.trimToSize(target)
         shelfArtEpoch.intValue++
     }
 }

@@ -65,6 +65,7 @@ internal fun rankWatchNext(
 
 object WatchNextSource {
     const val MAX_CARDS = 6
+    private const val MAX_ROWS = 500
 
     /**
      * Reads Watch Next first and the older Preview Programs listing second:
@@ -77,7 +78,7 @@ object WatchNextSource {
         includeContinue: Boolean,
     ): List<ShelfCard> = withContext(Dispatchers.IO) {
         if (!ContentPreferences.canReadListings(context)) return@withContext emptyList()
-        val rows = readWatchNext(context) + readPreviewPrograms(context)
+        val rows = readWatchNext(context, packageName) + readPreviewPrograms(context, packageName)
         rankWatchNext(rows, packageName, includeContinue).map { row ->
                 ShelfCard(
                     packageName = row.packageName,
@@ -108,7 +109,7 @@ object WatchNextSource {
         return intent
     }
 
-    private fun readWatchNext(context: Context): List<WatchNextRow> = query(
+    private fun readWatchNext(context: Context, packageName: String): List<WatchNextRow> = query(
         context = context,
         uri = TvContract.WatchNextPrograms.CONTENT_URI,
         columns = arrayOf(
@@ -129,10 +130,12 @@ object WatchNextSource {
         positionColumn = TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
         engagementColumn = TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS,
         typeColumn = TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE,
+        selection = "${TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME} = ?",
+        selectionArgs = arrayOf(packageName),
     )
 
     @Suppress("DEPRECATION")
-    private fun readPreviewPrograms(context: Context): List<WatchNextRow> = query(
+    private fun readPreviewPrograms(context: Context, packageName: String): List<WatchNextRow> = query(
         context = context,
         uri = TvContract.PreviewPrograms.CONTENT_URI,
         columns = arrayOf(
@@ -162,9 +165,11 @@ object WatchNextSource {
         positionColumn: String,
         engagementColumn: String?,
         typeColumn: String?,
+        selection: String? = null,
+        selectionArgs: Array<String>? = null,
     ): List<WatchNextRow> {
         val cursor: Cursor = runCatching {
-            context.contentResolver.query(uri, columns, null, null, null)
+            context.contentResolver.query(uri, columns, selection, selectionArgs, null)
         }.getOrNull() ?: return emptyList()
         return cursor.use {
             val packageIndex = it.getColumnIndex(TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME)
@@ -179,29 +184,33 @@ object WatchNextSource {
             val typeIndex = typeColumn?.let(it::getColumnIndex) ?: -1
             if (packageIndex < 0 || titleIndex < 0) return@use emptyList()
 
-            buildList {
-                while (it.moveToNext()) {
-                    val packageName = it.stringOrNull(packageIndex) ?: continue
-                    val title = it.stringOrNull(titleIndex) ?: continue
-                    val duration = it.longOrZero(durationIndex)
-                    val position = it.longOrZero(positionIndex)
-                    val type = if (typeIndex < 0) -1 else it.getInt(typeIndex)
-                    add(
-                        WatchNextRow(
-                            packageName = packageName,
-                            title = title,
-                            subtitle = it.stringOrNull(subtitleIndex),
-                            thumbnailUri = it.stringOrNull(thumbnailIndex),
-                            posterUri = it.stringOrNull(posterIndex),
-                            intentUri = it.stringOrNull(intentIndex),
-                            progress = watchNextProgress(position, duration),
-                            engagement = it.longOrZero(engagementIndex),
-                            continueRow = type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE ||
-                                type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT,
-                        ),
-                    )
+            runCatching {
+                buildList {
+                    var count = 0
+                    while (it.moveToNext() && count < MAX_ROWS) {
+                        count++
+                        val packageName = it.stringOrNull(packageIndex) ?: continue
+                        val title = it.stringOrNull(titleIndex) ?: continue
+                        val duration = it.longOrZero(durationIndex)
+                        val position = it.longOrZero(positionIndex)
+                        val type = if (typeIndex < 0) -1 else it.getInt(typeIndex)
+                        add(
+                            WatchNextRow(
+                                packageName = packageName,
+                                title = title,
+                                subtitle = it.stringOrNull(subtitleIndex),
+                                thumbnailUri = it.stringOrNull(thumbnailIndex),
+                                posterUri = it.stringOrNull(posterIndex),
+                                intentUri = it.stringOrNull(intentIndex),
+                                progress = watchNextProgress(position, duration),
+                                engagement = it.longOrZero(engagementIndex),
+                                continueRow = type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE ||
+                                    type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT,
+                            ),
+                        )
+                    }
                 }
-            }
+            }.getOrDefault(emptyList())
         }
     }
 

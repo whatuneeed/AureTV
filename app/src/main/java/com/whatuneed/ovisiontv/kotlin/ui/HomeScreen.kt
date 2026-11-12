@@ -172,6 +172,9 @@ fun HomeScreen(
     onUserActivity: () -> Unit = {},
     onStartSaver: () -> Unit = {},
     reduceMotion: Boolean = false,
+    // The weather loop belongs to the visible Home: a paused launcher must not
+    // keep refreshing an invisible capsule (AQ-21).
+    foreground: Boolean = true,
     prefsName: String = LauncherPrefs.NAME,
     // A kids profile must not rearrange the parent's saved order: edit mode
     // and the per-tile menus stay closed while it is on.
@@ -370,8 +373,9 @@ fun HomeScreen(
 
     // The cache is shown at once and the engine fetches only when the schedule
     // or the settings ask; the wait is computed, so idle time costs no wakes.
-    LaunchedEffect(resumeTick) {
+    LaunchedEffect(resumeTick, foreground) {
         weatherEnabled = WeatherPreferences.enabled(context)
+        if (!foreground) return@LaunchedEffect
         if (!weatherEnabled) {
             weatherData = null
             weatherStale = false

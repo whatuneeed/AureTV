@@ -1,6 +1,8 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
 import android.util.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -26,6 +28,7 @@ object CitySearch {
     private const val TAG = "CitySearch"
     private const val ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search"
     private const val TIMEOUT_MS = 10_000
+    private const val MAX_TOTAL_MS = 15_000L
     private const val MAX_BYTES = 512 * 1024
 
     /** Open-Meteo lists villages that share a name and a country as separate rows; on
@@ -70,7 +73,7 @@ object CitySearch {
     }
 
     /** Network call; null means the request itself failed (offline, timeout). */
-    fun search(query: String, language: String): List<CityPlace>? {
+    suspend fun search(query: String, language: String): List<CityPlace>? {
         val url = "$ENDPOINT?count=8&language=$language&name=" +
             URLEncoder.encode(query.trim(), "UTF-8")
         val body = download(url) ?: return null
@@ -79,17 +82,21 @@ object CitySearch {
             .getOrNull()
     }
 
-    private fun download(url: String): String? = runCatching {
+    private suspend fun download(url: String): String? = runCatching {
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
         connection.setRequestProperty("Accept", "application/json")
+        val deadline = System.nanoTime() + MAX_TOTAL_MS * 1_000_000L
         try {
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
             val out = ByteArrayOutputStream()
             connection.inputStream.use { input ->
                 val buffer = ByteArray(8 * 1024)
                 while (true) {
+                    // A cancelled search must stop reading and close the socket.
+                    currentCoroutineContext().ensureActive()
+                    if (System.nanoTime() > deadline) return null
                     val read = input.read(buffer)
                     if (read < 0) break
                     out.write(buffer, 0, read)

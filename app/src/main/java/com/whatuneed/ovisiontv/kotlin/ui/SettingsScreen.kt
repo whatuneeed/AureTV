@@ -53,6 +53,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -88,6 +90,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -536,8 +539,11 @@ fun SettingsScreen(
     var startupTarget by remember(resumeTick) { mutableStateOf(StartupPreferences.target(context)) }
     var startupLabel by remember(resumeTick) { mutableStateOf(StartupPreferences.label(context)) }
     var startupOnWake by remember(resumeTick) { mutableStateOf(StartupPreferences.onWake(context)) }
-    var clipList by remember(clips) {
-        mutableStateOf(clips ?: AerialCatalog.load(context))
+    var clipList by remember(clips) { mutableStateOf(clips ?: emptyList()) }
+    LaunchedEffect(clips) {
+        if (clips == null) {
+            clipList = withContext(Dispatchers.IO) { AerialCatalog.load(context) }
+        }
     }
     var pickerRefused by remember { mutableStateOf(false) }
     // Category filter of the chooser is view state, not a stored setting: it
@@ -554,6 +560,21 @@ fun SettingsScreen(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var holdHandled by remember { mutableStateOf(false) }
     var okDown by remember { mutableStateOf(false) }
+    // The preview is a real decoder surface. Leaving Settings must stop it
+    // instead of waiting for composition disposal (AQ-20).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, previewClip) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && previewClip != null) {
+                previewClip = null
+                previewClosing = false
+                holdHandled = false
+                focusTick++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Kids Mode. The entry gate is a snapshot taken when Settings opened: the
     // launcher passes kidsUnlocked after its own pad, a direct start (system
@@ -602,6 +623,7 @@ fun SettingsScreen(
     var facts by remember { mutableStateOf<DeviceFacts?>(null) }
     var cacheSizes by remember { mutableStateOf<CacheSizes?>(null) }
     var cacheTick by remember { mutableIntStateOf(0) }
+    var cacheBusy by remember { mutableStateOf(false) }
     var catalogBusy by remember { mutableStateOf(false) }
     var catalogStatus by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
@@ -805,17 +827,24 @@ fun SettingsScreen(
         pageFocus[PAGE_HOME_SCREEN] = 0
     }
 
-    fun clearCaches() {
-        AerialClipCache.cleanup(context)
-        AerialPreviewStore.clear(context)
-        AerialPosterStore.clear(context)
-        cacheSizes = CacheSizes(0, 0)
-        cacheTick++
+    fun clearCaches(onDone: () -> Unit = {}) {
+        if (cacheBusy) return
+        cacheBusy = true
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                AerialClipCache.cleanup(context)
+                AerialPreviewStore.clear(context)
+                AerialPosterStore.clear(context)
+            }
+            cacheSizes = CacheSizes(0, 0)
+            cacheTick++
+            cacheBusy = false
+            onDone()
+        }
     }
 
     fun confirmClearCaches() {
-        clearCaches()
-        back()
+        clearCaches { back() }
     }
 
     fun resetSaver() {

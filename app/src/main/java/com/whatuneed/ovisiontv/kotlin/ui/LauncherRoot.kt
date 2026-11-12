@@ -55,6 +55,7 @@ import com.whatuneed.ovisiontv.kotlin.KidsEntryGrant
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClipCache
 import com.whatuneed.ovisiontv.kotlin.data.AppRepository
@@ -159,7 +160,12 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     val saverDelay = remember(resumeTick) { SaverPreferences.delay(context) }
     val saverShowDuringMusic = remember(resumeTick) { SaverPreferences.music(context) }
     var catalogTick by remember { mutableIntStateOf(0) }
-    val aerialClips = remember(context, catalogTick) { AerialCatalog.load(context) }
+    // Reading the catalogue parses JSON and may touch the filesystem; keep it
+    // off the first frame and publish the result on Main (AQ-08).
+    var aerialClips by remember { mutableStateOf<List<AerialClip>>(emptyList()) }
+    LaunchedEffect(context, catalogTick) {
+        aerialClips = withContext(Dispatchers.IO) { AerialCatalog.load(context) }
+    }
     val saverItems = remember(resumeTick, aerialClips) {
         SaverPlaylist.build(
             aerialClips,
@@ -508,6 +514,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                         initialItems = visible,
                         resumeTick = resumeTick,
                         reduceMotion = reduceMotion,
+                        foreground = foreground,
                         prefsName = ProfileStore.homePrefsName(profile.id),
                         kidsMode = kidsActive,
                         onLaunch = { app ->
