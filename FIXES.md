@@ -202,8 +202,33 @@
 | Вложенный binary plist с общими ссылками раздувается экспоненциально | 0.4.45 (AQ-06) |
 | Огромный/битый PNG в кэше заставки декодируется без ограничения пикселей и повторно | 0.4.45 (AQ-07) |
 | Некорректные salt/итерации/тег в credentials дают исключение вместо управляемого отказа | 0.4.45 (AQ-11) |
+| Погода сохраняет старый прогноз под новым городом/единицами, если настройки сменились во время запроса | 0.4.46 (AQ-09) |
+| Удалённый профиль может получить тот же id и унаследовать layout/PIN/allowlist | 0.4.46 (AQ-10) |
+| После смены профиля package-событие перезагружает старый layout | 0.4.46 (AQ-13) |
+| В окне загрузки нового профиля restoreHidden пишет старый layout в новый store | 0.4.46 (AQ-14) |
+| Сбой записи каталога заставки возвращает UPDATED и может удалить старый файл | 0.4.46 (AQ-17) |
+| Скрыть все клипы темы A, затем отключить последнюю видимую B — playlist пуст | 0.4.46 (AQ-12) |
+| Redirect каталога заставки может увести на HTTP или чужой host | 0.4.46 (AQ-05) |
 
 ## Записи
+
+### 12.11.2026 — 0.4.46: этап 2 архитектурного аудита (ownership)
+
+Статус: `versionCode 66` / `versionName 0.4.46`, APK **4 077 702 B**, SHA-256 **`9e8ea1dd9b64b97ec4bb8a0e517b1ff009eb791903598f93defcadbabe3532cd`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` (прежний), установлен на `hume-tv` API 34. Закрыты AQ-09/10/13/14/17 и AQ-31, а также пробелы AQ-12 и AQ-05.
+
+- **AQ-09 — погода.** `runFetch` фиксирует снимок `WeatherRequest(key, language)` до сети; commit выполняется только если текущие key/язык совпали, иначе результат отбрасывается. Форсированный refresh при занятом `busy` больше не теряется: ставится `pending` и выполняется после текущего запроса. Защита: `WeatherRequestTest` (3).
+- **AQ-10 — identity профиля.** `ProfileStore` хранит монотонный `next_id`; `add` и `delete` поднимают его **до** записи списка, поэтому падение между durable-шагами не даёт новому профилю унаследовать layout/PIN/allowlist удалённого. Существующие id и `p1`-layout не меняются. Защита: `ProfilesTest.nextIdHonoursThePersistedFloorAfterADelete`, `ProfileStoreTest` (2, instrumented).
+- **AQ-13 — package receiver.** `DisposableEffect` больше не держит старый `reload`: receiver вызывает `rememberUpdatedState`-замыкание, а результат загрузки проверяется по generation и owner-store. Защита: полный UI-прогон; отдельный spoofed broadcast невозможен (protected broadcast), реальное package-событие не запускалось — граница ниже.
+- **AQ-14 — owner-scoped layout.** `SettingsScreen` запоминает `itemsOwner`; `restoreHidden` и `resetLayout` отказываются писать, пока загрузка нового профиля не завершена. Loading не считается пустым layout. Защита: полный UI-прогон; отдельный race-тест не добавлен — граница ниже.
+- **AQ-17 — atomic catalogue.** Новый `writeFileAtomically` (уникальный temp + `Files.move` с `ATOMIC_MOVE`/`REPLACE_EXISTING`, проверка результата) используется для каталога и превью; `AerialStore.save` сериализован и возвращает Boolean, `AerialRefresh` при неудаче возвращает `FAILED`, а не `UPDATED`. Защита: `AtomicWriteTest` (5).
+- **AQ-12 — пустой saver.** `SaverSettings.toggleTheme` принимает клипы и hidden-набор и не отключает тему, если после этого не остаётся ни одного видимого клипа; Settings передаёт `clipList`. Защита: `SaverSettingsTest` (3).
+- **AQ-05 — redirect.** Авто-редиректы выключены; `trustedCatalogueUrl`/`resolveCatalogueRedirect` разрешают только HTTPS `sylvan.apple.com` (порт 443/по умолчанию), максимум 3 перехода. Защита: `AerialRefreshUrlTest` (4).
+- **AQ-31.** Изменения ограничены операциями профиля/загрузки/записи; UI-классы не дробились.
+- **Проверка.** `testDebugUnitTest`/`testReleaseUnitTest`: **324/324** на вариант, 0 failures/errors/skipped. `connectedDebugAndroidTest`: **207/207**, 0 failures/errors/skipped. `lintDebug`: **0 Error / 14 Warning / 5 Information**. `assembleRelease` — **BUILD SUCCESSFUL**. Установленный `base.apk` совпал с собранным по SHA-256. Crash-буфер пуст.
+- **Живой smoke 0.4.46.** Чистая установка release, мастер RU от приветствия до «Открыть Главную», Главная, «Настройки OVisionTV» → «О системе 0.4.46». Кадры/XML — `UI_UX_UNIFICATION/evidence-0.4.46/`.
+- **Граница.** AQ-13 receiver проверен кодом и полным прогоном, но не реальным package-событием (protected broadcast нельзя отправить из теста/ADB). AQ-14 race проверен кодом, отдельного воспроизводящего UI-теста нет. AQ-09 проверен pure-guard, не задержкой реального HTTP. AQ-17 не моделировал ENOSPC/rename failure. Реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+- **Не делать.** Не возвращать общий `.tmp`/удаление target до rename; не сбрасывать `next_id`; не доверять redirect вне HTTPS Apple; не считать loading пустым layout.
+- **Доказательства.** `UI_UX_UNIFICATION/evidence-0.4.46/` (release-signature, кадры/XML), `temp/stage2-full.log`, `temp/stage2-release.log`, `temp/release-0.4.46-installed.apk`.
 
 ### 12.11.2026 — 0.4.45: этап 1 архитектурного аудита (High)
 

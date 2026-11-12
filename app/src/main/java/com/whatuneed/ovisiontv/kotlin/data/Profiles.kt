@@ -75,8 +75,8 @@ object ProfileCatalog {
         return if (index < 0) 0 else index / EMOJI_GROUP_SIZE
     }
 
-    fun nextId(profiles: List<Profile>): String {
-        var next = 1
+    fun nextId(profiles: List<Profile>, floor: Int = 0): String {
+        var next = maxOf(1, floor)
         profiles.forEach { profile ->
             val number = profile.id.removePrefix("p").toIntOrNull()
             if (number != null && number >= next) next = number + 1
@@ -295,12 +295,16 @@ class ProfileStore(context: Context) {
         val profiles = list()
         if (!ProfileCatalog.canAdd(profiles)) return null
         val emoji = ProfileCatalog.nextEmoji(profiles)
+        val id = ProfileCatalog.nextId(profiles, nextIdFloor())
         val profile = Profile(
-            id = ProfileCatalog.nextId(profiles),
+            id = id,
             name = name.trim().ifEmpty { appContext.getString(R.string.profile_default_name) },
             emoji = emoji,
             color = ProfileCatalog.colorFor(emoji),
         )
+        // Persist the floor before the list: a crash after the list write must
+        // not let the next add reuse this id (AQ-10).
+        bumpNextId(id.removePrefix("p").toIntOrNull()?.plus(1) ?: 0)
         prefs.edit().putString(KEY_LIST, serializeProfiles(profiles + profile)).apply()
         return profile
     }
@@ -323,6 +327,10 @@ class ProfileStore(context: Context) {
         val keep = profiles.filterNot { it.id == id }
         if (keep.size == profiles.size) return false
         val wasCurrent = prefs.getString(KEY_CURRENT, ProfileCatalog.DEFAULT_ID) == id
+        // Bump the identity floor before the list write: if the process dies
+        // between the two, a later add still cannot reuse this id and inherit
+        // its layout/PIN/allowlist (AQ-10).
+        bumpNextId(id.removePrefix("p").toIntOrNull()?.plus(1) ?: 0)
         prefs.edit().putString(KEY_LIST, serializeProfiles(keep)).apply()
         HomeOrderStore(appContext, homePrefsName(id)).clearLayout()
         // A reused id must not inherit the deleted profile's PIN or allowlist.
@@ -331,8 +339,13 @@ class ProfileStore(context: Context) {
         return true
     }
 
-    fun askOnBoot(): Boolean = prefs.getBoolean(KEY_ASK_ON_BOOT, true)
+    private fun nextIdFloor(): Int = prefs.getInt(KEY_NEXT_ID, 0)
 
+    private fun bumpNextId(value: Int) {
+        if (value > nextIdFloor()) prefs.edit().putInt(KEY_NEXT_ID, value).apply()
+    }
+
+    fun askOnBoot(): Boolean = prefs.getBoolean(KEY_ASK_ON_BOOT, true)
     fun setAskOnBoot(on: Boolean) {
         prefs.edit().putBoolean(KEY_ASK_ON_BOOT, on).apply()
     }
@@ -347,6 +360,7 @@ class ProfileStore(context: Context) {
         const val FILE = "profiles"
         private const val KEY_LIST = "list"
         private const val KEY_CURRENT = "current"
+        private const val KEY_NEXT_ID = "next_id"
         private const val KEY_ASK_ON_BOOT = "ask_on_boot"
         private const val KEY_ASK_ON_WAKE = "ask_on_wake"
 

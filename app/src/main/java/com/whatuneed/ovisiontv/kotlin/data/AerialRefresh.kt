@@ -41,6 +41,7 @@ enum class AerialRefreshResult {
 /** The refreshed catalogue lives in app storage; the asset stays the fallback. */
 internal object AerialStore {
     private const val FILE_NAME = "aerial_catalog.json"
+    private val saveLock = Any()
 
     fun load(context: Context): List<AerialClip> {
         val file = file(context)
@@ -48,14 +49,9 @@ internal object AerialStore {
         return runCatching { AerialCatalog.parse(file.readText()) }.getOrDefault(emptyList())
     }
 
-    fun save(context: Context, json: String) {
-        val target = file(context)
-        val temp = File(target.parentFile, "${target.name}.tmp")
-        temp.writeText(json)
-        if (!temp.renameTo(target)) {
-            target.delete()
-            temp.renameTo(target)
-        }
+    /** Serialized, atomic replace; false means the previous catalogue is intact. */
+    fun save(context: Context, json: String): Boolean = synchronized(saveLock) {
+        writeFileAtomically(file(context), json.toByteArray(Charsets.UTF_8))
     }
 
     private fun file(context: Context) = File(context.applicationContext.filesDir, FILE_NAME)
@@ -76,6 +72,7 @@ internal object AerialRefresh {
     private const val TIMEOUT_MS = 20_000
     private const val MAX_BYTES = 8 * 1024 * 1024
     private const val COPY_CHUNK = 64 * 1024
+    private const val MAX_REDIRECTS = 3
     private const val TAG = "AerialRefresh"
 
     fun isDue(context: Context, nowMs: Long = System.currentTimeMillis()): Boolean =
@@ -113,7 +110,9 @@ internal object AerialRefresh {
         if (AerialCatalog.parse(json).isEmpty()) {
             return fail("empty result", AerialRefreshResult.FAILED)
         }
-        AerialStore.save(context, json)
+        if (!AerialStore.save(context, json)) {
+            return fail("save", AerialRefreshResult.FAILED)
+        }
         Log.d(TAG, "aerial catalogue refreshed")
         return AerialRefreshResult.UPDATED
     }
@@ -123,14 +122,22 @@ internal object AerialRefresh {
         return result
     }
 
-    private fun download(): ByteArray? = runCatching {
-        val connection = URL(SOURCE_URL).openConnection() as HttpURLConnection
+    private fun download(url: String = SOURCE_URL, redirects: Int = 0): ByteArray? = runCatching {
+        val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
-        connection.instanceFollowRedirects = true
+        // A redirect must not downgrade the scheme or leave Apple's host.
+        connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/octet-stream")
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (redirects >= MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = resolveCatalogueRedirect(url, location) ?: return null
+                return download(next, redirects + 1)
+            }
+            if (code != HttpURLConnection.HTTP_OK) return null
             if (connection.contentLengthLong > MAX_BYTES) return null
             val out = ByteArrayOutputStream(COPY_CHUNK)
             connection.inputStream.use { input ->
@@ -149,4 +156,18 @@ internal object AerialRefresh {
             connection.disconnect()
         }
     }.onFailure { error -> Log.w(TAG, "aerial catalogue download failed", error) }.getOrNull()
+}
+
+/** The catalogue may only come from Apple's host over TLS. */
+internal fun trustedCatalogueUrl(url: String): Boolean {
+    val parsed = runCatching { java.net.URI(url) }.getOrNull() ?: return false
+    if (parsed.scheme?.equals("https", ignoreCase = true) != true) return false
+    if (parsed.host?.equals("sylvan.apple.com", ignoreCase = true) != true) return false
+    return parsed.port == -1 || parsed.port == 443
+}
+
+/** Resolves a redirect against the current URL and rejects an untrusted target. */
+internal fun resolveCatalogueRedirect(current: String, location: String): String? {
+    val next = runCatching { URL(URL(current), location).toString() }.getOrNull() ?: return null
+    return next.takeIf(::trustedCatalogueUrl)
 }

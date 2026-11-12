@@ -446,6 +446,10 @@ fun SettingsScreen(
 
     var catalog by remember(apps) { mutableStateOf(apps) }
     var items by remember { mutableStateOf<List<HomeItem>?>(null) }
+    // The layout belongs to the profile that was current when it was loaded.
+    // A switch creates a new order store before the new load finishes, so a
+    // mutation in that window must not write the old layout into it (AQ-14).
+    var itemsOwner by remember { mutableStateOf<String?>(null) }
     // A package installed or removed while this screen is open leaves the list
     // stale: the hidden folder would keep a row for an app that is already gone.
     var packageRefresh by remember { mutableIntStateOf(0) }
@@ -465,9 +469,12 @@ fun SettingsScreen(
         onDispose { context.unregisterReceiver(receiver) }
     }
     LaunchedEffect(apps, packageRefresh, refreshKey, orderStore) {
+        itemsOwner = null
+        val owner = currentProfileId
         val loaded = apps ?: AppRepository(context).load(withArtwork = false)
         catalog = loaded
         items = orderStore.applyOrder(loaded)
+        itemsOwner = owner
     }
 
     // The Home picker, the wizard and another Settings window can change the
@@ -779,6 +786,7 @@ fun SettingsScreen(
     // Settings is a separate activity: the saved order is the hand-off to Home,
     // which reloads its grid only when this value actually changed.
     fun restoreHidden(packageName: String) {
+        if (itemsOwner != currentProfileId) return
         val current = items ?: return
         val edit = takeAppOutOfFolder(current, HIDDEN_FOLDER_ID, packageName) ?: return
         items = edit.items
@@ -786,6 +794,7 @@ fun SettingsScreen(
     }
 
     fun resetLayout() {
+        if (itemsOwner != currentProfileId) return
         orderStore.clearOrder()
         items = catalog?.let(orderStore::applyOrder).orEmpty()
         // Confirming replaces the Reset page with the Home Screen page: the
@@ -1030,7 +1039,7 @@ fun SettingsScreen(
             SettingsRow(
                 title = saverThemeLabel(theme),
                 checked = theme in saverThemes,
-                action = { saverThemes = SaverPreferences.toggleTheme(context, theme) },
+                action = { saverThemes = SaverPreferences.toggleTheme(context, theme, clipList) },
             )
         }
 

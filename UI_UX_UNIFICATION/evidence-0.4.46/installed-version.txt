@@ -1,0 +1,4 @@
+    versionCode=66 minSdk=28 targetSdk=35
+    versionName=0.4.46
+    lastUpdateTime=2026-11-12 19:07:07
+apk_sha256=9e8ea1dd9b64b97ec4bb8a0e517b1ff009eb791903598f93defcadbabe3532cd

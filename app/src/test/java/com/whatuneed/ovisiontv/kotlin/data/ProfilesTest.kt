@@ -110,6 +110,14 @@ class ProfilesTest {
     }
 
     @Test
+    fun nextIdHonoursThePersistedFloorAfterADelete() {
+        // p2 was deleted; the floor keeps its number from being reused.
+        assertEquals("p3", ProfileCatalog.nextId(listOf(me), floor = 3))
+        assertEquals("p5", ProfileCatalog.nextId(listOf(me, guest), floor = 5))
+        assertEquals("p3", ProfileCatalog.nextId(listOf(me, guest), floor = 0))
+    }
+
+    @Test
     fun freeEmojisExcludeOtherProfilesButNotTheEditedOne() {
         val all = ProfileCatalog.freeEmojis(listOf(me, guest))
         assertFalse(ProfileCatalog.EMOJIS[0] in all)

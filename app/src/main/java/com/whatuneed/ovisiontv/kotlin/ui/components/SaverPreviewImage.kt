@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -155,13 +156,9 @@ internal object AerialPreviewStore {
         runCatching {
             if (!dir.isDirectory && !dir.mkdirs()) return
             val target = File(dir, name)
-            val temp = File(dir, "$name.tmp")
-            temp.writeBytes(bytes)
-            // A rename keeps a half-written preview from being decoded later.
-            if (!temp.renameTo(target)) {
-                target.delete()
-                temp.renameTo(target)
-            }
+            // A unique temp plus a checked replace keeps a half-written preview
+            // from being decoded later and never deletes the old file first.
+            if (!writeFileAtomically(target, bytes)) return
             prune(dir, keep)
         }
     }

@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -349,11 +350,18 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // Package broadcasts and the return from Settings can overlap; a stale
     // catalog must not overwrite the newer one when it finishes last.
     var reloadJob by remember { mutableStateOf<Job?>(null) }
+    var reloadGeneration by remember { mutableIntStateOf(0) }
     fun reload() {
         reloadJob?.cancel()
+        val generation = ++reloadGeneration
+        val store = orderStore
         reloadJob = scope.launch {
-            apps = orderStore.applyAndRememberOrder(repository.load())
-            savedOrder = orderStore.savedOrder()
+            val loaded = repository.load()
+            // A cancelled load may still return from a blocking section; the
+            // generation keeps its result from landing on a newer profile.
+            if (generation != reloadGeneration) return@launch
+            apps = store.applyAndRememberOrder(loaded)
+            savedOrder = store.savedOrder()
         }
     }
 
@@ -361,13 +369,16 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         reload()
     }
 
+    // The receiver outlives profile switches, so it must call the current
+    // reload closure instead of the one captured when it was registered.
+    val currentReload by rememberUpdatedState { reload() }
     DisposableEffect(context, repository) {
         val filter = packageChangeFilter()
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val replacing = intent?.getBooleanExtra(Intent.EXTRA_REPLACING, false) == true
                 if (!reloadsHomeFor(intent?.action, replacing)) return
-                reload()
+                currentReload()
             }
         }
         ContextCompat.registerReceiver(

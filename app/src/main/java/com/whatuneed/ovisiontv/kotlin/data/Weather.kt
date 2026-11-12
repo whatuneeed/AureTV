@@ -18,6 +18,15 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicBoolean
 
+/** The settings a forecast was requested for; a commit must match them. */
+internal data class WeatherRequest(val key: String, val language: String)
+
+internal fun weatherRequestIsCurrent(
+    snapshot: WeatherRequest,
+    currentKey: String,
+    currentLanguage: String,
+): Boolean = snapshot.key == currentKey && snapshot.language == currentLanguage
+
 /**
  * Current weather and a 5-day forecast from free services that need no key:
  * Open-Meteo, MET Norway (Yr) and wttr.in, in that order of preference but
@@ -41,6 +50,7 @@ object Weather {
     private const val MAX_BYTES = 2 * 1024 * 1024
 
     private val busy = AtomicBoolean(false)
+    private val pending = AtomicBoolean(false)
 
     // ---------------------------------------------------------------- data
 
@@ -226,18 +236,30 @@ object Weather {
         val app = context.applicationContext
         if (!WeatherPreferences.enabled(app)) return
         if (!force && !stale(app)) return
-        if (!busy.compareAndSet(false, true)) return
+        if (!busy.compareAndSet(false, true)) {
+            // A forced refresh must not be lost just because another fetch is
+            // in flight; it runs once that one finishes (AQ-09).
+            if (force) pending.set(true)
+            return
+        }
         try {
-            withContext(Dispatchers.IO) { runFetch(app) }
+            do {
+                pending.set(false)
+                withContext(Dispatchers.IO) { runFetch(app) }
+            } while (pending.get() && WeatherPreferences.enabled(app))
         } finally {
             busy.set(false)
         }
+        if (pending.get() && WeatherPreferences.enabled(app)) refresh(app, force = true)
     }
 
     private fun runFetch(context: Context) {
         try {
             val manual = WeatherPreferences.manual(context)
             val language = language(context)
+            // The request is a snapshot: a city/unit/language change while the
+            // network is busy must not be committed under the new key (AQ-09).
+            val request = WeatherRequest(WeatherPreferences.key(context), language)
             val lat: Double
             val lon: Double
             var place: String
@@ -272,6 +294,15 @@ object Weather {
                 }
             }
             if (data != null) {
+                if (!weatherRequestIsCurrent(
+                        request,
+                        WeatherPreferences.key(context),
+                        language(context),
+                    )
+                ) {
+                    Log.d(TAG, "forecast dropped: settings changed during fetch")
+                    return
+                }
                 if (place.isNotEmpty() || data.place.isEmpty()) data.place = place
                 val fetchedAt = System.currentTimeMillis()
                 data.fetchedAt = fetchedAt
@@ -279,7 +310,7 @@ object Weather {
                     context,
                     data.toJson().toString(),
                     fetchedAt,
-                    WeatherPreferences.key(context),
+                    request.key,
                     data.place,
                 )
             }

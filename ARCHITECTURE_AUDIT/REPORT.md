@@ -1,6 +1,6 @@
 # Architecture & Code Quality Audit — Kotlin 0.4.44
 
-Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этап 1 реализован в 0.4.45 / vc65** — статус и доказательства ниже, остальные этапы не начаты.
+Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этап 1 реализован в 0.4.45 / vc65, этап 2 — в 0.4.46 / vc66** — статус и доказательства ниже, этапы 3–5 не начаты.
 
 Аудит read-only: production-код, интерфейс, applicationId, подпись, разрешения и зависимости не изменялись. Созданы только этот отчёт и его проверочные артефакты. Ключи подписи и tvOS не читались; сторонние приложения и контент для аудита не запускались.
 
@@ -8,7 +8,7 @@
 
 Исходное состояние зафиксировано в [source-baseline.json](file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/ARCHITECTURE_AUDIT/evidence/source-baseline.json): 168 текстовых файлов исходников/конфигурации Kotlin-проекта, SHA-256; повторная проверка не обнаружила изменений. Git-корень находится внутри Kotlin-проекта, ветка `master`; ранее внесённые изменения 0.4.44 не закоммичены. Не путать рабочее дерево с HEAD.
 
-## Статус реализации (0.4.45, vc65)
+## Статус реализации (0.4.45–0.4.46)
 
 Этап 1 («серьёзные ошибки и стабильность») реализован 12.11.2026. Production-код: `SettingsActivity.kt`, `SettingsScreen.kt`, `LauncherRoot.kt`, `ControlCenter.kt`, `SleepControls.kt`, `Profiles.kt`, `AerialRefresh.kt`, `BinaryPlist.kt`, `SaverPreviewImage.kt`, `KidsMode.kt`. Новые тесты: `KidsEntryGrantTest`, `ArtKeyTest`, `SampleForTest`, `KidsStoreTest`, `PinPadInputTest`; расширены `SettingsScreenTest`, `ControlCenterTest`, `SaverPreviewTest`, `BinaryPlistTest`, `ProfilesTest`, `KidsModeTest`, `KidsGateTest`.
 
@@ -18,12 +18,26 @@
 | AQ-02 владелец exit PIN | реализовано: origin-профиль `kidsLeaveFrom` | `SettingsScreenTest.leave_gate_checks_the_current_kids_profile_not_the_entry_snapshot` |
 | AQ-03 permission navigation | реализовано: Power/Timer через общий Kids-гейт | `ControlCenterTest` (2) |
 | AQ-04 repair отключает Kids | реализовано: repair сохраняет `kids` | `ProfilesTest` |
-| AQ-05 подлинность каталога | реализовано: только HTTPS, без fallback | автотеста нет — известная граница |
+| AQ-05 подлинность каталога | реализовано: только HTTPS, redirect только на Apple, без fallback | `AerialRefreshUrlTest` (4) |
 | AQ-06 plist | реализовано: cycle detection + бюджет 100k узлов | `BinaryPlistTest` |
 | AQ-07 decoded bitmap | реализовано: bounds-first, бюджет ~4 Мпикс, удаление битого файла | `SampleForTest`, `SaverPreviewTest` |
 | AQ-11 malformed credentials | реализовано: fail-closed, проверка тега/итераций | `KidsModeTest` |
 
-Прогон 0.4.45: **308/308 debug + 308/308 release** юнит, **205/205** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL, source drift = 0. APK `fe5c8609…f0d1`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256. Доказательства — `UI_UX_UNIFICATION/evidence-0.4.45/`, запись — `FIXES.md` от 12.11.2026. Этапы 2–5 не начаты; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+Прогон 0.4.45: **308/308 debug + 308/308 release** юнит, **205/205** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL, source drift = 0. APK `fe5c8609…f0d1`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256. Доказательства — `UI_UX_UNIFICATION/evidence-0.4.45/`, запись — `FIXES.md` от 12.11.2026.
+
+Этап 2 («ownership и архитектурные границы») реализован в 0.4.46. Production-код: `Weather.kt`, `Profiles.kt`, `LauncherRoot.kt`, `SettingsScreen.kt`, `AerialRefresh.kt`, `SaverPreferences.kt`, `SaverPreviewImage.kt`, новый `AtomicWrite.kt`. Новые тесты: `WeatherRequestTest`, `AtomicWriteTest`, `AerialRefreshUrlTest`, `ProfileStoreTest`; расширены `ProfilesTest`, `SaverSettingsTest`.
+
+| Пункт | Статус | Проверка |
+|---|---|---|
+| AQ-09 weather commit | реализовано: снимок key/языка, commit только при совпадении, pending force | `WeatherRequestTest` (3) |
+| AQ-10 identity/delete | реализовано: монотонный `next_id`, поднимается до записи списка | `ProfilesTest`, `ProfileStoreTest` (2) |
+| AQ-13 package receiver | реализовано: `rememberUpdatedState` + generation/owner | полный UI-прогон; реальное package-событие — NOT TESTED |
+| AQ-14 owner-scoped items | реализовано: `itemsOwner`, мутации только после загрузки владельца | полный UI-прогон; отдельный race-тест — NOT TESTED |
+| AQ-17 atomic catalogue | реализовано: уникальный temp + проверяемый replace, `FAILED` при сбое | `AtomicWriteTest` (5) |
+| AQ-12 пустой saver | реализовано: toggleTheme учитывает клипы/hidden | `SaverSettingsTest` (3) |
+| AQ-31 границы | изменения ограничены операциями профиля/загрузки/записи | — |
+
+Прогон 0.4.46: **324/324 debug + 324/324 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `9e8ea1dd…32cd`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.46». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.46/`, запись — `FIXES.md`. Этапы 3–5 не начаты; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
 
 ## Уровни доказательств
 
@@ -539,7 +553,7 @@ Artwork caches / Aerial catalogue / ExoPlayer / device services
 
 # F. Поэтапный план улучшений
 
-**План. Этап 1 реализован в 0.4.45 (см. «Статус реализации» выше); этапы 2–5 не начаты.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
+**План. Этапы 1–2 реализованы в 0.4.45–0.4.46 (см. «Статус реализации» выше); этапы 3–5 не начаты.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
 
 Общий gate микроэтапа: зафиксирован исходный working tree/backup → воспроизведение/RED → минимальное изменение → GREEN → полная регрессия → проверенный подписанный APK и установка на изолированный стенд → журнал/артефакты. Не использовать reset/удаление пользовательских данных или отключение тестов для получения зелёного результата.
 

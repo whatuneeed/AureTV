@@ -49,11 +49,24 @@ object SaverSettings {
 
     /**
      * tvOS refuses to hide every aerial category (`AerialAllCategoriesHiddenAlert`),
-     * so unchecking the last theme keeps the set as it was.
+     * so unchecking the last theme keeps the set as it was. Turning a theme off
+     * must also leave at least one playable clip: every clip of the remaining
+     * themes may already be hidden (AQ-12).
      */
-    fun toggleTheme(current: Set<SaverTheme>, theme: SaverTheme): Set<SaverTheme> {
+    fun toggleTheme(
+        current: Set<SaverTheme>,
+        theme: SaverTheme,
+        clips: List<AerialClip> = emptyList(),
+        hidden: Set<String> = emptySet(),
+    ): Set<SaverTheme> {
         val next = if (theme in current) current - theme else current + theme
-        return if (next.isEmpty()) current else next
+        if (next.isEmpty()) return current
+        if (theme in current && clips.isNotEmpty() &&
+            clips.none { it.theme in next && it.id !in hidden }
+        ) {
+            return current
+        }
+        return next
     }
 
     /**
@@ -137,11 +150,14 @@ object SaverPreferences {
     fun themes(context: Context): Set<SaverTheme> =
         SaverSettings.decodeThemes(prefs(context).getString(KEY_THEMES, null))
 
-    fun toggleTheme(context: Context, theme: SaverTheme): Set<SaverTheme> {
-        val next = SaverSettings.toggleTheme(themes(context), theme)
+    fun toggleTheme(context: Context, theme: SaverTheme, clips: List<AerialClip>): Set<SaverTheme> {
+        val next = SaverSettings.toggleTheme(themes(context), theme, clips, hidden(context))
         prefs(context).edit().putString(KEY_THEMES, SaverSettings.encodeThemes(next)).apply()
         return next
     }
+
+    fun toggleTheme(context: Context, theme: SaverTheme): Set<SaverTheme> =
+        toggleTheme(context, theme, emptyList())
 
     fun hidden(context: Context): Set<String> =
         SaverSettings.decodeHidden(prefs(context).getString(KEY_HIDDEN_CLIPS, null))

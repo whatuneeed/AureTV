@@ -130,4 +130,60 @@ class SaverSettingsTest {
         assertEquals(SaverDelay.NEVER, SaverDelay.fromMinutes(-1))
         assertEquals(SaverDelay.FIVE, SaverDelay.fromMinutes(7))
     }
+
+    @Test
+    fun turning_off_the_last_theme_with_visible_clips_is_allowed() {
+        val clips = listOf(
+            clip("a1", SaverTheme.LANDSCAPES),
+            clip("b1", SaverTheme.CITIES),
+        )
+        val next = SaverSettings.toggleTheme(
+            setOf(SaverTheme.LANDSCAPES, SaverTheme.CITIES),
+            SaverTheme.CITIES,
+            clips,
+            hidden = emptySet(),
+        )
+        assertEquals(setOf(SaverTheme.LANDSCAPES), next)
+    }
+
+    @Test
+    fun turning_off_a_theme_is_refused_when_every_remaining_clip_is_hidden() {
+        val clips = listOf(
+            clip("a1", SaverTheme.LANDSCAPES),
+            clip("b1", SaverTheme.CITIES),
+        )
+        val themes = setOf(SaverTheme.LANDSCAPES, SaverTheme.CITIES)
+        val next = SaverSettings.toggleTheme(
+            themes,
+            SaverTheme.CITIES,
+            clips,
+            hidden = setOf("a1"),
+        )
+        assertEquals(themes, next)
+    }
+
+    @Test
+    fun turning_a_theme_on_is_never_blocked_by_hidden_clips() {
+        val clips = listOf(
+            clip("a1", SaverTheme.LANDSCAPES),
+            clip("b1", SaverTheme.CITIES),
+        )
+        val next = SaverSettings.toggleTheme(
+            setOf(SaverTheme.LANDSCAPES),
+            SaverTheme.CITIES,
+            clips,
+            hidden = setOf("a1", "b1"),
+        )
+        assertEquals(setOf(SaverTheme.LANDSCAPES, SaverTheme.CITIES), next)
+    }
+
+    private fun clip(id: String, theme: SaverTheme) = AerialClip(
+        id = id,
+        nameEn = id,
+        nameRu = id,
+        theme = theme,
+        videoUrl = "https://example/$id.mov",
+        previewUrl = "",
+        order = 0,
+    )
 }
