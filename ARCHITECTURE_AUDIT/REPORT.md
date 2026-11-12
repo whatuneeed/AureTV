@@ -1,6 +1,6 @@
 # Architecture & Code Quality Audit — Kotlin 0.4.44
 
-Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этапы 1–4 реализованы в 0.4.45–0.4.48 (vc65–vc68)** — статус и доказательства ниже, этап 5 не начат.
+Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этапы 1–5 реализованы в 0.4.45–0.4.48 (vc65–vc68)** — статус и доказательства ниже; аппаратная/API-матрица остаётся NOT TESTED.
 
 Аудит read-only: production-код, интерфейс, applicationId, подпись, разрешения и зависимости не изменялись. Созданы только этот отчёт и его проверочные артефакты. Ключи подписи и tvOS не читались; сторонние приложения и контент для аудита не запускались.
 
@@ -68,7 +68,20 @@
 | AQ-29 finish cursor | реализовано: `moveUp` guard | компиляция; device — NOT TESTED |
 | AQ-30 permanent denial | реализовано: App Info после отказа | `PermissionRecoveryTest` (4); device — NOT TESTED |
 
-Прогон 0.4.48: **336/336 debug + 336/336 release** юнит, `compileDebugAndroidTestKotlin` BUILD SUCCESSFUL, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `4bf03882…ebdd`, v2, сертификат `327a50…7b10`. **Инструментальный прогон и установка на стенд — NOT TESTED: эмулятор остановлен по просьбе владельца.** Доказательства — `UI_UX_UNIFICATION/evidence-0.4.48/`, запись — `FIXES.md`. Этап 5 не начат; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+Прогон 0.4.48: **342/342 debug + 342/342 release** юнит, **208/208** инструментальных (7 мин 42 с), lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL, `install -r` и мастер RU — успешно. APK `4bf03882…ebdd`, v2, сертификат `327a50…7b10`. Доказательства — `UI_UX_UNIFICATION/evidence-0.4.48/`, запись — `FIXES.md`.
+
+Этап 5 («release discipline и подготовка к расширению») выполнен в доступном объёме: добавлены `tools/release_check.py` (APK/подпись/сертификат/версия/RU-EN паритет), `tools/soak.py` (5 мин, 13 циклов, PSS 63 917→56 364 КиБ, 0 crash), `StorageContractTest` (6) и `ARCHITECTURE_AUDIT/RELEASE_DISCIPLINE.md` (gate, политика зависимостей, матрица, checklist). Код приложения не менялся, поэтому APK остаётся 0.4.48/vc68.
+
+| Область | Статус |
+|---|---|
+| API 34 AVD, 1920×1080 | PASS (208/208 + smoke + soak) |
+| API 28/29/35 | NOT TESTED (нет system images) |
+| Реальный ТВ / ИК-автоповтор | NOT TESTED |
+| LOW 1 ГБ / 4K-панель | NOT TESTED |
+| Голосовой TalkBack / RTL / третий язык | NOT TESTED (semantic-тесты есть) |
+| Длительный soak / GPU benchmark | NOT TESTED (5-минутный smoke пройден) |
+
+Матрица и правила — `ARCHITECTURE_AUDIT/RELEASE_DISCIPLINE.md`.
 
 ## Уровни доказательств
 
@@ -584,7 +597,7 @@ Artwork caches / Aerial catalogue / ExoPlayer / device services
 
 # F. Поэтапный план улучшений
 
-**План. Этапы 1–4 реализованы в 0.4.45–0.4.48 (см. «Статус реализации» выше); этап 5 не начат.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
+**План. Этапы 1–5 реализованы в доступном объёме в 0.4.45–0.4.48 (см. «Статус реализации» выше); аппаратная/API-матрица — NOT TESTED.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
 
 Общий gate микроэтапа: зафиксирован исходный working tree/backup → воспроизведение/RED → минимальное изменение → GREEN → полная регрессия → проверенный подписанный APK и установка на изолированный стенд → журнал/артефакты. Не использовать reset/удаление пользовательских данных или отключение тестов для получения зелёного результата.
 

@@ -229,6 +229,19 @@
 
 ## Записи
 
+### 13.11.2026 — этап 5: release discipline, контракты и soak
+
+Статус: выпуск остаётся **0.4.48 / vc68**, APK **4 095 078 B**, SHA-256 **`4bf03882bb3a0230878b62cba8ac8d9b748f0549f58feae1f4e4f54bc1d1ebdd`**, v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10`. Код приложения не менялся: этап добавил release-gate, контрактные тесты, soak и документ дисциплины.
+
+- **Release gate.** `tools/release_check.py` проверяет APK по `output-metadata.json` и `app/build.gradle.kts`: versionCode/versionName/applicationId, minSdk 28/targetSdk 35, подпись v2 и сертификат, паритет RU/EN ресурсов; печатает размер/SHA-256. Прогон на 0.4.48 — **PASS** (`evidence-0.4.48/release-check.txt`).
+- **Контракты хранения.** `StorageContractTest` (6) фиксирует имена prefs-файлов и ключей (`ovisiontv_launcher`, `profiles`, `kids_mode`, `weather`, `startup`, `home_order`, `place`, `cache2`, …), `p1`, лимит профилей и ключи тем заставки. Переименование теперь требует миграции и падает тестом.
+- **Soak.** `tools/soak.py`: 5 минут, 13 циклов Home → Control Center → Settings → Search на release 0.4.48; PSS **63 917 → 56 364 КиБ**, новых записей crash-буфера **0**. Это короткий smoke, не длительный soak.
+- **Дисциплина.** `ARCHITECTURE_AUDIT/RELEASE_DISCIPLINE.md`: версии/подпись, обязательный gate, матрица API/устройств, политика зависимостей, совместимость данных, сохранение evidence и checklist выпуска.
+- **Полный gate 0.4.48.** `testDebugUnitTest`/`testReleaseUnitTest`: **342/342** на вариант, 0 failures/errors/skipped. `connectedDebugAndroidTest`: **208/208**, 0 failures/errors/skipped, 7 мин 42 с на свежем AVD. `lintDebug`: **0 Error / 14 Warning / 5 Information**. `assembleRelease` и `install -r` — успешно. Мастер RU, Главная, «О системе 0.4.48»; crash-буфер после установки/soak пуст.
+- **Матрица.** API 34 AVD — PASS. API 28/29/35, реальный ТВ/ИК, LOW 1 ГБ, 4K-панель, голосовой TalkBack, RTL/третьи локали, масштаб шрифта 1,15/1,3, длительный soak и GPU benchmark — **NOT TESTED** (нет образов/железа). Это не успех и не регресс, а известная граница.
+- **Не делать.** Не считать `release_check.py` заменой connected/smoke; не обновлять зависимости пачкой без полного gate; не менять ключи хранения без миграции; не выдавать NOT TESTED за PASS.
+- **Доказательства.** `UI_UX_UNIFICATION/evidence-0.4.48/` (`release-signature.txt`, `release-check.txt`, `soak.txt`, кадры/XML), `temp/stage5-connected.log`, `temp/stage5-unit.log`.
+
 ### 13.11.2026 — 0.4.48: этап 4 архитектурного аудита (UX-контракты)
 
 Статус: `versionCode 68` / `versionName 0.4.48`, APK **4 095 078 B**, SHA-256 **`4bf03882bb3a0230878b62cba8ac8d9b748f0549f58feae1f4e4f54bc1d1ebdd`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` (прежний). Закрыты AQ-22/23/24/25/26/28/29/30. **Инструментальный прогон и живой smoke не выполнялись: эмулятор остановлен по просьбе владельца.**
