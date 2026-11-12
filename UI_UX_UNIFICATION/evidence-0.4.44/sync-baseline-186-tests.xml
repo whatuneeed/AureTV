@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.AppRepositoryTest" tests="186" failures="2" errors="0" skipped="0" time="366.072" timestamp="2026-11-11T19:09:44" hostname="localhost">
+  <properties>
+    <property name="device" value="hume-tv(AVD) - 14" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="the_settings_activity_is_the_launchers_only_tile" classname="com.whatuneed.ovisiontv.kotlin.data.AppRepositoryTest" time="0.189" />
+  <testcase name="every_tile_has_a_label_and_a_unique_package" classname="com.whatuneed.ovisiontv.kotlin.data.AppRepositoryTest" time="0.001" />
+  <testcase name="a_complete_order_is_not_rewritten_on_every_load" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.001" />
+  <testcase name="a_folder_round_trips_through_the_preferences" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.005" />
+  <testcase name="a_corrupt_order_is_replaced_when_remembering" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.01" />
+  <testcase name="corrupt_order_falls_back_to_the_install_order" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.003" />
+  <testcase name="the_hidden_folder_name_follows_the_launcher_language" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.033" />
+  <testcase name="an_app_installed_later_is_appended_and_remembered" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderStoreTest" time="0.013" />
+  <testcase name="unset_and_unknown_values_mean_system" classname="com.whatuneed.ovisiontv.kotlin.data.LocalePreferenceTest" time="0.004" />
+  <testcase name="stored_language_is_read_back" classname="com.whatuneed.ovisiontv.kotlin.data.LocalePreferenceTest" time="0.006" />
+  <testcase name="wrap_applies_the_chosen_language_only_when_not_system" classname="com.whatuneed.ovisiontv.kotlin.data.LocalePreferenceTest" time="0.008" />
+  <testcase name="theScreenFieldFollowsTheDisplay" classname="com.whatuneed.ovisiontv.kotlin.data.WallpaperTest" time="0.394" />
+  <testcase name="anUnknownStyleFallsBackToTheDefault" classname="com.whatuneed.ovisiontv.kotlin.data.WallpaperTest" time="0.005" />
+  <testcase name="everyStylePaintsADistinctField" classname="com.whatuneed.ovisiontv.kotlin.data.WallpaperTest" time="0.057" />
+  <testcase name="downFromTheCapsuleReturnsToTheGrid" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="3.762" />
+  <testcase name="panelCanBeReopenedImmediately" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="2.387" />
+  <testcase name="arrowsStayInsideThePanel" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="3.138" />
+  <testcase name="libraryTileIsAbsentWithoutASecondRow" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="1.25" />
+  <testcase name="okReopensThePanelRightAfterBack" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="1.683" />
+  <testcase name="upOpensThePanelAndBackReturnsToTheCapsule" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="1.803" />
+  <testcase name="screensaverTileStartsTheSaverAndClosesThePanel" classname="com.whatuneed.ovisiontv.kotlin.ui.ControlCenterTest" time="1.565" />
+  <testcase name="the_app_menu_moves_an_app_into_an_existing_folder" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.764" />
+  <testcase name="moving_the_last_app_out_leaves_no_folder_tile" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.427" />
+  <testcase name="removing_the_focused_app_keeps_the_cursor_in_place" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.146" />
+  <testcase name="left_returns_to_the_previous_tile" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.545" />
+  <testcase name="folder_rows_flip_pages_only_at_the_page_end" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.386" />
+  <testcase name="the_hidden_folder_title_is_not_a_rename_button" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.0" />
+  <testcase name="reopening_a_folder_restores_the_cell_it_was_left_on" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.578" />
+  <testcase name="a_folder_announces_how_many_apps_it_holds" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.238" />
+  <testcase name="back_during_a_drag_restores_the_order_and_the_cursor" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.063" />
+  <testcase name="the_assist_key_opens_search" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="0.997" />
+  <testcase name="menu_inside_a_folder_shows_an_app_back_on_home" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.392" />
+  <testcase name="the_rename_keyboard_hides_the_folder_cells_from_talkback" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.2" />
+  <testcase name="kids_profile_folder_is_read_only" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.214" />
+  <testcase name="a_lifted_tile_stays_up_after_release_and_moves_with_the_arrows" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.437" />
+  <testcase name="an_app_returns_from_more_apps_to_the_main_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.274" />
+  <testcase name="every_tile_is_a_single_button_node" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.203" />
+  <testcase name="launch_zoom_fills_the_screen_from_the_focused_tile" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.082" />
+  <testcase name="menu_on_the_own_settings_tile_has_no_hide_or_uninstall" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.231" />
+  <testcase name="an_auto_repeating_ok_opens_the_menu_without_taking_a_row" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.355" />
+  <testcase name="right_twice_then_center_opens_the_folder_and_back_closes_it" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.226" />
+  <testcase name="menu_on_the_hidden_folder_opens_no_menu" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.788" />
+  <testcase name="talkback_focus_follows_the_picked_tile_while_it_moves" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.073" />
+  <testcase name="a_package_change_closes_a_menu_for_a_removed_app" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.514" />
+  <testcase name="holding_ok_over_a_neighbour_folds_both_apps_into_a_folder" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.203" />
+  <testcase name="focus_rim_stays_readable_on_white_artwork" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.365" />
+  <testcase name="return_from_an_app_restores_the_grid_and_the_remote" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.03" />
+  <testcase name="menu_on_a_folder_deletes_it_and_its_apps_return_home" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.237" />
+  <testcase name="moving_while_ok_is_held_does_not_launch_the_next_tile" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="0.979" />
+  <testcase name="back_closes_the_folder_menu_and_the_grid_keeps_input" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.54" />
+  <testcase name="talkback_click_opens_folder_and_launches_inside" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.347" />
+  <testcase name="menu_on_an_app_hides_it_in_more_apps" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.163" />
+  <testcase name="down_from_an_incomplete_last_row_moves_to_the_nearest_cell" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.373" />
+  <testcase name="new_folder_from_the_app_menu_wraps_the_app_in_its_slot" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.759" />
+  <testcase name="down_opens_the_library_and_back_returns_to_the_dock" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.338" />
+  <testcase name="talkback_cannot_rename_a_folder_while_the_app_is_launching" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.05" />
+  <testcase name="focus_light_grows_with_the_tile_and_is_off_when_unfocused" classname="com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest" time="1.434" />
+  <testcase name="cancelling_the_leave_gate_returns_focus_to_the_picker_disc" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="3.649" />
+  <testcase name="kids_profile_shows_only_allowed_tiles_and_the_settings_tile" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="2.563" />
+  <testcase name="saver_never_starts_under_the_pin_gate" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="127.76" />
+  <testcase name="control_center_system_tile_opens_the_pin_gate" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="2.848" />
+  <testcase name="leaving_the_kids_profile_asks_for_the_pin_and_then_switches" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="4.082" />
+  <testcase name="settings_tile_opens_the_pin_gate_and_the_right_pin_opens_settings" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="5.803" />
+  <testcase name="recovery_word_resets_the_pin_and_closes_the_gate_without_the_action" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="7.357">
+    <failure>java.lang.AssertionError: the new PIN must verify
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest$recovery_word_resets_the_pin_and_closes_the_gate_without_the_action$6.invokeSuspend(KidsGateTest.kt:469)
+at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:280)
+at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:85)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:59)
+at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:38)
+at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+at com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest.recovery_word_resets_the_pin_and_closes_the_gate_without_the_action(KidsGateTest.kt:468)
+</failure>
+  </testcase>
+  <testcase name="five_wrong_pins_lock_the_pad_against_the_right_pin_too" classname="com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest" time="12.557">
+    <failure>androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 10000 ms
+at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
+at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:306)
+at com.whatuneed.ovisiontv.kotlin.ui.KidsGateTest.five_wrong_pins_lock_the_pad_against_the_right_pin_too(KidsGateTest.kt:323)
+</failure>
+  </testcase>
+  <testcase name="a_language_picked_in_settings_reaches_home_through_recreate" classname="com.whatuneed.ovisiontv.kotlin.ui.LanguageReturnTest" time="2.209" />
+  <testcase name="the_remote_works_after_home_recreates" classname="com.whatuneed.ovisiontv.kotlin.ui.LanguageReturnTest" time="2.099" />
+  <testcase name="a_changed_saved_order_rebuilds_the_grid_on_resume" classname="com.whatuneed.ovisiontv.kotlin.ui.LauncherReloadTest" time="1.668" />
+  <testcase name="the_first_grid_is_saved_so_a_language_change_cannot_reorder_it" classname="com.whatuneed.ovisiontv.kotlin.ui.LauncherReloadTest" time="1.011" />
+  <testcase name="the_licences_document_names_only_files_that_are_bundled" classname="com.whatuneed.ovisiontv.kotlin.ui.LicensingTest" time="0.013" />
+  <testcase name="every_overlay_hands_the_remote_back_to_the_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.MainActivityInputTest" time="1.635" />
+  <testcase name="a_held_ok_sent_as_pairs_types_one_character" classname="com.whatuneed.ovisiontv.kotlin.ui.MainActivityInputTest" time="1.2" />
+  <testcase name="search_takes_real_arrows_and_hardware_typing" classname="com.whatuneed.ovisiontv.kotlin.ui.MainActivityInputTest" time="1.43" />
+  <testcase name="a_resume_after_another_activity_rebuilds_the_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.MainActivityResumeTest" time="2.385" />
+  <testcase name="a_settings_round_trip_rebuilds_the_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.MainActivityResumeTest" time="1.699" />
+  <testcase name="filter_covers_every_package_event_the_launcher_reloads_on" classname="com.whatuneed.ovisiontv.kotlin.ui.PackageChangeFilterTest" time="0.012" />
+  <testcase name="system_back_closes_the_surface" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="0.971" />
+  <testcase name="no_match_shows_the_empty_message" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.007" />
+  <testcase name="search_key_opens_the_surface_with_the_hint" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="0.971" />
+  <testcase name="a_new_query_moves_the_result_cursor_back_to_the_first_match" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.251" />
+  <testcase name="results_header_stays_clear_of_the_input_field" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.106" />
+  <testcase name="menu_key_does_not_open_a_menu_behind_search" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="0.949" />
+  <testcase name="apps_inside_folders_are_searchable" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.199" />
+  <testcase name="typing_filters_the_results_live" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.451" />
+  <testcase name="keyboard_keys_stay_inside_the_panel" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="0.961" />
+  <testcase name="closing_search_restores_the_remote" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.19" />
+  <testcase name="back_key_closes_the_surface_and_returns_the_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="0.92" />
+  <testcase name="done_moves_to_results_and_ok_launches_the_app" classname="com.whatuneed.ovisiontv.kotlin.ui.SearchTest" time="1.168" />
+  <testcase name="root_shows_six_sections_without_group_headers" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.538" />
+  <testcase name="the_refresh_frequency_is_stored_and_announced" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.504" />
+  <testcase name="talkback_click_opens_the_about_page" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.841" />
+  <testcase name="the_license_page_scrolls_with_the_remote" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.295" />
+  <testcase name="the_delay_page_opens_on_the_stored_choice" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.015" />
+  <testcase name="permissions_root_row_counts_only_the_grants_that_can_be_given" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.848" />
+  <testcase name="the_category_list_filters_the_grid_and_switches_a_whole_theme" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.409" />
+  <testcase name="a_held_arrow_moves_the_chooser_one_step" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.377" />
+  <testcase name="home_button_row_turns_the_override_on_without_opening_settings" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.967" />
+  <testcase name="device_page_lists_facts_read_from_the_tv" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.988" />
+  <testcase name="adding_a_profile_appends_it_to_the_list" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="2.247" />
+  <testcase name="reset_asks_first_and_cancel_keeps_the_saved_order" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.951" />
+  <testcase name="hidden_apps_page_explains_when_nothing_is_hidden" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.392" />
+  <testcase name="interface_page_leads_to_the_language_list" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.906" />
+  <testcase name="the_refresh_page_opens_on_the_stored_choice" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.943" />
+  <testcase name="about_opens_the_license_text_and_back_returns_to_about" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.361" />
+  <testcase name="system_page_shows_the_airplay_receiver_state" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.31" />
+  <testcase name="resetting_the_saver_returns_every_option_to_defaults" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.293" />
+  <testcase name="legal_page_opens_the_terms_document" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.179" />
+  <testcase name="the_last_aerial_theme_cannot_be_turned_off" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.107" />
+  <testcase name="a_whole_category_cannot_leave_the_saver_without_clips" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.033" />
+  <testcase name="an_empty_catalog_still_reaches_the_hidden_list" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.931" />
+  <testcase name="down_then_center_opens_about_and_back_returns_to_root" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.261" />
+  <testcase name="profiles_page_opens_the_person_and_hides_the_delete_until_there_are_two" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.324" />
+  <testcase name="updates_page_shows_the_catalogue_and_nothing_fake" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.263" />
+  <testcase name="the_language_page_opens_on_the_stored_choice" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.854" />
+  <testcase name="hidden_apps_page_restores_an_app_to_the_saved_order" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.968" />
+  <testcase name="network_page_reports_the_live_connection" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.971" />
+  <testcase name="catalogue_refresh_reports_current_failed_and_updated_separately" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.101" />
+  <testcase name="holding_ok_on_a_clip_previews_the_saver_without_toggling_it" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.079" />
+  <testcase name="permissions_page_lists_every_real_grant_with_its_live_state" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.874" />
+  <testcase name="a_chosen_start_delay_is_stored_and_read_back_on_reopen" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.255" />
+  <testcase name="switching_and_deleting_a_profile_walks_its_own_page" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.634" />
+  <testcase name="confirming_the_reset_clears_the_saved_layout" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.412" />
+  <testcase name="system_page_offers_the_home_button_and_startup_rows" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.889" />
+  <testcase name="the_music_toggle_updates_its_value_and_is_stored" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.321" />
+  <testcase name="a_hidden_app_row_names_the_restore_action" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.877" />
+  <testcase name="startup_choice_and_wake_are_stored_and_summarized" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.684" />
+  <testcase name="repeated_ok_down_still_opens_the_saver_preview" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.452" />
+  <testcase name="reopening_the_home_page_restores_the_row_it_was_left_on" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.67" />
+  <testcase name="a_package_change_rebuilds_an_open_hidden_list" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="0.93" />
+  <testcase name="back_at_root_closes_the_screen" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.173" />
+  <testcase name="the_saver_page_shows_the_preview_and_the_tv_os_rows" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.256" />
+  <testcase name="moving_along_one_row_does_not_scroll_the_grid" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.038" />
+  <testcase name="the_saver_chooser_toggles_clips_and_keeps_the_last_one" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.222" />
+  <testcase name="long_hidden_list_scrolls_to_the_last_row" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.911" />
+  <testcase name="storage_page_counts_and_clears_the_caches" classname="com.whatuneed.ovisiontv.kotlin.ui.SettingsScreenTest" time="1.427" />
+  <testcase name="aReRunNamesTheExistingProfile" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.519" />
+  <testcase name="okOnTheWelcomePageMovesToTheLanguagePage" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.248" />
+  <testcase name="anInterruptedRunFromAnOldPageMapStartsOver" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.168" />
+  <testcase name="backOnTheFirstPageOfFirstRunStays" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.103" />
+  <testcase name="firstRunOpensTheWelcomePage" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.152" />
+  <testcase name="theCitySearchOpensAndBackReturnsToTheRows" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.998" />
+  <testcase name="pickingAPresetWritesThePlace" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.015" />
+  <testcase name="pickingAnAvatarWritesTheProfile" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.348" />
+  <testcase name="backReturnsToThePreviousPage" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.915" />
+  <testcase name="okOnAToggleWritesTheRealPreference" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.217" />
+  <testcase name="anInterruptedRunResumesOnItsSavedPage" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.776" />
+  <testcase name="okOnTheLastRowLeavesForTheNextPage" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.015" />
+  <testcase name="theAvatarRowOpensTheGridAndBackReturnsToTheRows" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.892" />
+  <testcase name="theProfileRowsFollowTheWizardSteps" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.944" />
+  <testcase name="theWeatherRowsWriteTheRealPreference" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.038" />
+  <testcase name="theAccessRowsShowTheirLiveState" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.171" />
+  <testcase name="reRunStartsAtTheFirstPageAndBackCloses" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.811" />
+  <testcase name="choosingALanguageReportsItOnce" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.949" />
+  <testcase name="finishPageClosesTheWizardAndMarksSetupDone" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="1.192" />
+  <testcase name="theNameRowOpensTheKeyboardAndBackReturns" classname="com.whatuneed.ovisiontv.kotlin.ui.SetupScreenTest" time="0.907" />
+  <testcase name="canvasKeepsTheDesignAspectAndFitsTheWindow" classname="com.whatuneed.ovisiontv.kotlin.ui.TvCanvasTest" time="0.758" />
+  <testcase name="shift_makes_the_next_letter_a_capital" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.608" />
+  <testcase name="the_mode_toggle_lands_on_the_first_digit" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.502" />
+  <testcase name="backspace_removes_one_character" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.862" />
+  <testcase name="shift_reports_its_state_instead_of_only_changing_colour" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.353" />
+  <testcase name="done_returns_the_trimmed_name" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.167" />
+  <testcase name="an_empty_name_cancels_instead_of_renaming" classname="com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardTest" time="1.16" />
+  <testcase name="the_preview_names_the_clip_in_the_language_of_the_screen" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreviewTest" time="0.729" />
+  <testcase name="the_saver_takes_the_remote_from_the_focused_grid_immediately" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.739" />
+  <testcase name="a_real_still_keeps_the_saver_on_screen_even_when_the_clip_cannot_play" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="1.323" />
+  <testcase name="the_saver_fills_the_screen" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.716" />
+  <testcase name="back_asks_the_saver_to_close_without_looking_for_another_surface" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.76" />
+  <testcase name="a_saver_that_never_gets_a_picture_leaves_instead_of_owning_the_remote_invisibly" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="1.235" />
+  <testcase name="the_saver_is_not_removed_before_its_exit_finishes" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.716" />
+  <testcase name="the_saver_does_not_paint_its_background_before_it_has_a_picture" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.877" />
+  <testcase name="a_clip_that_cannot_play_keeps_the_saver_usable" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.845" />
+  <testcase name="any_remote_direction_asks_the_saver_to_close" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreenTest" time="0.79" />
+  <testcase name="an_app_without_a_banner_leaves_the_shelf_empty" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="1.179" />
+  <testcase name="the_selected_page_grows_into_a_capsule" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.738" />
+  <testcase name="focusing_the_carousel_moves_details_and_page_controls_to_the_bottom" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="1.184" />
+  <testcase name="the_shelf_caption_uppercases_in_the_launcher_language" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.696" />
+  <testcase name="a_new_app_replaces_the_shelf_underlay" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.749" />
+  <testcase name="the_dots_report_the_page_without_being_a_control" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="1.113" />
+  <testcase name="the_dots_name_the_recommendation_that_is_on_screen" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.788" />
+  <testcase name="rebuilding_the_focused_app_keeps_its_poster" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.751" />
+  <testcase name="a_burst_of_key_downs_counts_as_one_press" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeatTest" time="0.005" />
+  <testcase name="the_platform_repeat_count_is_not_trusted_alone" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeatTest" time="0.007" />
+  <testcase name="a_held_arrow_repeats_slowly_and_stops_on_release" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeatTest" time="1.02" />
+  <testcase name="text_keys_keep_their_native_repeat" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeatTest" time="0.002" />
+  <testcase name="a_lost_release_recovers_after_the_stale_window" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeatTest" time="0.002" />
+  <testcase name="ok_closes_the_panel" classname="com.whatuneed.ovisiontv.kotlin.ui.components.WeatherPanelTest" time="1.185" />
+</testsuite>

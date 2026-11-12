@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
@@ -35,6 +36,10 @@ class SetupActivity : TvRemoteActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appliedLanguage = LocalePreference.get(this)
+        // The wizard shares the process with Home: its preview caches must be
+        // sized from the hardware before the first composition, exactly as
+        // MainActivity and SettingsActivity do (audit A-10).
+        Adaptive.install(this)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {

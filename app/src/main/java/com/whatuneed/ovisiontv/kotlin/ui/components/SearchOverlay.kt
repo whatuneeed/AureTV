@@ -421,17 +421,19 @@ private fun ResultRow(
 
 @Composable
 private fun ResultArtwork(app: TvApp, scale: TvScale) {
+    val banner = rememberArt(app.banner)
+    val icon = rememberArt(app.icon)
     when {
-        app.banner != null -> Image(
-            bitmap = app.banner,
+        banner != null -> Image(
+            bitmap = banner,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
             filterQuality = FilterQuality.Medium,
         )
 
-        app.icon != null -> Image(
-            bitmap = app.icon,
+        icon != null -> Image(
+            bitmap = icon,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(0.55f),
             contentScale = ContentScale.Fit,

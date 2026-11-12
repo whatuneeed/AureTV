@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:27" hostname="DESKTOP-M0B4FRI" time="0.007">
+  <properties/>
+  <testcase name="a_plain_press_reaches_the_screen_once_after_the_settle" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.005"/>
+  <testcase name="two_presses_with_a_pause_are_two_presses" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.0"/>
+  <testcase name="a_held_button_sent_as_pairs_is_one_press" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.001"/>
+  <testcase name="a_lost_release_is_closed_before_a_new_press" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.0"/>
+  <testcase name="text_keys_are_not_merged" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.0"/>
+  <testcase name="a_real_auto_repeat_is_passed_through" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.0"/>
+  <testcase name="a_held_arrow_sent_as_pairs_moves_once" classname="com.whatuneed.ovisiontv.kotlin.input.TvKeyBurstFilterTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -11,6 +11,7 @@ internal object BinaryPlist {
     private const val TRAILER = 32
     private const val MAX_DEPTH = 32
     private const val MAX_OBJECTS = 1_000_000
+    private const val MAX_NODES = 100_000
 
     fun parseStrings(bytes: ByteArray): Map<String, String> {
         val root = parse(bytes) as? Map<*, *> ?: return emptyMap()
@@ -45,72 +46,89 @@ internal object BinaryPlist {
             return if (offset in 0 until bytes.size.toLong()) offset.toInt() else null
         }
 
+        val onStack = java.util.BitSet(objectCount.toInt())
+        var nodes = 0
+        var rejected = false
+
         fun objectAt(index: Long, depth: Int): Any? {
-            if (depth > MAX_DEPTH) return null
-            val start = offsetOf(index) ?: return null
-            val marker = bytes[start].toInt() and 0xff
-            val type = marker ushr 4
-            val info = marker and 0x0f
-            return when (type) {
-                0x0 -> when (info) {
-                    0x0 -> null
-                    0x8 -> false
-                    0x9 -> true
-                    else -> null
-                }
-                0x1 -> {
-                    val size = 1 shl info
-                    readUInt(bytes, start + 1, size)
-                }
-                0x2 -> {
-                    val size = 1 shl info
-                    when (size) {
-                        4 -> Float.fromBits(readUInt(bytes, start + 1, 4).toInt()).toDouble()
-                        8 -> Double.fromBits(readUInt(bytes, start + 1, 8))
+            if (depth > MAX_DEPTH || index < 0 || index >= objectCount) return null
+            if (onStack.get(index.toInt()) || nodes >= MAX_NODES) {
+                rejected = true
+                return null
+            }
+            nodes++
+            onStack.set(index.toInt())
+            try {
+                val start = offsetOf(index) ?: return null
+                val marker = bytes[start].toInt() and 0xff
+                val type = marker ushr 4
+                val info = marker and 0x0f
+                return when (type) {
+                    0x0 -> when (info) {
+                        0x0 -> null
+                        0x8 -> false
+                        0x9 -> true
                         else -> null
                     }
-                }
-                0x4 -> {
-                    val (count, header) = length(bytes, marker, start) ?: return null
-                    val from = start + header
-                    if (from + count > bytes.size) return null
-                    bytes.copyOfRange(from, from + count)
-                }
-                0x5, 0x6 -> {
-                    val (count, header) = length(bytes, marker, start) ?: return null
-                    val from = start + header
-                    val size = if (type == 0x5) count else count * 2
-                    if (from + size > bytes.size) return null
-                    val charset = if (type == 0x5) Charsets.UTF_8 else Charsets.UTF_16BE
-                    String(bytes, from, size, charset)
-                }
-                0xa, 0xc -> {
-                    val (count, header) = length(bytes, marker, start) ?: return null
-                    val from = start + header
-                    if (from + count * refSize > bytes.size) return null
-                    List(count) { indexInArray ->
-                        val ref = readUInt(bytes, from + indexInArray * refSize, refSize)
-                        objectAt(ref, depth + 1)
+                    0x1 -> {
+                        val size = 1 shl info
+                        readUInt(bytes, start + 1, size)
                     }
-                }
-                0xd -> {
-                    val (count, header) = length(bytes, marker, start) ?: return null
-                    val keysAt = start + header
-                    val valuesAt = keysAt + count * refSize
-                    if (valuesAt + count * refSize > bytes.size) return null
-                    val map = HashMap<Any?, Any?>(count)
-                    for (indexInDict in 0 until count) {
-                        val keyRef = readUInt(bytes, keysAt + indexInDict * refSize, refSize)
-                        val valueRef = readUInt(bytes, valuesAt + indexInDict * refSize, refSize)
-                        map[objectAt(keyRef, depth + 1)] = objectAt(valueRef, depth + 1)
+                    0x2 -> {
+                        val size = 1 shl info
+                        when (size) {
+                            4 -> Float.fromBits(readUInt(bytes, start + 1, 4).toInt()).toDouble()
+                            8 -> Double.fromBits(readUInt(bytes, start + 1, 8))
+                            else -> null
+                        }
                     }
-                    map
+                    0x4 -> {
+                        val (count, header) = length(bytes, marker, start) ?: return null
+                        val from = start + header
+                        if (from + count > bytes.size) return null
+                        bytes.copyOfRange(from, from + count)
+                    }
+                    0x5, 0x6 -> {
+                        val (count, header) = length(bytes, marker, start) ?: return null
+                        val from = start + header
+                        val size = if (type == 0x5) count else count * 2
+                        if (from + size > bytes.size) return null
+                        val charset = if (type == 0x5) Charsets.UTF_8 else Charsets.UTF_16BE
+                        String(bytes, from, size, charset)
+                    }
+                    0xa, 0xc -> {
+                        val (count, header) = length(bytes, marker, start) ?: return null
+                        val from = start + header
+                        if (from + count * refSize > bytes.size) return null
+                        List(count) { indexInArray ->
+                            val ref = readUInt(bytes, from + indexInArray * refSize, refSize)
+                            objectAt(ref, depth + 1)
+                        }
+                    }
+                    0xd -> {
+                        val (count, header) = length(bytes, marker, start) ?: return null
+                        val keysAt = start + header
+                        val valuesAt = keysAt + count * refSize
+                        if (valuesAt + count * refSize > bytes.size) return null
+                        val map = HashMap<Any?, Any?>(count)
+                        for (indexInDict in 0 until count) {
+                            val keyRef = readUInt(bytes, keysAt + indexInDict * refSize, refSize)
+                            val valueRef = readUInt(bytes, valuesAt + indexInDict * refSize, refSize)
+                            map[objectAt(keyRef, depth + 1)] = objectAt(valueRef, depth + 1)
+                        }
+                        map
+                    }
+                    else -> null
                 }
-                else -> null
+            } finally {
+                // Shared DAG refs are not cycles: the mark must leave with the node.
+                onStack.clear(index.toInt())
             }
         }
 
-        return objectAt(topObject, 0)
+        val root = objectAt(topObject, 0)
+        // A cycle or an exhausted budget leaves null holes; a malformed table must fail as a whole.
+        return if (rejected) null else root
     }
 
     private fun length(bytes: ByteArray, marker: Int, start: Int): Pair<Int, Int>? {

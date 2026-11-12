@@ -2,6 +2,11 @@ package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.Locale
@@ -60,33 +65,83 @@ class KidsStore(context: Context) {
 
     fun hasPin(profileId: String): Boolean = !prefs.getString(KEY_PIN_HASH + profileId, null).isNullOrEmpty()
 
-    fun checkPin(profileId: String, pin: String): Boolean {
-        if (pin.length < KidsMode.PIN_LENGTH) return false
-        val salt = prefs.getString(KEY_PIN_SALT + profileId, null) ?: return false
-        val expected = prefs.getString(KEY_PIN_HASH + profileId, null) ?: return false
-        return KidsCrypto.matches(salt, expected, pin)
+    enum class Verification { PASSED, WRONG, LOCKED, CHANGED }
+
+    private data class Credential(val salt: String, val hash: String, val revision: Long)
+
+    private fun credential(profileId: String, recovery: Boolean): Credential? {
+        val salt = prefs.getString((if (recovery) KEY_REC_SALT else KEY_PIN_SALT) + profileId, null)
+            ?: return null
+        val hash = prefs.getString((if (recovery) KEY_REC_HASH else KEY_PIN_HASH) + profileId, null)
+            ?: return null
+        return Credential(salt, hash, revisions[profileId] ?: 0L)
     }
 
-    fun setPin(profileId: String, pin: String) {
+    private suspend fun verify(
+        profileId: String,
+        value: String,
+        recovery: Boolean,
+        countAttempt: Boolean,
+    ): Verification {
+        val snapshot = synchronized(prefs) {
+            if (countAttempt && lockRemaining(profileId) > 0) return Verification.LOCKED
+            credential(profileId, recovery) ?: return Verification.CHANGED
+        }
+        val matches = KidsCrypto.matches(snapshot.salt, snapshot.hash, value)
+        currentCoroutineContext().ensureActive()
+        // Never hold this lock during PBKDF2: clearing a PIN must not block the UI.
+        return synchronized(prefs) {
+            if (credential(profileId, recovery) != snapshot) return Verification.CHANGED
+            if (countAttempt) {
+                if (lockRemaining(profileId) > 0) return Verification.LOCKED
+                if (matches) clearFailures(profileId) else recordFailure(profileId)
+            }
+            if (matches) Verification.PASSED else Verification.WRONG
+        }
+    }
+
+    suspend fun checkPin(profileId: String, pin: String): Boolean =
+        pin.length == KidsMode.PIN_LENGTH &&
+            verify(profileId, pin, recovery = false, countAttempt = false) == Verification.PASSED
+
+    suspend fun verifyPin(profileId: String, pin: String): Verification {
+        if (pin.length != KidsMode.PIN_LENGTH) return Verification.WRONG
+        return verify(profileId, pin, recovery = false, countAttempt = true)
+    }
+
+    suspend fun verifyRecovery(profileId: String, answer: String): Verification =
+        verify(profileId, KidsCrypto.normalizeAnswer(answer), recovery = true, countAttempt = true)
+
+    suspend fun setPin(profileId: String, pin: String) {
+        val revision = synchronized(prefs) { revisions[profileId] ?: 0L }
         val salt = KidsCrypto.newSalt()
-        prefs.edit()
-            .putString(KEY_PIN_SALT + profileId, salt)
-            .putString(KEY_PIN_HASH + profileId, KidsCrypto.hash(salt, pin))
-            .apply()
-        // A new PIN starts from a clean slate: an old lockout must not outlive it.
-        clearFailures(profileId)
+        val hash = KidsCrypto.hash(salt, pin)
+        currentCoroutineContext().ensureActive()
+        synchronized(prefs) {
+            if ((revisions[profileId] ?: 0L) != revision) throw CancellationException("Credentials changed")
+            prefs.edit()
+                .putString(KEY_PIN_SALT + profileId, salt)
+                .putString(KEY_PIN_HASH + profileId, hash)
+                .remove(KEY_FAILS + profileId)
+                .remove(KEY_LOCK_UNTIL + profileId)
+                .apply()
+            revisions[profileId] = revision + 1
+        }
     }
 
     fun clearPin(profileId: String) {
-        prefs.edit()
-            .remove(KEY_PIN_SALT + profileId)
-            .remove(KEY_PIN_HASH + profileId)
-            .remove(KEY_REC_SALT + profileId)
-            .remove(KEY_REC_HASH + profileId)
-            .remove(KEY_REC_HINT + profileId)
-            .remove(KEY_FAILS + profileId)
-            .remove(KEY_LOCK_UNTIL + profileId)
-            .apply()
+        synchronized(prefs) {
+            prefs.edit()
+                .remove(KEY_PIN_SALT + profileId)
+                .remove(KEY_PIN_HASH + profileId)
+                .remove(KEY_REC_SALT + profileId)
+                .remove(KEY_REC_HASH + profileId)
+                .remove(KEY_REC_HINT + profileId)
+                .remove(KEY_FAILS + profileId)
+                .remove(KEY_LOCK_UNTIL + profileId)
+                .apply()
+            revisions[profileId] = (revisions[profileId] ?: 0L) + 1
+        }
     }
 
     /** Deleting a profile removes everything it gated, not just its PIN. */
@@ -100,20 +155,22 @@ class KidsStore(context: Context) {
         return (until - now).coerceAtLeast(0L)
     }
 
-    fun recordFailure(profileId: String, now: Long = System.currentTimeMillis()): Int {
+    fun recordFailure(profileId: String, now: Long = System.currentTimeMillis()): Int = synchronized(prefs) {
         val fails = prefs.getInt(KEY_FAILS + profileId, 0) + 1
         val delay = KidsMode.lockDelayMillis(fails)
         val editor = prefs.edit().putInt(KEY_FAILS + profileId, fails)
         if (delay > 0) editor.putLong(KEY_LOCK_UNTIL + profileId, now + delay)
         editor.apply()
-        return fails
+        fails
     }
 
     fun clearFailures(profileId: String) {
-        prefs.edit()
-            .remove(KEY_FAILS + profileId)
-            .remove(KEY_LOCK_UNTIL + profileId)
-            .apply()
+        synchronized(prefs) {
+            prefs.edit()
+                .remove(KEY_FAILS + profileId)
+                .remove(KEY_LOCK_UNTIL + profileId)
+                .apply()
+        }
     }
 
     fun recoveryHint(profileId: String): String =
@@ -122,23 +179,29 @@ class KidsStore(context: Context) {
     fun hasRecovery(profileId: String): Boolean =
         !prefs.getString(KEY_REC_HASH + profileId, null).isNullOrEmpty()
 
-    fun setRecovery(profileId: String, hint: String, answer: String) {
+    suspend fun setRecovery(profileId: String, hint: String, answer: String) {
         if (answer.trim().isEmpty()) return
+        val revision = synchronized(prefs) { revisions[profileId] ?: 0L }
         val salt = KidsCrypto.newSalt()
-        prefs.edit()
-            .putString(KEY_REC_HINT + profileId, hint.trim())
-            .putString(KEY_REC_SALT + profileId, salt)
-            .putString(KEY_REC_HASH + profileId, KidsCrypto.hash(salt, KidsCrypto.normalizeAnswer(answer)))
-            .apply()
+        val hash = KidsCrypto.hash(salt, KidsCrypto.normalizeAnswer(answer))
+        currentCoroutineContext().ensureActive()
+        synchronized(prefs) {
+            if ((revisions[profileId] ?: 0L) != revision) throw CancellationException("Credentials changed")
+            prefs.edit()
+                .putString(KEY_REC_HINT + profileId, hint.trim())
+                .putString(KEY_REC_SALT + profileId, salt)
+                .putString(KEY_REC_HASH + profileId, hash)
+                .apply()
+            revisions[profileId] = revision + 1
+        }
     }
 
-    fun checkRecovery(profileId: String, answer: String): Boolean {
-        val salt = prefs.getString(KEY_REC_SALT + profileId, null) ?: return false
-        val expected = prefs.getString(KEY_REC_HASH + profileId, null) ?: return false
-        return KidsCrypto.matches(salt, expected, KidsCrypto.normalizeAnswer(answer))
-    }
+    suspend fun checkRecovery(profileId: String, answer: String): Boolean =
+        verify(profileId, KidsCrypto.normalizeAnswer(answer), recovery = true, countAttempt = false) ==
+            Verification.PASSED
 
     companion object {
+        private val revisions = mutableMapOf<String, Long>()
         const val FILE = "kids_mode"
         private const val KEY_ALLOW = "allow_"
         private const val KEY_PIN_SALT = "pin_salt_"
@@ -164,16 +227,28 @@ internal object KidsCrypto {
         return Base64.getEncoder().encodeToString(bytes)
     }
 
-    fun hash(salt: String, value: String): String {
-        val out = pbkdf2(salt, value, KDF_ITERATIONS)
+    suspend fun hash(salt: String, value: String): String {
+        val out = withContext(Dispatchers.Default) { pbkdf2(salt, value, KDF_ITERATIONS) }
         return "$KDF\$$KDF_ALG\$$KDF_ITERATIONS\$" + Base64.getEncoder().encodeToString(out)
     }
 
-    fun matches(salt: String, expected: String, value: String): Boolean {
+    suspend fun matches(salt: String, expected: String, value: String): Boolean {
         val parts = expected.split('$')
-        if (parts.size != 4 || parts[0] != KDF) return false
+        if (parts.size != 4 || parts[0] != KDF || parts[1] != KDF_ALG) return false
         val iterations = parts[2].toIntOrNull() ?: return false
-        val out = pbkdf2(salt, value, iterations)
+        // Cap at our own KDF cost: a larger stored count would be a CPU DoS.
+        if (iterations !in 1..KDF_ITERATIONS) return false
+        // Fail closed on a corrupt salt, but let cancellation propagate so a
+        // cancelled verify does not abort the caller's setPin via ensureActive().
+        val out = withContext(Dispatchers.Default) {
+            try {
+                pbkdf2(salt, value, iterations)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+        } ?: return false
         val encoded = Base64.getEncoder().encodeToString(out)
         return expected == "$KDF\$${parts[1]}\$$iterations\$$encoded"
     }

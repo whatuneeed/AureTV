@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:26" hostname="DESKTOP-M0B4FRI" time="0.622">
+  <properties/>
+  <testcase name="recoveryAnswersIgnoreCaseAndSurroundingSpace" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.296"/>
+  <testcase name="kidsFlagSurvivesTheProfileFile" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.003"/>
+  <testcase name="filterLiftsAllowedAppsOutOfFoldersAndDropsEmptyOnes" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="everyStoredPinGetsItsOwnSalt" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.001"/>
+  <testcase name="pinAcceptsAtMostFourDigitsAndRejectsOtherCharacters" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.003"/>
+  <testcase name="pinHashVerifiesOnlyTheSamePin" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.176"/>
+  <testcase name="nonPositiveIterationsFailClosedWithoutThrowing" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.034"/>
+  <testcase name="fourWrongPinsCostNothingAndTheFifthLocksForThirtySeconds" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="leavingKidsWithAPinIsGated" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.001"/>
+  <testcase name="switchingBetweenKidsProfilesOrIntoKidsIsNotGated" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="filterKeepsOnlyAllowedAppsAndTheLauncherItself" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="invalidBase64SaltFailsClosedWithoutThrowing" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.034"/>
+  <testcase name="aFileFromBeforeKidsModeReadsAsAPlainProfile" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="anUnsupportedAlgorithmTagIsRejected" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.036"/>
+  <testcase name="absurdIterationCountIsRejectedWithoutComputing" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.036"/>
+  <testcase name="leavingKidsWithoutAPinIsNotGated" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <testcase name="switchingInsideAPlainProfileIsNeverGated" classname="com.whatuneed.ovisiontv.kotlin.data.KidsModeTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

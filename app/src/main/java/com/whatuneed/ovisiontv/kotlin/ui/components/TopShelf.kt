@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
+import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.loadShelfBanner
 import com.whatuneed.ovisiontv.kotlin.ui.ArtEasing
@@ -76,6 +78,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.roundToInt
 
@@ -383,15 +386,27 @@ private fun ShelfDots(
 private val shelfArtCache =
     object : LruCache<String, ImageBitmap>(Adaptive.budgets.shelfArtEntries) {}
 
+/**
+ * Bumped by every trim. The carousel remembers the posters it has shown in
+ * [rememberShelfArts]; that map was a second owner of the same bitmaps, so an
+ * eviction freed nothing (audit A-02). A bump makes it drop its entries, which
+ * leaves the LruCache as the only owner and lets the trim actually return memory.
+ */
+private val shelfArtEpoch = mutableIntStateOf(0)
+
 /** Called from MemoryPressure; the provider still holds every poster. */
 internal fun trimShelfArtCache(percent: Int) {
     if (percent >= 100) shelfArtCache.evictAll()
     else shelfArtCache.trimToSize(shelfArtCache.maxSize() * (100 - percent) / 100)
+    shelfArtEpoch.intValue++
 }
 
 /** Follows a profile downgrade: the entry budget may only shrink. */
 internal fun trimShelfArtCacheTo(entries: Int) {
-    if (entries < shelfArtCache.maxSize()) shelfArtCache.trimToSize(entries)
+    if (entries < shelfArtCache.maxSize()) {
+        shelfArtCache.trimToSize(entries)
+        shelfArtEpoch.intValue++
+    }
 }
 
 // P-GPU-2: the scrim used to be three full-screen gradient rects per frame.
@@ -466,7 +481,16 @@ private fun shelfScrim(width: Int, height: Int): ImageBitmap {
 private fun rememberShelfArts(cards: List<ShelfCard>): Map<String, ImageBitmap> {
     val context = LocalContext.current
     val arts = remember { mutableStateMapOf<String, ImageBitmap>() }
-    LaunchedEffect(cards) {
+    val epoch = shelfArtEpoch.intValue
+    var loadedEpoch by remember { mutableIntStateOf(epoch) }
+    LaunchedEffect(cards, epoch) {
+        // A trim dropped the cache entries: let go of the remembered posters
+        // before reloading, or they outlive the eviction that was meant to free
+        // them (A-02).
+        if (loadedEpoch != epoch) {
+            arts.clear()
+            loadedEpoch = epoch
+        }
         val current = cards.mapNotNull { it.artUri }.distinct()
         for (uri in current) {
             if (arts[uri] != null) continue
@@ -495,49 +519,82 @@ private fun rememberShelfArts(cards: List<ShelfCard>): Map<String, ImageBitmap> 
  */
 @Composable
 private fun rememberShelfBanner(app: TvApp): ImageBitmap? {
-    val fallback = app.banner ?: return null
+    if (app.banner == null) return null
+    val fallback = rememberArt(app.banner)
     val context = LocalContext.current
-    var banner by remember(app.packageName, app.banner) { mutableStateOf(fallback) }
+    var wide by remember(app.packageName, app.banner) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(app.packageName, app.banner) {
-        val wide = loadShelfBanner(
+        val thumbnail = fallback ?: withContext(Dispatchers.IO) {
+            AppArtCache.load(context, app.banner)
+        }
+        wide = loadShelfBanner(
             context,
             app.packageName,
             TvOs.SCREEN_WIDTH.roundToInt(),
             TvOs.SCREEN_HEIGHT.roundToInt(),
-        )
-        if (wide != null && wide.width > fallback.width) banner = wide
+        )?.takeIf { thumbnail == null || it.width > thumbnail.width }
     }
-    return banner
+    // A smaller source keeps the grid thumbnail instead of being upscaled.
+    return wide?.takeIf { fallback == null || it.width > fallback.width } ?: fallback
 }
+
+/**
+ * TV providers publish posters on hosts that may hang. The old path opened the
+ * URL twice with no connect/read timeout and no size cap, so one dead host held
+ * a Dispatchers.IO thread for minutes and could allocate an unbounded buffer
+ * (audit A-04). Now the bytes are read once, bounded, and decoded from memory.
+ */
+private const val ART_TIMEOUT_MS = 10_000
+private const val ART_MAX_BYTES = 8 * 1024 * 1024
 
 private fun loadShelfArt(context: Context, value: String): ImageBitmap? = runCatching {
     val uri = Uri.parse(value)
-    openArtStream(context, uri, value)?.use { stream ->
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeStream(stream, null, bounds)
-        var sample = 1
-        val maxPx = Adaptive.budgets.shelfArtMaxPx
-        while (bounds.outWidth / sample > maxPx || bounds.outHeight / sample > maxPx) {
-            sample *= 2
+    val bytes = readArtBytes(context, uri, value) ?: return@runCatching null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    val maxPx = Adaptive.budgets.shelfArtMaxPx
+    while (bounds.outWidth / sample > maxPx || bounds.outHeight / sample > maxPx) {
+        sample *= 2
+    }
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+    }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+}.getOrNull()
+
+private fun readArtBytes(context: Context, uri: Uri, value: String): ByteArray? = runCatching {
+    if (uri.scheme == "http" || uri.scheme == "https") {
+        val connection = URL(value).openConnection() as HttpURLConnection
+        connection.connectTimeout = ART_TIMEOUT_MS
+        connection.readTimeout = ART_TIMEOUT_MS
+        connection.instanceFollowRedirects = true
+        try {
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            if (connection.contentLengthLong > ART_MAX_BYTES) return null
+            connection.inputStream.use { it.readAtMost(ART_MAX_BYTES) }
+        } finally {
+            connection.disconnect()
         }
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = sample
-            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
-        }
-        openArtStream(context, uri, value)?.use { again ->
-            BitmapFactory.decodeStream(again, null, options)?.asImageBitmap()
-        }
+    } else {
+        context.contentResolver.openInputStream(uri)?.use { it.readAtMost(ART_MAX_BYTES) }
     }
 }.getOrNull()
 
-private fun openArtStream(
-    context: Context,
-    uri: Uri,
-    value: String,
-): java.io.InputStream? = runCatching {
-    if (uri.scheme == "http" || uri.scheme == "https") {
-        URL(value).openStream()
-    } else {
-        context.contentResolver.openInputStream(uri)
+/** Reads a stream into one buffer, refusing anything over [limit] bytes. */
+private fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
+    val out = java.io.ByteArrayOutputStream(COPY_CHUNK)
+    val buffer = ByteArray(COPY_CHUNK)
+    var total = 0
+    while (true) {
+        val read = read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > limit) return null
+        out.write(buffer, 0, read)
     }
-}.getOrNull()
+    return out.toByteArray()
+}
+
+private const val COPY_CHUNK = 64 * 1024

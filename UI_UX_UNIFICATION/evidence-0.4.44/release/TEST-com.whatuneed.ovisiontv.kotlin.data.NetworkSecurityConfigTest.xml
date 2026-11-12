@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.NetworkSecurityConfigTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:09" hostname="DESKTOP-M0B4FRI" time="0.002">
+  <properties/>
+  <testcase name="the_cdn_host_is_the_only_cleartext_exception" classname="com.whatuneed.ovisiontv.kotlin.data.NetworkSecurityConfigTest" time="0.002"/>
+  <testcase name="cleartext_stays_disabled_for_every_host_by_default" classname="com.whatuneed.ovisiontv.kotlin.data.NetworkSecurityConfigTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

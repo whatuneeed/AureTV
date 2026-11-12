@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-11T20:12:48" hostname="DESKTOP-M0B4FRI" time="0.05">
+  <properties/>
+  <testcase name="matchIsCaseInsensitive" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.021"/>
+  <testcase name="dashInsideTheQueryStillMatchesASpaceInTheLabel" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="blankQueryHasNoResults" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="noMatchReturnsEmpty" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.004"/>
+  <testcase name="prefixRanksAboveWordAndWordAboveSubstring" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.001"/>
+  <testcase name="wordsMayBeSplitByNbsp" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.001"/>
+  <testcase name="yoMatchesYe" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.004"/>
+  <testcase name="duplicatePackageIsListedOnce" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="wordOrderDoesNotMatter" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.001"/>
+  <testcase name="queryWithExtraSpacesStillMatches" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="homeAppsFlattenFoldersAndHiddenApps" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.004"/>
+  <testcase name="exactNameWins" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="homeAppsDropsDuplicates" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <testcase name="hyphensMatchASpaceAndTheOtherWayAround" classname="com.whatuneed.ovisiontv.kotlin.data.AppSearchTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,241 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:mapDebugSourceSetPaths
+> Task :app:checkDebugAarMetadata
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebug
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:buildKotlinToolingMetadata
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResValues
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResources
+> Task :app:mergeDebugResources
+> Task :app:packageReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileRelease
+> Task :app:preReleaseUnitTestBuild UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:javaPreCompileReleaseUnitTest
+> Task :app:generateDebugAndroidTestResValues
+> Task :app:extractProguardFiles
+> Task :app:processDebugAndroidTestManifest
+> Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:checkDebugAndroidTestAarMetadata
+> Task :app:mapDebugAndroidTestSourceSetPaths
+> Task :app:generateDebugAndroidTestResources
+> Task :app:javaPreCompileDebugAndroidTest
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugJniLibFolders
+> Task :app:compressDebugAssets
+> Task :app:validateSigningDebug
+11-11 23:29:54.561 10580 20828 W aapt2.exe: AssetsProvider.cpp:114 Failed to stat file 'C:\Users\Никита Скуратов\AppData\Local\Android\Sdk\platforms\android-35\android.jar': No such file or directory
+
+> Task :app:mergeDebugNativeLibs
+> Task :app:writeDebugAppMetadata
+> Task :app:checkDebugDuplicateClasses
+> Task :app:writeDebugSigningConfigVersions
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
+
+> Task :app:mergeDebugAndroidTestShaders
+> Task :app:compileDebugAndroidTestShaders NO-SOURCE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugAndroidTestAssets
+> Task :app:compressDebugAndroidTestAssets
+> Task :app:desugarDebugAndroidTestFileDependencies
+> Task :app:mergeDebugAndroidTestJniLibFolders
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest
+> Task :app:writeDebugAndroidTestSigningConfigVersions
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:checkDebugAndroidTestDuplicateClasses
+> Task :app:mergeReleaseNativeLibs
+> Task :app:mergeLibDexDebugAndroidTest
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
+
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:processDebugResources
+> Task :app:collectReleaseDependencies
+> Task :app:mergeExtDexDebugAndroidTest
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeDebugAndroidTestResources
+11-11 23:29:59.276 21208  2080 W aapt2.exe: AssetsProvider.cpp:114 Failed to stat file 'C:\Users\Никита Скуратов\AppData\Local\Android\Sdk\platforms\android-35\android.jar': No such file or directory
+
+> Task :app:processDebugAndroidTestResources
+> Task :app:mergeReleaseResources
+11-11 23:30:02.423 21208  2080 W aapt2.exe: AssetsProvider.cpp:114 Failed to stat file 'C:\Users\Никита Скуратов\AppData\Local\Android\Sdk\platforms\android-35\android.jar': No such file or directory
+
+> Task :app:processReleaseResources
+> Task :app:convertLinkedResourcesToProtoRelease
+> Task :app:mergeExtDexDebug
+> Task :app:compileDebugKotlin
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/MainActivity.kt:157:49 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/DeviceFacts.kt:136:50 'val connectionInfo: WifiInfo!' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:34:29 'static field TRIM_MEMORY_RUNNING_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:35:29 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:36:29 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:42:29 'static field TRIM_MEMORY_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:43:29 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugJavaRes
+> Task :app:generateDebugLintReportModel
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+
+> Task :app:compileReleaseKotlin
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/MainActivity.kt:157:49 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/DeviceFacts.kt:136:50 'val connectionInfo: WifiInfo!' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:34:29 'static field TRIM_MEMORY_RUNNING_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:35:29 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:36:29 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:42:29 'static field TRIM_MEMORY_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:43:29 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+
+> Task :app:dexBuilderDebug
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:processReleaseJavaRes
+> Task :app:generateDebugAndroidTestLintModel
+> Task :app:generateDebugUnitTestLintModel
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:bundleReleaseClassesToRuntimeJar
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeReleaseGeneratedProguardFiles
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:13:60 'static field TRIM_MEMORY_RUNNING_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:20:60 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:27:60 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:45:33 'static field TRIM_MEMORY_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:46:33 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+
+> Task :app:bundleReleaseClassesToCompileJar
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:mergeProjectDexDebug
+> Task :app:processDebugUnitTestJavaRes
+
+> Task :app:compileReleaseUnitTestKotlin
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:13:60 'static field TRIM_MEMORY_RUNNING_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:20:60 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:27:60 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:45:33 'static field TRIM_MEMORY_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/test/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressureTest.kt:46:33 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintAnalyzeDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:testDebugUnitTest
+> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processReleaseUnitTestJavaRes
+> Task :app:compileDebugAndroidTestKotlin
+> Task :app:testReleaseUnitTest
+> Task :app:compileDebugAndroidTestJavaWithJavac
+> Task :app:dexBuilderDebugAndroidTest
+> Task :app:mergeDebugAndroidTestGlobalSynthetics
+> Task :app:processDebugAndroidTestJavaRes
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:mergeProjectDexDebugAndroidTest
+> Task :app:mergeDebugAndroidTestJavaResource
+> Task :app:packageDebugAndroidTest
+> Task :app:createDebugAndroidTestApkListingFileRedirect
+> Task :app:lintAnalyzeDebugAndroidTest
+> Task :app:lintAnalyzeDebugUnitTest
+> Task :app:lintVitalAnalyzeRelease
+
+> Task :app:connectedDebugAndroidTest
+Starting 194 tests on hume-tv(AVD) - 14
+
+> Task :app:minifyReleaseWithR8
+
+hume-tv(AVD) - 14 Tests 10/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 11/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 19/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 21/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 26/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 32/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 40/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 49/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 57/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 64/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 65/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 67/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 68/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 69/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 75/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 81/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 87/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 93/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 101/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 108/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 116/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 124/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 133/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 138/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 143/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 152/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 161/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 165/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 173/194 completed. (0 skipped) (0 failed)
+hume-tv(AVD) - 14 Tests 182/194 completed. (0 skipped) (0 failed)
+Finished 194 tests on hume-tv(AVD) - 14
+
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:compileReleaseArtProfile
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/build/reports/lint-results-debug.html
+
+> Task :app:lintDebug
+> Task :app:shrinkReleaseRes
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+
+BUILD SUCCESSFUL in 9m 8s
+137 actionable tasks: 137 executed

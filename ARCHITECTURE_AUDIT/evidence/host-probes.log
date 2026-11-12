@@ -1,0 +1,8 @@
+PROFILE: healthy kids=true; blank-name repair kids=false (reproduced)
+CREDENTIAL: malformed salt and zero iterations throw; unsupported algorithm tag accepted (JVM helper reproduced, Android crash not run)
+FOLDER: missing-ID order covers all apps but gets a new ID on each parse (reproduced)
+SAVER: hiding A then disabling B leaves enabled themes but zero playable clips (reproduced)
+PLIST: depth=6 bytes=66 allocated-array-nodes=63
+PLIST: depth=10 bytes=82 allocated-array-nodes=1023
+PLIST: depth=14 bytes=98 allocated-array-nodes=16383
+BOUNDED PROBES COMPLETE: no network, no Android settings writes, no depth-32/OOM payload executed

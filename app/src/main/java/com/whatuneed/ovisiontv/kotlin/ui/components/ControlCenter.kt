@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.Manifest
+import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -441,6 +442,20 @@ internal fun ControlCenter(
     fun openSystem(intent: Intent) {
         if (onOpenSystem != null) onOpenSystem(intent) else openSystemScreen(context, intent)
     }
+    // Asking for the sleep permission is system navigation too: it goes
+    // through the same kids gate as the system tiles, OEM fallback included.
+    fun requestSleepPermission() {
+        val intent = SleepControls.permissionIntent(context)
+        if (intent == null) {
+            Toast.makeText(context, R.string.settings_power_unavailable, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (intent.action != DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN) {
+            Toast.makeText(context, R.string.settings_power_accessibility_hint, Toast.LENGTH_LONG)
+                .show()
+        }
+        openSystem(intent)
+    }
     val keyRepeat = rememberTvKeyRepeat()
     val scope = rememberCoroutineScope()
     val network = rememberNetworkKind()
@@ -523,7 +538,7 @@ internal fun ControlCenter(
         status = null,
         glyph = SectionGlyph.power,
         action = {
-            if (!SleepControls.powerOff(context)) SleepControls.requestPermission(context)
+            if (!SleepControls.powerOff(context)) requestSleepPermission()
         },
     )
     val sound = CcTile(
@@ -585,7 +600,7 @@ internal fun ControlCenter(
                 action = {
                     if (!SleepControls.hasAdmin(context)) {
                         requestClose(false)
-                        SleepControls.requestPermission(context)
+                        requestSleepPermission()
                     } else {
                         SleepControls.setTimer(
                             context,

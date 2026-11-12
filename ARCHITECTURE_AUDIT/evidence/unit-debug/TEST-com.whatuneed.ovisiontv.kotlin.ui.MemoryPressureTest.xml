@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-11T20:12:45" hostname="DESKTOP-M0B4FRI" time="0.04">
+  <properties/>
+  <testcase name="unknown_levels_trim_lightly_and_keep_the_shelf" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.04"/>
+  <testcase name="background_and_severe_levels_drop_the_shelf_too" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.0"/>
+  <testcase name="running_low_drops_half" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.0"/>
+  <testcase name="running_critical_drops_everything_except_the_shelf" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.0"/>
+  <testcase name="running_moderate_drops_a_quarter_but_keeps_the_shelf" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.0"/>
+  <testcase name="ui_hidden_releases_the_saver_frames_but_not_the_shelf" classname="com.whatuneed.ovisiontv.kotlin.ui.MemoryPressureTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

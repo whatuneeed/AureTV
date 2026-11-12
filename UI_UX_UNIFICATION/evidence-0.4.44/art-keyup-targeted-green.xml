@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest" tests="3" failures="0" errors="0" skipped="0" time="14.127" timestamp="2026-11-11T19:28:27" hostname="localhost">
+  <properties>
+    <property name="device" value="hume-tv(AVD) - 14" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="back_cancels_during_pin_verification" classname="com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest" time="6.897" />
+  <testcase name="key_up_during_hashing_allows_the_next_real_ok" classname="com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest" time="5.704" />
+  <testcase name="background_trim_restores_the_settings_activity_icon" classname="com.whatuneed.ovisiontv.kotlin.ui.components.TopShelfTest" time="0.848" />
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardModeLabelsTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:09" hostname="DESKTOP-M0B4FRI" time="0.01">
+  <properties/>
+  <testcase name="every_layout_switch_has_its_own_spoken_name" classname="com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardModeLabelsTest" time="0.01"/>
+  <testcase name="a_mode_key_without_a_spoken_name_falls_back_to_its_label" classname="com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardModeLabelsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

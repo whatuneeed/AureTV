@@ -1,0 +1,3 @@
+    versionCode=65 minSdk=28 targetSdk=35
+    versionName=0.4.45
+    lastUpdateTime=2026-11-12 15:38:40

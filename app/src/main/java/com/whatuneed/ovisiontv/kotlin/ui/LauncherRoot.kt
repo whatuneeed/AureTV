@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.animation.ValueAnimator
+import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.media3.exoplayer.ExoPlayer
+import com.whatuneed.ovisiontv.kotlin.KidsEntryGrant
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
@@ -67,6 +69,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SaverPlaylist
 import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
 import com.whatuneed.ovisiontv.kotlin.data.SaverSchedule
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
+import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
@@ -216,13 +219,21 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // composable): that draw uploads the GPU texture now, so the saver's first
     // frame is the picture itself and never the background waiting for it.
     var warmStill by remember { mutableStateOf<Bitmap?>(null) }
+    val trimTick = MemoryPressure.trimTick.intValue
+    LaunchedEffect(trimTick) {
+        if (trimTick > 0) warmStill = null
+    }
     LaunchedEffect(foreground, saverItems, saverDelay) {
+        warmStill = null
         if (!foreground || saverDelay == SaverDelay.NEVER) return@LaunchedEffect
         val clip = saverItems.firstOrNull() ?: return@LaunchedEffect
-        warmStill = withContext(Dispatchers.IO) {
+        val beforeLoad = MemoryPressure.trimTick.intValue
+        val frame = withContext(Dispatchers.IO) {
             AerialPosterStore.load(context, clip.id)
                 ?: AerialPreviewStore.load(context, clip.previewUrl)
         }
+        // A trim must not immediately allocate the warm frame it just dropped.
+        if (MemoryPressure.trimTick.intValue == beforeLoad) warmStill = frame
     }
 
     // The saver's decoder pair is built while Home is idle: constructing two
@@ -589,14 +600,16 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                     pinGate = null
                     gateRecover = false
                     when (gate) {
-                        PinGate.SETTINGS -> runCatching {
-                            context.startActivity(
-                                Intent(context, SettingsActivity::class.java)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    // The Settings activity re-checks the gate on
-                                    // a direct start; this extra marks the pass.
-                                    .putExtra(SettingsActivity.EXTRA_KIDS_OK, true),
-                            )
+                        PinGate.SETTINGS -> {
+                            // The grant lives in this process: an external
+                            // intent cannot forge the PIN pass.
+                            KidsEntryGrant.issue(profile.id)
+                            runCatching {
+                                context.startActivity(
+                                    Intent(context, SettingsActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }.onFailure { KidsEntryGrant.clear() }
                         }
 
                         PinGate.PROFILE -> {
@@ -682,6 +695,11 @@ private fun startSystemIntent(context: Context, intent: Intent) {
         context.startActivity(intent)
     } catch (_: Exception) {
         // Some builds have no handler for a package's settings page.
+        // A refused admin screen still owes the OEM accessibility fallback;
+        // this runs only after the gate authorized the navigation.
+        if (intent.action == DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN) {
+            SleepControls.requestPermission(context)
+        }
     }
 }
 

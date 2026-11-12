@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:29" hostname="DESKTOP-M0B4FRI" time="0.019">
+  <properties/>
+  <testcase name="the_last_unit_absorbs_any_remaining_magnitude" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.002"/>
+  <testcase name="uptime_switches_between_days_hours_and_minutes" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.008"/>
+  <testcase name="the_caller_locale_controls_the_decimal_separator" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.002"/>
+  <testcase name="an_unknown_refresh_rate_is_not_zero_hertz" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.0"/>
+  <testcase name="bytes_below_a_kilobyte_stay_in_bytes" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.004"/>
+  <testcase name="two_digit_values_drop_the_fraction" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.001"/>
+  <testcase name="hertz_prints_whole_numbers_without_a_fraction" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.001"/>
+  <testcase name="sizes_step_up_through_binary_magnitudes" classname="com.whatuneed.ovisiontv.kotlin.data.DeviceFormatTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

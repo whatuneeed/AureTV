@@ -77,6 +77,32 @@ class ProfilesTest {
     }
 
     @Test
+    fun blankNameRepairKeepsTheKidsFlag() {
+        val raw = """[{"id":"p2","name":"   ","emoji":"🍿","color":3,"kids":true}]"""
+        val parsed = parseProfiles(raw, "Я")
+        assertTrue(parsed.repaired)
+        assertEquals("Я", parsed.profiles[0].name)
+        assertTrue(parsed.profiles[0].kids)
+    }
+
+    @Test
+    fun repairedKidsFlagSurvivesTheSavedRepair() {
+        val raw = """[{"id":"p2","name":"","emoji":"🍿","color":3,"kids":true}]"""
+        val repaired = parseProfiles(raw, "Me").profiles
+        val reread = parseProfiles(serializeProfiles(repaired), "Me")
+        assertFalse(reread.repaired)
+        assertTrue(reread.profiles[0].kids)
+    }
+
+    @Test
+    fun blankNameRepairLeavesKidsFalseWhenFalseOrAbsent() {
+        val falseFlag = """[{"id":"p2","name":" ","emoji":"🍿","color":3,"kids":false}]"""
+        val legacy = """[{"id":"p2","name":" ","emoji":"🍿","color":3}]"""
+        assertFalse(parseProfiles(falseFlag, "Me").profiles[0].kids)
+        assertFalse(parseProfiles(legacy, "Me").profiles[0].kids)
+    }
+
+    @Test
     fun nextIdSkipsExistingNumbers() {
         assertEquals("p3", ProfileCatalog.nextId(listOf(me, guest)))
         assertEquals("p1", ProfileCatalog.nextId(emptyList()))

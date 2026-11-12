@@ -67,9 +67,9 @@ internal object AerialStore {
  * TLS to Apple must still have a screen saver.
  */
 internal object AerialRefresh {
-    // Russian networks block port 443 to Apple's CDN; port 80 serves the same
-    // tar. The Java launcher uses cleartext for the same reason.
-    private const val SOURCE_URL = "http://sylvan.apple.com/Aerials/resources.tar"
+    // TLS keeps catalogue metadata authentic; where 443 to Apple is blocked the
+    // refresh fails and the bundled catalogue keeps the saver running. No HTTP fallback.
+    private const val SOURCE_URL = "https://sylvan.apple.com/Aerials/resources.tar"
     private const val ENTRIES = "entries.json"
     private const val STRINGS_EN = "TVIdleScreenStrings.bundle/en.lproj/Localizable.nocache.strings"
     private const val STRINGS_RU = "TVIdleScreenStrings.bundle/ru.lproj/Localizable.nocache.strings"

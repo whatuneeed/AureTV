@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:00" hostname="DESKTOP-M0B4FRI" time="0.004">
+  <properties/>
+  <testcase name="the_apple_tables_are_read_as_plain_string_maps" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.004"/>
+  <testcase name="broken_input_yields_no_table" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

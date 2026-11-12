@@ -2,18 +2,23 @@
 
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import android.content.ComponentCallbacks2
+import android.content.ComponentName
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +36,15 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.SettingsActivity
+import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
+import com.whatuneed.ovisiontv.kotlin.data.AppRepository
+import com.whatuneed.ovisiontv.kotlin.data.drawableToImage
+import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicReference
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
@@ -55,6 +69,36 @@ class TopShelfTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test
+    fun background_trim_restores_the_settings_activity_icon() {
+        val own = runBlocking { AppRepository(context).load() }
+            .single { it.packageName == context.packageName }
+        val key = requireNotNull(own.icon)
+        val expected = requireNotNull(drawableToImage(
+            context.packageManager.getActivityInfo(
+                ComponentName(context, SettingsActivity::class.java), 0,
+            ).loadIcon(context.packageManager), 256, 256,
+        )).asAndroidBitmap()
+        val rendered = AtomicReference<ImageBitmap?>()
+        rule.setContent {
+            val art = rememberArt(key)
+            SideEffect { rendered.set(art) }
+        }
+        rule.waitUntil(5_000) { rendered.get() != null }
+        val before = requireNotNull(rendered.get())
+        assertTrue(before.asAndroidBitmap().sameAs(expected))
+        rule.runOnIdle {
+            MemoryPressure.trim(ComponentCallbacks2.TRIM_MEMORY_BACKGROUND)
+            assertNull(AppArtCache.get(key))
+        }
+        rule.waitUntil(5_000) { rendered.get()?.let { it !== before } == true }
+        rule.runOnIdle {
+            val restored = requireNotNull(rendered.get())
+            assertSame(AppArtCache.get(key), restored)
+            assertTrue(restored.asAndroidBitmap().sameAs(expected))
+        }
+    }
+
     private fun app(
         packageName: String,
         label: String,
@@ -63,9 +107,10 @@ class TopShelfTest {
         packageName = packageName,
         activityName = "$packageName.MainActivity",
         label = label,
-        banner = Bitmap.createBitmap(16, 9, Bitmap.Config.ARGB_8888)
-            .apply { eraseColor(color) }
-            .asImageBitmap(),
+        banner = com.whatuneed.ovisiontv.kotlin.ui.testArtKey(
+            "$packageName|$label",
+            Bitmap.createBitmap(16, 9, Bitmap.Config.ARGB_8888).apply { eraseColor(color) },
+        ),
         icon = null,
     )
 
@@ -340,7 +385,10 @@ class TopShelfTest {
             activityName = "test.two.MainActivity",
             label = "Второй",
             banner = null,
-            icon = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888).asImageBitmap(),
+            icon = com.whatuneed.ovisiontv.kotlin.ui.testArtKey(
+                "bare-icon",
+                Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888),
+            ),
         )
 
         rule.setContent {

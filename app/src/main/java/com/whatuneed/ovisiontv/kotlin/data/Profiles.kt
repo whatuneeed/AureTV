@@ -195,7 +195,8 @@ internal fun parseProfiles(raw: String?, defaultName: String): ParsedProfiles {
         val rawName = entry.optString("name").trim()
         val name = ProfileCatalog.repairDefaultName(rawName, defaultName)
         if (name.isEmpty()) {
-            parsed += Profile(id, defaultName, "", 0)
+            // Repairing display fields must not clear the kids security flag.
+            parsed += Profile(id, defaultName, "", 0, kids = entry.optBoolean("kids", false))
             repaired = true
             continue
         }

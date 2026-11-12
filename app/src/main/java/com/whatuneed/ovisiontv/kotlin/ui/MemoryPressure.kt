@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.content.ComponentCallbacks2
+import androidx.compose.runtime.mutableIntStateOf
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
 import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPosterStore
@@ -17,6 +18,13 @@ internal object MemoryPressure {
 
     /** How much of each cache to drop and whether the shelf posters may go. */
     data class TrimPlan(val percent: Int, val shelf: Boolean)
+
+    /**
+     * Incremented on every trim. Surfaces that hold a decoded frame outside the
+     * caches (the saver's warm still) watch it and let go of that frame, or the
+     * trim leaves the biggest single allocation untouched (audit A-09).
+     */
+    val trimTick = mutableIntStateOf(0)
 
     /**
      * Levels are matched by name: the constants are not ordered by severity
@@ -51,6 +59,7 @@ internal object MemoryPressure {
 
     fun trim(level: Int) {
         val plan = plan(level)
+        trimTick.intValue++
         AerialPosterStore.trim(plan.percent)
         AerialPreviewStore.trim(plan.percent)
         if (!plan.shelf) trimShelfArtCache(plan.percent)

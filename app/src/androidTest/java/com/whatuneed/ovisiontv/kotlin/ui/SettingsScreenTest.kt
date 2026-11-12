@@ -35,6 +35,8 @@ import androidx.compose.ui.test.isFocusable
 import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -53,6 +55,7 @@ import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.HIDDEN_FOLDER_ID
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
+import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.PermissionSummary
@@ -66,6 +69,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.components.SAVER_PREVIEW_TAG
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -474,6 +478,72 @@ class SettingsScreenTest {
             .assertIsDisplayed()
             .assert(isHeading())
         rule.onAllNodesWithContentDescription(guest.name, substring = true).assertCountEquals(0)
+    }
+
+    /** The pad auto-submits on the fourth digit, one click per digit. */
+    private fun typePin(value: String) {
+        value.forEach { digit ->
+            rule.onAllNodesWithContentDescription(digit.toString())
+                .onFirst()
+                .performSemanticsAction(SemanticsActions.OnClick)
+        }
+        rule.waitForIdle()
+    }
+
+    // AQ-02: A -> kids B -> A. The leave gate opens under B, so it must verify
+    // B's PIN; the entry snapshot (A) is a different person's lock.
+    @Test
+    fun leave_gate_checks_the_current_kids_profile_not_the_entry_snapshot() {
+        val savedKids = PrefsSnapshot.captureKids(context)
+        try {
+            val store = ProfileStore(context)
+            val kidsStore = KidsStore(context)
+            val adult = store.current()
+            val kids = requireNotNull(store.add("Малыш"))
+            store.update(kids.copy(kids = true))
+            runBlocking {
+                kidsStore.setPin(adult.id, "1111")
+                kidsStore.setPin(kids.id, "2222")
+            }
+            setSettings()
+            openProfiles()
+
+            // Entering the kids profile is not gated.
+            waitForRow(kids.name)
+            click(row(kids.name, kids.emoji))
+            clickRow(string(R.string.profile_switch))
+            rule.waitForIdle()
+            assertEquals(kids.id, ProfileStore(context).current().id)
+
+            // Leaving it back to the adult profile raises the leave gate.
+            press(Key.Back)
+            waitForRow(adult.name)
+            click(row(adult.name, adult.emoji))
+            clickRow(string(R.string.profile_switch))
+            rule.waitUntil(5_000) {
+                rule.onAllNodesWithContentDescription(string(R.string.kids_pin_title))
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+
+            // The adult's own PIN must not pass the child's gate.
+            typePin("1111")
+            val kidsPrefs = context.getSharedPreferences(KidsStore.FILE, Context.MODE_PRIVATE)
+            rule.waitUntil(10_000) {
+                ProfileStore(context).current().id == adult.id ||
+                    (kidsPrefs.getInt("fail_${kids.id}", 0) == 1 &&
+                        rule.onAllNodesWithTag("pin-pad-ready").fetchSemanticsNodes().isNotEmpty())
+            }
+            assertEquals(
+                "the leave gate must check the kids profile's PIN, not the entry snapshot's",
+                kids.id,
+                ProfileStore(context).current().id,
+            )
+
+            typePin("2222")
+            rule.waitUntil(10_000) { ProfileStore(context).current().id == adult.id }
+        } finally {
+            PrefsSnapshot.restoreKids(context, savedKids)
+        }
     }
 
     @Test

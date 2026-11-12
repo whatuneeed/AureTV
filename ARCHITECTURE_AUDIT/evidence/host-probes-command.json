@@ -1,0 +1,8 @@
+[
+  "java",
+  "-Xmx128m",
+  "-Dfile.encoding=UTF-8",
+  "--class-path",
+  "C:\\OpenCode Project\\OVisionTV\\OVisionTV_Kotlin\\app\\build\\tmp\\kotlin-classes\\debug;C:\\gradle-home\\caches\\modules-2\\files-2.1\\org.jetbrains.kotlin\\kotlin-stdlib\\2.0.21\\618b539767b4899b4660a83006e052b63f1db551\\kotlin-stdlib-2.0.21.jar;C:\\gradle-home\\caches\\modules-2\\files-2.1\\org.json\\json\\20240303\\ebb88e8fb5122b7506d5cf1d69f1ccdb790d22a\\json-20240303.jar;C:\\gradle-home\\caches\\modules-2\\files-2.1\\org.jetbrains.kotlinx\\kotlinx-coroutines-core-jvm\\1.7.3\\2b09627576f0989a436a00a4a54b55fa5026fb86\\kotlinx-coroutines-core-jvm-1.7.3.jar",
+  "C:\\OpenCode Project\\OVisionTV\\OVisionTV_Kotlin\\ARCHITECTURE_AUDIT\\evidence\\AuditProbe.java"
+]

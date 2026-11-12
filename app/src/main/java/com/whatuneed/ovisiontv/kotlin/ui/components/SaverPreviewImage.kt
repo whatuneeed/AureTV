@@ -51,7 +51,12 @@ internal object AerialPreviewStore {
         } else {
             download(url)?.also { save(dir, fileName, it, KEEP_THUMBS) }
         } ?: return null
-        val bitmap = decodeSampled(bytes, 2) ?: return null
+        val bitmap = decodeSampled(bytes, 2)
+        if (bitmap == null) {
+            // A corrupt entry must not be re-decoded on every visit.
+            file.delete()
+            return null
+        }
         thumbMemory.put(url, bitmap)
         return bitmap
     }
@@ -99,14 +104,22 @@ internal object AerialPreviewStore {
             download(url)?.also { save(dir, fileName, it, KEEP_FILES) }
         } ?: return null
 
-        val bitmap = decodeSampled(bytes, 1) ?: return null
+        val bitmap = decodeSampled(bytes, 1)
+        if (bitmap == null) {
+            // A corrupt entry must not be re-decoded on every visit.
+            file.delete()
+            return null
+        }
         memory.put(url, bitmap)
         return bitmap
     }
 
     private fun decodeSampled(bytes: ByteArray, sample: Int): Bitmap? = runCatching {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
         val options = BitmapFactory.Options().apply {
-            inSampleSize = sample.coerceAtLeast(1)
+            inSampleSize = sampleFor(bounds.outWidth, bounds.outHeight, sample)
         }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }.getOrNull()
@@ -166,4 +179,13 @@ internal object AerialPreviewStore {
             .digest(url.toByteArray())
             .take(16)
             .joinToString("") { "%02x".format(it.toInt() and 0xff) } + ".png"
+}
+
+// ~16 MB of ARGB_8888; Apple's 900x580 stills pass without downsampling.
+private const val MAX_PIXELS = 4_000_000
+
+internal fun sampleFor(width: Int, height: Int, minSample: Int): Int {
+    var sample = minSample.coerceAtLeast(1)
+    while ((width / sample).toLong() * (height / sample) > MAX_PIXELS) sample *= 2
+    return sample
 }

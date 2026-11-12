@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-11T20:12:43" hostname="DESKTOP-M0B4FRI" time="0.199">
+  <properties/>
+  <testcase name="a_broken_entries_file_yields_no_catalogue" classname="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" time="0.039"/>
+  <testcase name="the_2019_flat_catalogue_is_not_accepted_from_the_network" classname="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" time="0.02"/>
+  <testcase name="the_public_resources_build_the_same_four_themes" classname="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" time="0.108"/>
+  <testcase name="entries_that_cannot_play_are_left_out" classname="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" time="0.016"/>
+  <testcase name="a_name_missing_from_the_table_falls_back_to_the_label" classname="com.whatuneed.ovisiontv.kotlin.data.AerialCatalogBuilderTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

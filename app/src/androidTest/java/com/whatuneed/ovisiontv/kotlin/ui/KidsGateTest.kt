@@ -3,6 +3,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,10 +25,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
+import com.whatuneed.ovisiontv.kotlin.KidsEntryGrant
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
@@ -74,6 +78,7 @@ class KidsGateTest {
 
     private val pin = "1234"
     private val kidsName = "Малыш"
+    private lateinit var kidsProfileId: String
 
     private lateinit var savedPrefs: Map<String, Any?>
     private lateinit var savedPrefsP2: Map<String, Any?>
@@ -118,6 +123,7 @@ class KidsGateTest {
 
         val store = ProfileStore(context)
         val kids = store.add(kidsName) ?: error("profile add failed")
+        kidsProfileId = kids.id
         store.update(kids.copy(kids = true))
         store.setCurrent(kids.id)
         // The boot picker must not ambush a test; the wake one is welcome.
@@ -125,7 +131,7 @@ class KidsGateTest {
         store.setAskOnWake(true)
 
         val kidsStore = KidsStore(context)
-        kidsStore.setPin(kids.id, pin)
+        runBlocking { kidsStore.setPin(kids.id, pin) }
         kidsStore.setAllowlist(kids.id, setOf(allowedApp.packageName))
     }
 
@@ -206,6 +212,15 @@ class KidsGateTest {
         value.forEach { digit -> click(digit.toString()) }
     }
 
+    private fun waitForFailedPin(expectedFailures: Int) {
+        val prefs = context.getSharedPreferences(KidsStore.FILE, Context.MODE_PRIVATE)
+        // waitForIdle and a stale error note do not await the background PIN check.
+        rule.waitUntil(10_000) {
+            prefs.getInt("fail_$kidsProfileId", 0) == expectedFailures &&
+                rule.onAllNodesWithTag("pin-pad-ready").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     private fun openGate() {
         composeRoot()
         waitForTile(allowedApp.label)
@@ -262,6 +277,7 @@ class KidsGateTest {
             .assertExists()
 
         typePin("0000")
+        waitForFailedPin(1)
         rule.waitUntil(10_000) {
             rule.onAllNodesWithText(context.getString(R.string.kids_pin_wrong))
                 .fetchSemanticsNodes().isNotEmpty()
@@ -315,7 +331,10 @@ class KidsGateTest {
     fun five_wrong_pins_lock_the_pad_against_the_right_pin_too() {
         openGate()
 
-        repeat(KidsMode.FREE_ATTEMPTS + 1) { typePin("0000") }
+        repeat(KidsMode.FREE_ATTEMPTS + 1) { attempt ->
+            typePin("0000")
+            waitForFailedPin(attempt + 1)
+        }
         // The countdown ticks, so the match must use the part before the
         // number: the substituted 30 marks where the digits begin.
         val lockPrefix = context.getString(R.string.kids_lock_wait, 30)
@@ -396,7 +415,7 @@ class KidsGateTest {
         // The picker opens on the current (kids) disc; walk the cursor to the
         // parent disc the way the remote would, so the cancel has an index to
         // return to.
-        val kidsIndex = profiles.indexOfFirst { it.kids }
+        val kidsIndex = profiles.indexOfFirst { it.id == kidsProfileId }
         val parentIndex = profiles.indexOfFirst { !it.kids }
         val step = if (parentIndex > kidsIndex) Key.DirectionRight else Key.DirectionLeft
         repeat(kotlin.math.abs(parentIndex - kidsIndex)) { press(step) }
@@ -423,8 +442,8 @@ class KidsGateTest {
 
     @Test
     fun recovery_word_resets_the_pin_and_closes_the_gate_without_the_action() {
-        val kids = ProfileStore(context).list().first { it.kids }
-        KidsStore(context).setRecovery(kids.id, "Кличка питомца", "test")
+        val store = KidsStore(context)
+        runBlocking { store.setRecovery(kidsProfileId, "Кличка питомца", "test") }
 
         openGate()
 
@@ -457,17 +476,19 @@ class KidsGateTest {
         click("OK")
 
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithContentDescription(allowedApp.label)
-                .fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_new))
+                .fetchSemanticsNodes().isEmpty() &&
+                runBlocking { store.checkPin(kidsProfileId, "9999") }
         }
         assertTrue(
             "recovery must not perform the gated action",
             resumedSettings() == null,
         )
-        val store = KidsStore(context)
-        assertTrue("the new PIN must verify", store.checkPin(kids.id, "9999"))
-        assertFalse("the old PIN must be gone", store.checkPin(kids.id, pin))
-        assertNotNull(store.recoveryHint(kids.id))
+        runBlocking {
+            assertTrue("the new PIN must verify", store.checkPin(kidsProfileId, "9999"))
+            assertFalse("the old PIN must be gone", store.checkPin(kidsProfileId, pin))
+        }
+        assertNotNull(store.recoveryHint(kidsProfileId))
     }
 
     /**
@@ -493,5 +514,102 @@ class KidsGateTest {
             rule.onAllNodesWithTag(SAVER_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty(),
         )
         rule.onNodeWithText(context.getString(R.string.kids_gate_settings)).assertExists()
+    }
+}
+
+/**
+ * AQ-01: SettingsActivity is exported, so a foreign app can start it with any
+ * extra it likes. The entry gate must only trust the launcher's in-process
+ * grant, never the intent. The real activity is launched here; the empty
+ * compose rule reads its semantics through the global compose root registry.
+ */
+@RunWith(AndroidJUnit4::class)
+class SettingsEntryGrantTest {
+
+    @get:Rule
+    val rule = createEmptyComposeRule()
+
+    private val context: Context =
+        InstrumentationRegistry.getInstrumentation().targetContext
+
+    private lateinit var savedProfiles: Map<String, Any?>
+    private lateinit var savedKids: Map<String, Any?>
+    private lateinit var kidsProfileId: String
+
+    @Before
+    fun seedKidsProfile() {
+        KidsEntryGrant.clear()
+        savedProfiles = PrefsSnapshot.captureProfiles(context)
+        savedKids = PrefsSnapshot.captureKids(context)
+        val store = ProfileStore(context)
+        val kids = store.add("Малыш") ?: error("profile add failed")
+        kidsProfileId = kids.id
+        store.update(kids.copy(kids = true))
+        store.setCurrent(kids.id)
+        runBlocking { KidsStore(context).setPin(kids.id, "1234") }
+    }
+
+    @After
+    fun restoreStores() {
+        KidsEntryGrant.clear()
+        PrefsSnapshot.restoreProfiles(context, savedProfiles)
+        PrefsSnapshot.restoreKids(context, savedKids)
+    }
+
+    private fun settingsIntent(extraKidsOk: Boolean): Intent {
+        val intent = Intent(context, SettingsActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // The literal extra a foreign app would forge; the constant is gone
+        // from the activity, so the test must not depend on it.
+        if (extraKidsOk) intent.putExtra("kids_ok", true)
+        return intent
+    }
+
+    private fun gateVisible(): Boolean =
+        rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_title))
+            .fetchSemanticsNodes().isNotEmpty()
+
+    private fun awaitSettingsRoot() {
+        rule.waitUntil(20_000) {
+            rule.onAllNodesWithContentDescription(
+                context.getString(R.string.settings_profiles),
+                substring = true,
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun forged_kids_ok_extra_does_not_unlock_the_entry_gate() {
+        ActivityScenario.launch<SettingsActivity>(settingsIntent(extraKidsOk = true)).use {
+            rule.waitUntil(20_000) { gateVisible() }
+        }
+    }
+
+    @Test
+    fun issued_grant_unlocks_the_entry_gate_once() {
+        KidsEntryGrant.issue(kidsProfileId)
+        ActivityScenario.launch<SettingsActivity>(settingsIntent(extraKidsOk = false)).use {
+            awaitSettingsRoot()
+            assertFalse("the launcher's own PIN pass must not re-open the gate", gateVisible())
+        }
+        assertFalse("the grant must be consumed by the start", KidsEntryGrant.consume(kidsProfileId))
+    }
+
+    @Test
+    fun warm_start_with_a_grant_unlocks_the_gate() {
+        ActivityScenario.launch<SettingsActivity>(settingsIntent(extraKidsOk = false)).use { scenario ->
+            rule.waitUntil(20_000) { gateVisible() }
+            // The launcher passes its gate while Settings is already up: the
+            // singleTop activity receives the grant through onNewIntent.
+            KidsEntryGrant.issue(kidsProfileId)
+            scenario.onActivity { activity ->
+                activity.startActivity(
+                    Intent(activity, SettingsActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                )
+            }
+            rule.waitUntil(20_000) { !gateVisible() }
+            awaitSettingsRoot()
+        }
     }
 }

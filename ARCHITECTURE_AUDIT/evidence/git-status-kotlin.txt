@@ -1,0 +1,30 @@
+ M FIXES.md
+ M UI_UX_UNIFICATION/00_MASTER_UI_UX_REPORT.md
+ M UI_UX_UNIFICATION/10_UX_REGISTRY.md
+ M UI_UX_UNIFICATION/12_REGRESSION.md
+ M UI_UX_UNIFICATION/16_FINAL_VERIFICATION.md
+ M app/build.gradle.kts
+ M app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/ui/HomeScreenTest.kt
+ M app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/ui/KidsGateTest.kt
+ M app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/ui/components/TopShelfTest.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/SetupActivity.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/AppRepository.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/KidsMode.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/TvApp.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/LauncherRoot.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/SettingsScreen.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/AppCard.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/FolderCard.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/PinPad.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/SearchOverlay.kt
+ M app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/TopShelf.kt
+ M app/src/test/java/com/whatuneed/ovisiontv/kotlin/data/KidsModeTest.kt
+?? ARCHITECTURE_AUDIT/
+?? UI_UX_UNIFICATION/evidence-0.4.44/
+?? app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/data/KidsStoreTest.kt
+?? app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/ui/TestArt.kt
+?? app/src/androidTest/java/com/whatuneed/ovisiontv/kotlin/ui/components/PinPadInputTest.kt
+?? app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/AppArt.kt
+?? app/src/test/java/com/whatuneed/ovisiontv/kotlin/data/ArtKeyTest.kt
+?? connected.log

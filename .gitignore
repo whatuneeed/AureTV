@@ -18,6 +18,10 @@ keystore.properties
 # Verification artifacts (166 MB of screenshots, regenerated on demand)
 screenshots/
 
+# Local verification scratch (logs, pulled APKs, temporary captures)
+temp/
+connected.log
+
 # OS noise
 .DS_Store
 Thumbs.db

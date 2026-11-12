@@ -410,9 +410,9 @@ fun SettingsScreen(
     clips: List<AerialClip>? = null,
     refreshCatalog: (suspend () -> AerialRefreshResult)? = null,
     previewSurface: (@Composable (AerialClip) -> Unit)? = null,
-    // True when the launcher's kids PIN gate already passed (the extra
-    // EXTRA_KIDS_OK on the activity intent). A direct start without the
-    // extra re-opens the gate inside Settings for a kids profile with a PIN.
+    // True when the launcher's kids PIN gate already passed (the in-process
+    // KidsEntryGrant). A direct start without the grant re-opens the gate
+    // inside Settings for a kids profile with a PIN.
     kidsUnlocked: Boolean = false,
 ) {
     val scale = rememberTvScale()
@@ -557,7 +557,9 @@ fun SettingsScreen(
     // checking once at the start.
     val kidsStore = remember(context) { KidsStore(context) }
     val kidsGateProfile = remember { currentProfile }
-    var kidsEntryLocked by remember {
+    // Keyed on kidsUnlocked: a singleTop warm start can consume the launcher's
+    // grant after this composition, and the gate must then stand down.
+    var kidsEntryLocked by remember(kidsUnlocked) {
         mutableStateOf(
             kidsGateProfile?.kids == true &&
                 !kidsUnlocked &&
@@ -572,8 +574,12 @@ fun SettingsScreen(
     // Leaving the kids profile from Settings waits for the same pad the picker
     // would show: without it a child could switch out with no PIN.
     var kidsLeaveFor by remember { mutableStateOf<String?>(null) }
+    // The leave gate verifies the profile it was opened from, which may differ
+    // from the entry snapshot after a switch inside this session (A->B->A).
+    var kidsLeaveFrom by remember { mutableStateOf<String?>(null) }
     var kidsLeaveRecover by remember { mutableStateOf(false) }
     var recoveryFor by remember { mutableStateOf<String?>(null) }
+    var recoverySession by remember { mutableIntStateOf(0) }
     var recoveryStep by remember { mutableStateOf<Int?>(null) }
     var recoveryHint by remember { mutableStateOf("") }
     // The allowlist page keeps its set in state and writes through to the
@@ -717,6 +723,7 @@ fun SettingsScreen(
         if (current != null && target != null &&
             kidsLeaveNeedsPin(current, target, kidsStore.hasPin(current.id))
         ) {
+            kidsLeaveFrom = current.id
             kidsLeaveFor = id
             return
         }
@@ -1223,6 +1230,7 @@ fun SettingsScreen(
                             ),
                             chevron = true,
                             action = {
+                                recoverySession++
                                 recoveryFor = kidsId
                                 recoveryHint = ""
                                 recoveryStep = 0
@@ -2914,25 +2922,28 @@ fun SettingsScreen(
     kidsLeaveFor?.let { target ->
         PinPadOverlay(
             mode = if (kidsLeaveRecover) PinPadMode.RECOVER else PinPadMode.VERIFY,
-            profileId = kidsGateProfile?.id ?: currentProfileId,
+            profileId = kidsLeaveFrom ?: currentProfileId,
             reduceMotion = reduceMotion,
             onPassed = {
                 profileStore.setCurrent(target)
                 refreshProfiles()
                 kidsLeaveFor = null
+                kidsLeaveFrom = null
                 kidsLeaveRecover = false
             },
             // Recovery replaces the PIN; the child stays on the kids profile.
             onRecovered = {
                 kidsLeaveFor = null
+                kidsLeaveFrom = null
                 kidsLeaveRecover = false
             },
             onCancel = {
                 kidsLeaveFor = null
+                kidsLeaveFrom = null
                 kidsLeaveRecover = false
             },
             onForgot = if (!kidsLeaveRecover &&
-                kidsStore.hasRecovery(kidsGateProfile?.id ?: currentProfileId)
+                kidsStore.hasRecovery(kidsLeaveFrom ?: currentProfileId)
             ) {
                 { kidsLeaveRecover = true }
             } else {
@@ -2943,13 +2954,16 @@ fun SettingsScreen(
     }
 
     // Recovery word: the hint first, then the answer, the way Java's
-    // TextActivity walked the parent through two screens. key(step) gives the
-    // second step a fresh keyboard: the remembered field would otherwise
+    // TextActivity walked the parent through two screens. The keyed step gives
+    // the answer a fresh keyboard: the remembered field would otherwise
     // carry the typed hint into the answer field.
     recoveryStep?.let { step ->
         val owner = recoveryFor
+        val session = recoverySession
         if (owner != null) {
-            key(step) {
+            key(owner, session, step) {
+                val recoveryScope = rememberCoroutineScope()
+                var recoveryJob by remember { mutableStateOf<Job?>(null) }
                 RenameKeyboardOverlay(
                     title = stringResource(
                         if (step == 0) {
@@ -2975,18 +2989,31 @@ fun SettingsScreen(
                         },
                     ),
                     onDone = { text ->
-                        if (step == 0) {
-                            recoveryHint = text
-                            recoveryStep = 1
-                        } else {
-                            kidsStore.setRecovery(owner, recoveryHint, text)
-                            recoveryStep = null
-                            recoveryFor = null
+                        if (recoveryFor == owner && recoverySession == session &&
+                            recoveryStep == step && recoveryJob == null
+                        ) {
+                            if (step == 0) {
+                                recoveryHint = text
+                                recoveryStep = 1
+                            } else {
+                                val hint = recoveryHint
+                                // Cancel owns this job even before the next composition.
+                                recoveryJob = recoveryScope.launch {
+                                    kidsStore.setRecovery(owner, hint, text)
+                                    if (recoveryFor == owner && recoverySession == session) {
+                                        recoveryStep = null
+                                        recoveryFor = null
+                                    }
+                                }
+                            }
                         }
                     },
                     onCancel = {
-                        recoveryStep = null
-                        recoveryFor = null
+                        recoveryJob?.cancel()
+                        if (recoveryFor == owner && recoverySession == session) {
+                            recoveryStep = null
+                            recoveryFor = null
+                        }
                     },
                 )
             }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:00" hostname="DESKTOP-M0B4FRI" time="0.014">
+  <properties/>
+  <testcase name="folderKeepsSurvivingChildren" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="orderMissingAnAppIsIncomplete" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="brokenJsonFallsBackToInstallOrder" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="duplicateFolderIdsAreRegenerated" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.005"/>
+  <testcase name="orderAlsoListingUninstalledAppsStillCoversInstalledOnes" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="userNamedFolderKeepsItsNameWhenAHiddenNameIsProvided" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="mixedOrderKeepsFoldersAndAppPositions" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="blankFolderNameUsesTheGivenName" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="blankFolderNameUsesTheProvidedLocalizedName" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="uninstalledAppsDisappearAndEmptyFolderIsDropped" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="orderCoveringEveryAppCountsAsComplete" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="packageInsideFolderIsNotDuplicated" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="emptyArrayFallsBackToInstallOrder" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="hiddenFolderTakesTheNameOfTheCurrentLanguage" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="newlyInstalledAppIsAppended" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="missingOrderListsEveryAppInInstallOrder" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="absentCorruptOrEmptyOrderIsIncomplete" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <testcase name="newAppsAreInsertedBeforeTheHiddenFolder" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.001"/>
+  <testcase name="renamedFolderKeepsItsName" classname="com.whatuneed.ovisiontv.kotlin.data.HomeOrderTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

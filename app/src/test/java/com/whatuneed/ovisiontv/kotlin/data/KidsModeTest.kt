@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.data
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,7 +14,7 @@ class KidsModeTest {
         HomeItem.FolderItem(id, id, pkgs.map(::app))
 
     @Test
-    fun pinHashVerifiesOnlyTheSamePin() {
+    fun pinHashVerifiesOnlyTheSamePin() = runBlocking {
         val salt = KidsCrypto.newSalt()
         val hash = KidsCrypto.hash(salt, "1234")
         assertTrue(hash.startsWith("pbkdf2\$sha256\$120000\$"))
@@ -28,11 +29,41 @@ class KidsModeTest {
     }
 
     @Test
-    fun recoveryAnswersIgnoreCaseAndSurroundingSpace() {
+    fun recoveryAnswersIgnoreCaseAndSurroundingSpace() = runBlocking {
         val salt = KidsCrypto.newSalt()
         val hash = KidsCrypto.hash(salt, KidsCrypto.normalizeAnswer("  Барсик "))
         assertTrue(KidsCrypto.matches(salt, hash, KidsCrypto.normalizeAnswer("барсик")))
         assertFalse(KidsCrypto.matches(salt, hash, KidsCrypto.normalizeAnswer("Барсика")))
+    }
+
+    @Test
+    fun invalidBase64SaltFailsClosedWithoutThrowing() = runBlocking {
+        val salt = KidsCrypto.newSalt()
+        val hash = KidsCrypto.hash(salt, "1234")
+        assertFalse(KidsCrypto.matches("!", hash, "1234"))
+    }
+
+    @Test
+    fun nonPositiveIterationsFailClosedWithoutThrowing() = runBlocking {
+        val salt = KidsCrypto.newSalt()
+        val digest = KidsCrypto.hash(salt, "1234").substringAfterLast('$')
+        listOf("0", "-1").forEach { iterations ->
+            assertFalse(KidsCrypto.matches(salt, "pbkdf2\$sha256\$$iterations\$$digest", "1234"))
+        }
+    }
+
+    @Test
+    fun anUnsupportedAlgorithmTagIsRejected() = runBlocking {
+        val salt = KidsCrypto.newSalt()
+        val digest = KidsCrypto.hash(salt, "1234").substringAfterLast('$')
+        assertFalse(KidsCrypto.matches(salt, "pbkdf2\$other\$120000\$$digest", "1234"))
+    }
+
+    @Test(timeout = 10_000)
+    fun absurdIterationCountIsRejectedWithoutComputing() = runBlocking {
+        val salt = KidsCrypto.newSalt()
+        val digest = KidsCrypto.hash(salt, "1234").substringAfterLast('$')
+        assertFalse(KidsCrypto.matches(salt, "pbkdf2\$sha256\$2147483647\$$digest", "1234"))
     }
 
     @Test

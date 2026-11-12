@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.ArtKeyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:26" hostname="DESKTOP-M0B4FRI" time="0.002">
+  <properties/>
+  <testcase name="damaged_keys_are_rejected_instead_of_guessed" classname="com.whatuneed.ovisiontv.kotlin.data.ArtKeyTest" time="0.001"/>
+  <testcase name="the_launchers_own_settings_icon_keeps_its_activity" classname="com.whatuneed.ovisiontv.kotlin.data.ArtKeyTest" time="0.0"/>
+  <testcase name="a_banner_key_carries_package_kind_and_box" classname="com.whatuneed.ovisiontv.kotlin.data.ArtKeyTest" time="0.0"/>
+  <testcase name="a_new_stamp_is_a_different_key" classname="com.whatuneed.ovisiontv.kotlin.data.ArtKeyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

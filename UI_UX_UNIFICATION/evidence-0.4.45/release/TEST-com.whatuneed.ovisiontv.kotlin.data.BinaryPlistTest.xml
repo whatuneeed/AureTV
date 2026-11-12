@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:29" hostname="DESKTOP-M0B4FRI" time="0.024">
+  <properties/>
+  <testcase name="a_shared_reference_without_a_cycle_keeps_its_value" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.0"/>
+  <testcase name="an_array_with_a_single_self_reference_is_rejected" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.001"/>
+  <testcase name="a_healthy_nested_plist_still_parses" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.0"/>
+  <testcase name="a_shared_dag_over_the_work_budget_is_rejected" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.018"/>
+  <testcase name="an_array_with_two_self_references_is_rejected" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.0"/>
+  <testcase name="the_apple_tables_are_read_as_plain_string_maps" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.004"/>
+  <testcase name="broken_input_yields_no_table" classname="com.whatuneed.ovisiontv.kotlin.data.BinaryPlistTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

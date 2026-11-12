@@ -71,6 +71,8 @@ fun FolderCard(
         val top = (TvOs.ICON_HEIGHT - gridHeight) / 2f
         Box(Modifier.fillMaxSize()) {
             folder.apps.take(9).forEachIndexed { index, app ->
+                val icon = rememberArt(app.icon)
+                val banner = rememberArt(app.banner)
                 val column = index % PREVIEW_COLUMNS
                 val row = index / PREVIEW_COLUMNS
                 Box(
@@ -85,8 +87,8 @@ fun FolderCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     when {
-                        app.icon != null -> Image(
-                            bitmap = app.icon,
+                        icon != null -> Image(
+                            bitmap = icon,
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -95,8 +97,8 @@ fun FolderCard(
                             filterQuality = FilterQuality.Medium,
                         )
 
-                        app.banner != null -> Image(
-                            bitmap = app.banner,
+                        banner != null -> Image(
+                            bitmap = banner,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,

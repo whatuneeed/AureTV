@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:27" hostname="DESKTOP-M0B4FRI" time="0.001">
+  <properties/>
+  <testcase name="a_tiny_frame_is_never_upsampled" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" time="0.001"/>
+  <testcase name="the_thumbnail_minimum_is_kept" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" time="0.0"/>
+  <testcase name="an_apple_still_passes_without_downsampling" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" time="0.0"/>
+  <testcase name="extreme_dimensions_do_not_overflow" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" time="0.0"/>
+  <testcase name="an_oversized_frame_is_sampled_into_the_budget" classname="com.whatuneed.ovisiontv.kotlin.ui.components.SampleForTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

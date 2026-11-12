@@ -50,9 +50,11 @@ fun AppCard(
 /** Banner, icon or initial — shared so the launch zoom starts on the same pixels. */
 @Composable
 internal fun BoxScope.AppArtwork(app: TvApp, scale: TvScale) {
+    val banner = rememberArt(app.banner)
+    val icon = rememberArt(app.icon)
     when {
-        app.banner != null -> Image(
-            bitmap = app.banner,
+        banner != null -> Image(
+            bitmap = banner,
             // The card's merged semantics owns the announcement; the pixels here
             // are decorative or duplicated by the launch overlay.
             contentDescription = null,
@@ -61,8 +63,8 @@ internal fun BoxScope.AppArtwork(app: TvApp, scale: TvScale) {
             filterQuality = FilterQuality.Medium,
         )
 
-        app.icon != null -> Image(
-            bitmap = app.icon,
+        icon != null -> Image(
+            bitmap = icon,
             contentDescription = null,
             modifier = Modifier
                 .align(Alignment.Center)

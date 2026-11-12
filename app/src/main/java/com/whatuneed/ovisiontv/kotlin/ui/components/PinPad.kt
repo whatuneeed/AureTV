@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +44,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -169,6 +172,12 @@ internal fun PinPadOverlay(
     var note by remember { mutableStateOf<String?>(null) }
     var noteIsError by remember { mutableStateOf(false) }
     var lockSeconds by remember { mutableLongStateOf(0L) }
+    // PBKDF2 runs off the main thread (audit A-03). While it does, the pad
+    // refuses input: a second OK during the hash would start a parallel check
+    // and could count one guess as two failures.
+    var busy by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<Job?>(null) }
+    var dismissed by remember { mutableStateOf(false) }
     val requesters = remember { mutableMapOf<Pair<Int, Int>, FocusRequester>() }
     fun requester(r: Int, c: Int): FocusRequester = requesters.getOrPut(r to c) { FocusRequester() }
     val keyRepeat = rememberTvKeyRepeat()
@@ -203,8 +212,7 @@ internal fun PinPadOverlay(
         lockSeconds = if (ms > 0) (ms + 999) / 1000 else 0L
     }
 
-    // The lockout counts down while the gate is open, like the Java ticker.
-    LaunchedEffect(mode, profileId) {
+    LaunchedEffect(mode, profileId, lockSeconds > 0) {
         refreshLock()
         while (lockSeconds > 0) {
             kotlinx.coroutines.delay(LOCK_TICK_MS)
@@ -212,50 +220,66 @@ internal fun PinPadOverlay(
         }
     }
 
+    fun dismiss(action: () -> Unit) {
+        if (dismissed) return
+        dismissed = true
+        pending?.cancel()
+        keyRepeat.stopRepeat()
+        action()
+    }
+
     fun submit() {
+        if (busy || dismissed) return
         val value = digits.value
-        when (mode) {
-            PinPadMode.SET -> {
-                if (!digits.complete) {
-                    showNote(need4, true)
-                    return
-                }
-                store.setPin(profileId, value)
-                showNote(saved, false)
-                onPassed()
-            }
+        // A short code can never match the stored four digits, so OK on an
+        // empty or partial pad is a nudge, not a wrong guess: counting it would
+        // let stray OK presses feed the lockout.
+        if (!digits.complete) {
+            showNote(need4, true)
+            return
+        }
+        if (mode == PinPadMode.VERIFY && KidsMode.lockRemaining(context, profileId) > 0) {
+            digits = PinDigits()
+            refreshLock()
+            return
+        }
+        busy = true
+        pending = scope.launch {
+            try {
+                when (mode) {
+                    PinPadMode.SET -> {
+                        store.setPin(profileId, value)
+                        showNote(saved, false)
+                        dismiss(onPassed)
+                    }
 
-            PinPadMode.VERIFY -> {
-                // A short code can never match the stored four digits, so OK on
-                // an empty or partial pad is a nudge, not a wrong guess: counting
-                // it would let stray OK presses feed the lockout.
-                if (!digits.complete) {
-                    showNote(need4, true)
-                    return
-                }
-                if (KidsMode.lockRemaining(context, profileId) > 0) {
-                    digits = PinDigits()
-                    refreshLock()
-                    return
-                }
-                if (!store.checkPin(profileId, value)) {
-                    digits = PinDigits()
-                    store.recordFailure(profileId)
-                    refreshLock()
-                    showNote(wrong, true)
-                    return
-                }
-                store.clearFailures(profileId)
-                onPassed()
-            }
+                    PinPadMode.VERIFY -> {
+                        when (store.verifyPin(profileId, value)) {
+                            KidsStore.Verification.PASSED -> dismiss(onPassed)
+                            KidsStore.Verification.WRONG -> {
+                                digits = PinDigits()
+                                refreshLock()
+                                showNote(wrong, true)
+                            }
+                            KidsStore.Verification.LOCKED, KidsStore.Verification.CHANGED -> {
+                                digits = PinDigits()
+                                refreshLock()
+                            }
+                        }
+                    }
 
-            // Unreachable: the RECOVER mode is routed to RecoveryFlow before
-            // the digit pad is built; the branch only satisfies the compiler.
-            PinPadMode.RECOVER -> Unit
+                    // Unreachable: RECOVER is routed to RecoveryFlow before the
+                    // digit pad is built; the branch only satisfies the compiler.
+                    PinPadMode.RECOVER -> Unit
+                }
+            } finally {
+                busy = false
+            }
         }
     }
 
     fun press(label: String) {
+        if (busy || dismissed) return
         when {
             label == "\u232B" -> digits = digits.backspace()
             label == "OK" -> submit()
@@ -280,7 +304,7 @@ internal fun PinPadOverlay(
         requesters[0 to 0]?.requestFocus()
     }
 
-    BackHandler { onCancel() }
+    BackHandler { dismiss(onCancel) }
 
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
@@ -298,12 +322,14 @@ internal fun PinPadOverlay(
     Box(
         Modifier
             .fillMaxSize()
+            .testTag(if (busy) "pin-pad-busy" else "pin-pad-ready")
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp) {
                     keyRepeat.release(event.key)
                     return@onKeyEvent false
                 }
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (dismissed || (busy && event.key != Key.Back)) return@onKeyEvent true
                 if (TvKeyRepeat.isOneShot(event.key) && !keyRepeat.firstPress(event)) {
                     return@onKeyEvent true
                 }
@@ -365,7 +391,7 @@ internal fun PinPadOverlay(
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         keyRepeat.stopRepeat()
                         if (forgotFocused) {
-                            onForgot?.invoke()
+                            onForgot?.let { dismiss(it) }
                         } else {
                             press(PinPadLayout.ROWS[row][column])
                         }
@@ -373,8 +399,7 @@ internal fun PinPadOverlay(
                     }
 
                     Key.Back -> {
-                        keyRepeat.stopRepeat()
-                        onCancel()
+                        dismiss(onCancel)
                         true
                     }
 
@@ -519,7 +544,7 @@ internal fun PinPadOverlay(
                                 contentDescription = forgot
                                 role = Role.Button
                                 onClick(label = forgot) {
-                                    onForgot?.invoke()
+                                    onForgot?.let { dismiss(it) }
                                     true
                                 }
                             },
@@ -575,6 +600,17 @@ private fun RecoveryFlow(
     var attempt by remember { mutableIntStateOf(0) }
     var wrong by remember { mutableStateOf(false) }
     var lockSeconds by remember { mutableLongStateOf(0L) }
+    var busy by remember { mutableStateOf(false) }
+    var pending by remember { mutableStateOf<Job?>(null) }
+    var dismissed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    fun cancel() {
+        if (dismissed) return
+        dismissed = true
+        pending?.cancel()
+        onCancel()
+    }
 
     val title = stringResource(R.string.kids_gate_recover_title)
     val wrongAnswer = stringResource(R.string.kids_recovery_wrong)
@@ -597,7 +633,7 @@ private fun RecoveryFlow(
         return
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(profileId, lockSeconds > 0) {
         refreshLock()
         while (lockSeconds > 0) {
             kotlinx.coroutines.delay(LOCK_TICK_MS)
@@ -625,18 +661,28 @@ private fun RecoveryFlow(
             note = note,
             placeholder = placeholder,
             onDone = { answer ->
+                if (busy || dismissed) return@RenameKeyboardOverlay
                 if (KidsMode.lockRemaining(context, profileId) > 0) {
                     wrong = false
-                } else if (store.checkRecovery(profileId, answer)) {
-                    store.clearFailures(profileId)
-                    setPinPhase = true
+                    attempt++
                 } else {
-                    store.recordFailure(profileId)
-                    wrong = true
+                    busy = true
+                    pending = scope.launch {
+                        try {
+                            when (store.verifyRecovery(profileId, answer)) {
+                                KidsStore.Verification.PASSED -> setPinPhase = true
+                                KidsStore.Verification.WRONG -> wrong = true
+                                KidsStore.Verification.LOCKED, KidsStore.Verification.CHANGED -> wrong = false
+                            }
+                            refreshLock()
+                            attempt++
+                        } finally {
+                            busy = false
+                        }
+                    }
                 }
-                attempt++
             },
-            onCancel = onCancel,
+            onCancel = { cancel() },
         )
     }
 }

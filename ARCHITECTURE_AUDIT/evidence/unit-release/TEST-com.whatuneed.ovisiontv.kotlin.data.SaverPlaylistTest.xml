@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-11T20:12:49" hostname="DESKTOP-M0B4FRI" time="0.018">
+  <properties/>
+  <testcase name="the_settings_preview_skips_hidden_clips" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.005"/>
+  <testcase name="a_loop_never_repeats_the_clip_it_ended_with" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.001"/>
+  <testcase name="the_settings_preview_follows_the_first_enabled_theme" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.005"/>
+  <testcase name="a_shuffled_pass_plays_every_clip_exactly_once" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.003"/>
+  <testcase name="a_shuffled_pass_is_not_the_catalogue_order" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.0"/>
+  <testcase name="an_empty_selection_keeps_every_theme" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.002"/>
+  <testcase name="only_the_selected_themes_are_played" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.0"/>
+  <testcase name="an_empty_catalogue_yields_no_loop" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.0"/>
+  <testcase name="hidden_clips_are_left_out_of_the_loop" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.0"/>
+  <testcase name="hiding_every_clip_yields_no_loop_instead_of_fallback_content" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.001"/>
+  <testcase name="a_theme_without_clips_yields_no_loop" classname="com.whatuneed.ovisiontv.kotlin.data.SaverPlaylistTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

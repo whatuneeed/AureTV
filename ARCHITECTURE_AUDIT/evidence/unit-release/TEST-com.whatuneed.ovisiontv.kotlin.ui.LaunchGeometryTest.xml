@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.LaunchGeometryTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-11T20:12:49" hostname="DESKTOP-M0B4FRI" time="0.005">
+  <properties/>
+  <testcase name="end_rect_covers_the_whole_screen" classname="com.whatuneed.ovisiontv.kotlin.ui.LaunchGeometryTest" time="0.005"/>
+  <testcase name="progress_is_clamped" classname="com.whatuneed.ovisiontv.kotlin.ui.LaunchGeometryTest" time="0.0"/>
+  <testcase name="middle_rect_moves_the_center_towards_the_screen_center" classname="com.whatuneed.ovisiontv.kotlin.ui.LaunchGeometryTest" time="0.0"/>
+  <testcase name="start_rect_is_the_focused_cell_centered_on_the_icon" classname="com.whatuneed.ovisiontv.kotlin.ui.LaunchGeometryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

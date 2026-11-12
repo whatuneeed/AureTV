@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:08" hostname="DESKTOP-M0B4FRI" time="0.017">
+  <properties/>
+  <testcase name="a_deleted_folder_leaves_its_apps_in_its_place" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.003"/>
+  <testcase name="hiding_an_unknown_or_folder_package_changes_nothing" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="hiding_the_last_app_keeps_focus_on_its_neighbour" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.004"/>
+  <testcase name="hiding_more_apps_appends_them_to_the_same_folder" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.001"/>
+  <testcase name="the_last_app_takes_the_place_of_the_folder" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="an_app_leaves_the_hidden_folder_for_the_end_of_the_grid" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="an_app_leaves_the_folder_right_after_its_tile" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="without_the_hidden_folder_nothing_is_hidden" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="hidden_apps_keep_the_order_they_were_hidden_in" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.001"/>
+  <testcase name="hiding_an_app_creates_the_hidden_folder_at_the_end" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="the_last_hidden_app_takes_the_place_of_the_hidden_folder" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="deleting_an_unknown_folder_changes_nothing" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <testcase name="an_unknown_folder_or_app_changes_nothing" classname="com.whatuneed.ovisiontv.kotlin.data.FolderEditTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

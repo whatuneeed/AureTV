@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -12,6 +13,7 @@ import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.runtime.mutableIntStateOf
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,13 @@ internal object AppArtCache {
             value.asAndroidBitmap().allocationByteCount / 1024
     }
 
+    /**
+     * Bumped on every eviction. Cards key their remembered artwork on it, so a
+     * tile that still held a dropped bitmap lets go of it and re-reads from the
+     * APK instead of pinning the whole grid in memory (audit A-01).
+     */
+    val epoch = mutableIntStateOf(0)
+
     fun get(key: String): ImageBitmap? = cache.get(key)
 
     fun put(key: String, value: ImageBitmap) {
@@ -41,13 +50,84 @@ internal object AppArtCache {
     fun trim(percent: Int) {
         if (percent >= 100) cache.evictAll()
         else cache.trimToSize(cache.maxSize() * (100 - percent) / 100)
+        epoch.intValue++
     }
 
     /** A lower profile (thermal, pressure) may shrink the budget after creation. */
     fun shrinkTo(kb: Int) {
-        if (kb < cache.maxSize()) cache.trimToSize(kb)
+        if (kb < cache.maxSize()) {
+            cache.trimToSize(kb)
+            epoch.intValue++
+        }
+    }
+
+    /**
+     * Re-reads one entry from the package manager after it was evicted. The key
+     * is the exact string [AppRepository.readApp] built, so an app update (a new
+     * lastUpdateTime) can never resolve to the previous version's artwork.
+     * Runs on the caller's IO dispatcher; the decode itself is ~1 ms.
+     */
+    fun load(context: Context, key: String): ImageBitmap? {
+        get(key)?.let { return it }
+        val parsed = parseArtKey(key) ?: return null
+        val appContext = context.applicationContext
+        val packageManager = appContext.packageManager
+        val info = runCatching { packageManager.getPackageInfo(parsed.packageName, 0) }.getOrNull()
+            ?: return null
+        val app = info.applicationInfo ?: return null
+        val kind = parsed.kind
+        val drawable = when {
+            // The launcher's own Settings tile declares its own icon, which is
+            // not the application icon; the key keeps the activity name for it.
+            kind.startsWith(KIND_ACTIVITY) -> runCatching {
+                packageManager.getActivityInfo(
+                    ComponentName(parsed.packageName, kind.removePrefix(KIND_ACTIVITY)),
+                    0,
+                )
+            }.getOrNull()?.loadIconSafe(packageManager)
+
+            kind == KIND_BANNER -> app.loadBannerSafe(packageManager)
+            else -> app.loadIconSafe(packageManager)
+        }
+        return drawableToImage(drawable, parsed.width, parsed.height)?.also { put(key, it) }
     }
 }
+
+internal const val KIND_BANNER = "banner"
+internal const val KIND_ICON = "icon"
+internal const val KIND_ACTIVITY = "act:"
+
+/** One decoded [TvApp] artwork key: package, kind and the box it fits into. */
+internal data class ArtKey(
+    val packageName: String,
+    val kind: String,
+    val width: Int,
+    val height: Int,
+)
+
+/**
+ * The key is "package|stamp|kind|WxH". Anything else is not ours, so a corrupt
+ * saved layout can never make the reload touch an unrelated package.
+ */
+internal fun parseArtKey(key: String): ArtKey? {
+    val parts = key.split('|')
+    if (parts.size != 4 || parts[0].isEmpty()) return null
+    val size = parts[3].split('x', limit = 2)
+    val width = size.getOrNull(0)?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+    val height = size.getOrNull(1)?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+    return ArtKey(parts[0], parts[2], width, height)
+}
+
+/**
+ * Registers art that was painted directly (tests, previews) under a stable key
+ * and hands the key to the tile. Only the cache holds the bitmap, the same rule
+ * the package-manager path follows.
+ */
+internal fun artKey(key: String, art: ImageBitmap?): String? =
+    art?.let {
+        AppArtCache.put(key, it)
+        key
+    }
 
 class AppRepository(context: Context) {
     // The launcher language lives in its own preference and is applied by
@@ -143,29 +223,33 @@ class AppRepository(context: Context) {
         // the gear that SettingsActivity declares, so this one tile skips it.
         val ownSettings = activity.packageName == context.packageName
         val stamp = packageInfo.lastUpdateTime
+        // The cache is decoded eagerly so the first frame has art, but the tile
+        // keeps only the key: nothing in the grid owns a bitmap (A-01).
         val banner = if (!withArtwork || ownSettings) {
             null
         } else {
-            val key = "${activity.packageName}|$stamp|banner|400x240"
-            AppArtCache.get(key) ?: drawableToImage(
-                appInfo.loadBannerSafe(packageManager), 400, 240,
-            )?.also { AppArtCache.put(key, it) }
+            val key = "${activity.packageName}|$stamp|$KIND_BANNER|400x240"
+            artKey(key, AppArtCache.get(key)
+                ?: drawableToImage(appInfo.loadBannerSafe(packageManager), 400, 240))
         }
-        val icon = if (!withArtwork) {
+        val icon = if (!withArtwork || banner != null) {
             null
-        } else if (banner == null) {
-            val key = "${activity.packageName}|$stamp|icon|256x256"
-            val cached = AppArtCache.get(key)
-            cached ?: run {
+        } else {
+            val kind = if (ownSettings) {
+                KIND_ACTIVITY + activity.name
+            } else {
+                KIND_ICON
+            }
+            val key = "${activity.packageName}|$stamp|$kind|256x256"
+            val art = AppArtCache.get(key) ?: run {
                 val drawable = if (ownSettings) {
                     activity.loadIconSafe(packageManager)
                 } else {
                     appInfo.loadIconSafe(packageManager)
                 }
-                drawableToImage(drawable, 256, 256)?.also { AppArtCache.put(key, it) }
+                drawableToImage(drawable, 256, 256)
             }
-        } else {
-            null
+            artKey(key, art)
         }
 
         return TvApp(
@@ -178,28 +262,28 @@ class AppRepository(context: Context) {
         )
     }
 
-    private fun ApplicationInfo.loadBannerSafe(packageManager: PackageManager): Drawable? =
-        try {
-            loadBanner(packageManager)
-        } catch (_: Exception) {
-            null
-        }
-
-    private fun ApplicationInfo.loadIconSafe(packageManager: PackageManager): Drawable? =
-        try {
-            loadIcon(packageManager)
-        } catch (_: Exception) {
-            null
-        }
-
-    private fun ActivityInfo.loadIconSafe(packageManager: PackageManager): Drawable? =
-        try {
-            loadIcon(packageManager)
-        } catch (_: Exception) {
-            null
-        }
-
 }
+
+internal fun ApplicationInfo.loadBannerSafe(packageManager: PackageManager): Drawable? =
+    try {
+        loadBanner(packageManager)
+    } catch (_: Exception) {
+        null
+    }
+
+internal fun ApplicationInfo.loadIconSafe(packageManager: PackageManager): Drawable? =
+    try {
+        loadIcon(packageManager)
+    } catch (_: Exception) {
+        null
+    }
+
+internal fun ActivityInfo.loadIconSafe(packageManager: PackageManager): Drawable? =
+    try {
+        loadIcon(packageManager)
+    } catch (_: Exception) {
+        null
+    }
 
 /**
  * Android TV banners are 16:9 while the home cell is 5:3. Copying into a 5:3

@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import android.widget.Toast
 import com.whatuneed.ovisiontv.kotlin.OVisionAccessibilityService
 import com.whatuneed.ovisiontv.kotlin.R
@@ -117,20 +118,35 @@ object SleepControls {
     )
 
     /**
-     * The system's own device-admin screen explains the request; when the TV
-     * lacks it, the accessibility switch is the only route to standby.
+     * The screen that grants the sleep permission, or null when the TV offers
+     * neither route. The Control Center sends it through the kids gate; the
+     * system's own device-admin screen explains the request, and when the TV
+     * lacks it the accessibility switch is the only route to standby.
      */
-    fun requestPermission(context: Context) {
-        if (hasAdmin(context)) return
+    fun permissionIntent(context: Context): Intent? {
         if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_DEVICE_ADMIN)) {
-            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+            return Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
                 .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin(context))
                 .putExtra(
                     DevicePolicyManager.EXTRA_ADD_EXPLANATION,
                     context.getString(R.string.settings_power_admin_explanation),
                 )
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (runCatching { context.startActivity(intent) }.isSuccess) return
+        }
+        if (AccessibilityStatus.available(context)) {
+            return Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return null
+    }
+
+    fun requestPermission(context: Context) {
+        if (hasAdmin(context)) return
+        val intent = permissionIntent(context)
+        if (intent != null && intent.action == DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN &&
+            runCatching { context.startActivity(intent) }.isSuccess
+        ) {
+            return
         }
         if (AccessibilityStatus.available(context)) {
             Toast.makeText(context, R.string.settings_power_accessibility_hint, Toast.LENGTH_LONG)

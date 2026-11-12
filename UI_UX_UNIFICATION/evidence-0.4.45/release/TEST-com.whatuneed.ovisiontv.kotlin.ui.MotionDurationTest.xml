@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.ui.MotionDurationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:30" hostname="DESKTOP-M0B4FRI" time="0.0">
+  <properties/>
+  <testcase name="reduce_motion_removes_the_travel_but_keeps_the_hand_off" classname="com.whatuneed.ovisiontv.kotlin.ui.MotionDurationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

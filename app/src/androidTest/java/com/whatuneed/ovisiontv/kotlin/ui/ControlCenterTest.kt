@@ -2,7 +2,11 @@
 
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import android.app.admin.DevicePolicyManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -19,9 +23,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
+import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -74,6 +82,7 @@ class ControlCenterTest {
         count: Int = 8,
         onStartSaver: () -> Unit = {},
         onLaunch: (TvApp) -> Boolean = { true },
+        onOpenSystem: ((Intent) -> Unit)? = null,
     ) {
         rule.setContent {
             OVisionTheme {
@@ -83,6 +92,7 @@ class ControlCenterTest {
                     onLaunch = onLaunch,
                     onOrderChanged = {},
                     onStartSaver = onStartSaver,
+                    onOpenSystem = onOpenSystem,
                 )
             }
         }
@@ -260,6 +270,74 @@ class ControlCenterTest {
         rule.onNodeWithContentDescription(context.getString(R.string.cc_screensaver))
             .assertDoesNotExist()
     }
+
+    // AQ-03: asking for the sleep permission is system navigation, so Power
+    // and Timer must go through the same gate host as the other system tiles
+    // instead of opening the permission screen directly.
+    @Test
+    fun powerTileRoutesThePermissionRequestThroughTheSystemGate() {
+        assumeTrue("the TV must offer a permission screen", SleepControls.adminSupported(context))
+        assumeFalse("the permission must not be granted already", SleepControls.hasAdmin(context))
+        var captured: Intent? = null
+        setHome(onOpenSystem = { captured = it })
+        openPanel()
+
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(300)
+        rule.waitForIdle()
+
+        val intent = requireNotNull(captured) {
+            "Power must ask the gate host, not open the permission screen directly"
+        }
+        assertEquals(permissionAction(), intent.action)
+    }
+
+    @Test
+    fun timerTileRoutesThePermissionRequestThroughTheSystemGate() {
+        assumeTrue("the TV must offer a permission screen", SleepControls.adminSupported(context))
+        assumeFalse("the permission must not be granted already", SleepControls.hasAdmin(context))
+        var captured: Intent? = null
+        setHome(onOpenSystem = { captured = it })
+        openPanel()
+
+        // Right enters the right column; Down walks it to the timer (the
+        // display tile only exists when the TV exposes a screen for it).
+        press(Key.DirectionRight)
+        val timer = context.getString(R.string.cc_sleep_timer)
+        var steps = 0
+        while (focusedDescription() != timer && steps < 3) {
+            press(Key.DirectionDown)
+            steps++
+        }
+        rule.onNodeWithContentDescription(timer).assertIsFocused()
+
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(300)
+        rule.waitForIdle()
+
+        val intent = requireNotNull(captured) {
+            "Timer must ask the gate host, not open the permission screen directly"
+        }
+        assertEquals(permissionAction(), intent.action)
+        // requestClose(false) is preserved: the panel leaves for the system screen.
+        rule.onNodeWithContentDescription(timer).assertDoesNotExist()
+    }
+
+    private fun permissionAction(): String =
+        if (context.packageManager.hasSystemFeature(PackageManager.FEATURE_DEVICE_ADMIN)) {
+            DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN
+        } else {
+            Settings.ACTION_ACCESSIBILITY_SETTINGS
+        }
+
+    private fun focusedDescription(): String? =
+        rule.onNode(
+            SemanticsMatcher("focused") {
+                it.config.getOrNull(SemanticsProperties.Focused) == true
+            },
+        ).fetchSemanticsNode().config
+            .getOrNull(SemanticsProperties.ContentDescription)
+            ?.joinToString()
 
     @Test
     fun panelCanBeReopenedImmediately() {

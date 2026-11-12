@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest" tests="3" failures="3" errors="0" skipped="0" time="12.967" timestamp="2026-11-11T19:16:00" hostname="localhost">
+  <properties>
+    <property name="device" value="hume-tv(AVD) - 14" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="cleared_pin_cannot_pass_an_in_flight_check" classname="com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest" time="4.27">
+    <failure>java.lang.AssertionError
+at org.junit.Assert.fail(Assert.java:87)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at org.junit.Assert.assertFalse(Assert.java:65)
+at org.junit.Assert.assertFalse(Assert.java:75)
+at com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest$cleared_pin_cannot_pass_an_in_flight_check$1.invokeSuspend(KidsStoreTest.kt:27)
+at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:280)
+at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:85)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:59)
+at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:38)
+at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+at com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest.cleared_pin_cannot_pass_an_in_flight_check(KidsStoreTest.kt:23)
+</failure>
+  </testcase>
+  <testcase name="cleared_recovery_cannot_pass_an_in_flight_check" classname="com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest" time="3.807">
+    <failure>java.lang.AssertionError
+at org.junit.Assert.fail(Assert.java:87)
+at org.junit.Assert.assertTrue(Assert.java:42)
+at org.junit.Assert.assertFalse(Assert.java:65)
+at org.junit.Assert.assertFalse(Assert.java:75)
+at com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest$cleared_recovery_cannot_pass_an_in_flight_check$1.invokeSuspend(KidsStoreTest.kt:35)
+at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
+at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:280)
+at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:85)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:59)
+at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:38)
+at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+at com.whatuneed.ovisiontv.kotlin.data.KidsStoreTest.cleared_recovery_cannot_pass_an_in_flight_check(KidsStoreTest.kt:31)
+</failure>
+  </testcase>
+  <testcase name="back_cancels_during_pin_verification" classname="com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest" time="4.336">
+    <failure>java.lang.AssertionError: BACK must remain available while hashing expected:&lt;1&gt; but was:&lt;0&gt;
+at org.junit.Assert.fail(Assert.java:89)
+at org.junit.Assert.failNotEquals(Assert.java:835)
+at org.junit.Assert.assertEquals(Assert.java:120)
+at com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest.back_cancels_during_pin_verification$lambda$1(PinPadInputTest.kt:53)
+at com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest.$r8$lambda$GwkgSwznJk0CoOBSYopcYu5GOA0(Unknown Source:0)
+at com.whatuneed.ovisiontv.kotlin.ui.components.PinPadInputTest$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+at androidx.compose.ui.test.AndroidSynchronization_androidKt.runOnUiThread$lambda$0(AndroidSynchronization.android.kt:37)
+at androidx.compose.ui.test.AndroidSynchronization_androidKt.$r8$lambda$opyMdTZ52jorqLaIG4SKpPr_Zno(Unknown Source:0)
+at androidx.compose.ui.test.AndroidSynchronization_androidKt$$ExternalSyntheticLambda0.call(D8$$SyntheticClass:0)
+at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2420)
+at android.os.Handler.handleCallback(Handler.java:958)
+at android.os.Handler.dispatchMessage(Handler.java:99)
+at android.os.Looper.loopOnce(Looper.java:205)
+at android.os.Looper.loop(Looper.java:294)
+at android.app.ActivityThread.main(ActivityThread.java:8177)
+at java.lang.reflect.Method.invoke(Native Method)
+at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:552)
+at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:971)
+</failure>
+  </testcase>
+</testsuite>
