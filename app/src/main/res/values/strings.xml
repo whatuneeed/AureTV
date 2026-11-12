@@ -223,6 +223,7 @@
     <string name="settings_perms_wifi">Wi-Fi Name in Control Center</string>
     <string name="settings_perms_allowed">Allowed</string>
     <string name="settings_perms_allow">Allow…</string>
+    <string name="settings_perms_denied">Denied</string>
     <string name="settings_perms_setup">Set Up…</string>
     <string name="settings_perms_unavailable">Not available on TV</string>
     <string name="settings_perms_all_allowed">All allowed</string>
@@ -279,6 +280,7 @@
     <string name="setup_accessibility_on">On</string>
     <string name="setup_accessibility_stale">Restart the switch</string>
     <string name="setup_access_detail">Lets the shelf read app recommendations</string>
+    <string name="setup_access_permanent">Open App Info to allow it manually</string>
     <string name="setup_done_title">All Set</string>
     <string name="setup_continue">Continue</string>
     <string name="setup_back">Back</string>

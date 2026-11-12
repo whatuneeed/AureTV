@@ -163,5 +163,30 @@ class HomeOrderTest {
         assertEquals(false, savedOrderCovers("[]", apps))
     }
 
+    @Test
+    fun a_repaired_folder_id_is_stable_once_persisted() {
+        val saved = """[{"name":"Folder","apps":["alpha"]}]"""
+        val first = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(first.repairedIds)
+        val firstId = first.items.filterIsInstance<HomeItem.FolderItem>().single().id
+        // This is what HomeOrderStore.saveOrder writes after the repair.
+        val persisted = """[{"id":"$firstId","name":"Folder","apps":["alpha"]}]"""
+        val second = buildHomeOrderRepair(persisted, apps, "Folder")
+        assertEquals(false, second.repairedIds)
+        assertEquals(firstId, second.items.filterIsInstance<HomeItem.FolderItem>().single().id)
+    }
+
+    @Test
+    fun a_duplicate_folder_id_is_repaired_once() {
+        val saved = """[
+            {"id":"same","name":"A","apps":["alpha"]},
+            {"id":"same","name":"B","apps":["beta"]}
+        ]"""
+        val built = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(built.repairedIds)
+        val ids = built.items.filterIsInstance<HomeItem.FolderItem>().map { it.id }
+        assertEquals(2, ids.toSet().size)
+    }
+
     private fun List<HomeItem>.keys(): List<String> = map { it.key }
 }

@@ -44,6 +44,9 @@ class SettingsActivity : TvRemoteActivity() {
     // the default Home are only true again on resume.
     private val resumeTick = mutableIntStateOf(0)
     private val kidsUnlocked = mutableStateOf(false)
+    // Setup or another Settings window may change the launcher language while
+    // this activity is paused; its wrapped context is fixed at creation.
+    private var appliedLanguage: String = LocalePreference.SYSTEM
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocalePreference.wrap(newBase))
@@ -51,6 +54,7 @@ class SettingsActivity : TvRemoteActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appliedLanguage = LocalePreference.get(this)
         // Settings is reachable in its own task (deep link, recents); its
         // preview caches must see the same budgets as Home.
         Adaptive.install(this)
@@ -90,6 +94,12 @@ class SettingsActivity : TvRemoteActivity() {
         // The device row shows the live profile: re-derive it after system
         // screens, thermal status may have changed while we were away.
         Adaptive.install(this)
+        // A language change made in the wizard must rebuild this activity's
+        // wrapped context, exactly as Home and Setup do (AQ-25).
+        if (LocalePreference.get(this) != appliedLanguage) {
+            recreate()
+            return
+        }
         resumeTick.intValue++
     }
 }

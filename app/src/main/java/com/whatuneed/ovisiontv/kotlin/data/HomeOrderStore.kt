@@ -18,13 +18,19 @@ class HomeOrderStore(
 
     private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
-    fun applyOrder(apps: List<TvApp>): List<HomeItem> =
-        buildHomeOrder(
+    fun applyOrder(apps: List<TvApp>): List<HomeItem> {
+        val built = buildHomeOrderRepair(
             saved = prefs.getString(LauncherPrefs.KEY_HOME_ORDER, null),
             apps = apps,
             defaultFolderName = context.getString(R.string.folder_default),
             hiddenFolderName = context.getString(R.string.hidden_folder_name),
         )
+        // Persist a generated folder id even when the saved order already
+        // covers every app: otherwise the next read invents another UUID and
+        // the Compose key and saved focus become unstable (AQ-28).
+        if (built.repairedIds) saveOrder(built.items)
+        return built.items
+    }
 
     /**
      * The fallback order follows localized labels, so leaving it unsaved means a
@@ -109,25 +115,38 @@ internal fun savedOrderCovers(saved: String?, apps: List<TvApp>): Boolean {
  * saved order, and a folder left without children is dropped. Newly installed apps
  * are appended so they are never lost.
  */
+internal data class BuiltHomeOrder(
+    val items: List<HomeItem>,
+    val repairedIds: Boolean,
+)
+
 internal fun buildHomeOrder(
     saved: String?,
     apps: List<TvApp>,
     defaultFolderName: String,
     hiddenFolderName: String? = null,
-): List<HomeItem> {
+): List<HomeItem> = buildHomeOrderRepair(saved, apps, defaultFolderName, hiddenFolderName).items
+
+internal fun buildHomeOrderRepair(
+    saved: String?,
+    apps: List<TvApp>,
+    defaultFolderName: String,
+    hiddenFolderName: String? = null,
+): BuiltHomeOrder {
     val fallback = apps.map(HomeItem::AppItem)
-    if (saved == null) return fallback
+    if (saved == null) return BuiltHomeOrder(fallback, repairedIds = false)
     val entries = try {
         JSONArray(saved)
     } catch (_: Exception) {
-        return fallback
+        return BuiltHomeOrder(fallback, repairedIds = false)
     }
-    if (entries.length() == 0) return fallback
+    if (entries.length() == 0) return BuiltHomeOrder(fallback, repairedIds = false)
 
     val byPackage = apps.associateBy { it.packageName }
     val used = HashSet<String>(entries.length())
     val usedIds = HashSet<String>()
     val result = ArrayList<HomeItem>(entries.length())
+    var repairedIds = false
     for (index in 0 until entries.length()) {
         val entry = entries.opt(index)
         if (entry is String) {
@@ -147,6 +166,7 @@ internal fun buildHomeOrder(
             if (id.isEmpty() || !usedIds.add(id)) {
                 id = UUID.randomUUID().toString()
                 usedIds.add(id)
+                repairedIds = true
             }
             val storedName = entry.optString("name").takeIf { it.isNotBlank() }
             // The hidden folder is a system bucket with a fixed caption, not a
@@ -169,5 +189,5 @@ internal fun buildHomeOrder(
         }
         if (hiddenIndex >= 0) result.addAll(hiddenIndex, additions) else result.addAll(additions)
     }
-    return result
+    return BuiltHomeOrder(result, repairedIds)
 }

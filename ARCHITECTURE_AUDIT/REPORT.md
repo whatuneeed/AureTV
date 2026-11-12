@@ -1,6 +1,6 @@
 # Architecture & Code Quality Audit — Kotlin 0.4.44
 
-Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этапы 1–3 реализованы в 0.4.45–0.4.47 (vc65–vc67)** — статус и доказательства ниже, этапы 4–5 не начаты.
+Дата: 12.11.2026. Объект — **только OVisionTV_Kotlin**, рабочее дерево `0.4.44 / versionCode 64`, `com.whatuneed.ovisiontv.kotlin`. Соседняя Java-версия исключена из этого отчёта по указанию владельца. Аудит выполнен на 0.4.44; **этапы 1–4 реализованы в 0.4.45–0.4.48 (vc65–vc68)** — статус и доказательства ниже, этап 5 не начат.
 
 Аудит read-only: production-код, интерфейс, applicationId, подпись, разрешения и зависимости не изменялись. Созданы только этот отчёт и его проверочные артефакты. Ключи подписи и tvOS не читались; сторонние приложения и контент для аудита не запускались.
 
@@ -8,7 +8,7 @@
 
 Исходное состояние зафиксировано в [source-baseline.json](file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/ARCHITECTURE_AUDIT/evidence/source-baseline.json): 168 текстовых файлов исходников/конфигурации Kotlin-проекта, SHA-256; повторная проверка не обнаружила изменений. Git-корень находится внутри Kotlin-проекта, ветка `master`; ранее внесённые изменения 0.4.44 не закоммичены. Не путать рабочее дерево с HEAD.
 
-## Статус реализации (0.4.45–0.4.47)
+## Статус реализации (0.4.45–0.4.48)
 
 Этап 1 («серьёзные ошибки и стабильность») реализован 12.11.2026. Production-код: `SettingsActivity.kt`, `SettingsScreen.kt`, `LauncherRoot.kt`, `ControlCenter.kt`, `SleepControls.kt`, `Profiles.kt`, `AerialRefresh.kt`, `BinaryPlist.kt`, `SaverPreviewImage.kt`, `KidsMode.kt`. Новые тесты: `KidsEntryGrantTest`, `ArtKeyTest`, `SampleForTest`, `KidsStoreTest`, `PinPadInputTest`; расширены `SettingsScreenTest`, `ControlCenterTest`, `SaverPreviewTest`, `BinaryPlistTest`, `ProfilesTest`, `KidsModeTest`, `KidsGateTest`.
 
@@ -53,7 +53,22 @@
 | AQ-27 startup policy | реализовано: reason + recheck onWake/Kids | `StartupPreferencesTest` (3) |
 | AQ-32 leanback-only | реализовано: fallback на `LEANBACK_LAUNCHER` | полный прогон; реальное приложение — NOT TESTED |
 
-Прогон 0.4.47: **330/330 debug + 330/330 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `7a26a32c…30e9`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.47». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.47/`, запись — `FIXES.md`. Этапы 4–5 не начаты; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
+Прогон 0.4.47: **330/330 debug + 330/330 release** юнит, **207/207** инструментальных, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `7a26a32c…30e9`, v2, сертификат `327a50…7b10`; установленный `base.apk` совпал по SHA-256, crash-буфер пуст. Живой smoke: мастер RU, Главная, «О системе 0.4.47». Доказательства — `UI_UX_UNIFICATION/evidence-0.4.47/`, запись — `FIXES.md`.
+
+Этап 4 («UX-контракты без редизайна») реализован в 0.4.48. Production-код: `SettingsScreen.kt`, `SetupScreen.kt`, `ControlCenter.kt`, `SettingsActivity.kt`, `HomeOrderStore.kt`, новые `PermissionRecovery.kt` и `CacheBudget.kt` (этап 3). Новые тесты: `PermissionRecoveryTest`; расширены `HomeOrderTest`, `HomeOrderStoreTest`.
+
+| Пункт | Статус | Проверка |
+|---|---|---|
+| AQ-22 modal focus | реализовано: `modalOpen` в guard и ключах эффекта | компиляция; device — NOT TESTED |
+| AQ-23 мастер и TalkBack | реализовано: `onActivate` в semantics кнопок | компиляция; device — NOT TESTED |
+| AQ-24 владелец city-query | реализовано: `foundQuery` | компиляция; device — NOT TESTED |
+| AQ-25 language resume | реализовано: `appliedLanguage` + `recreate()` | компиляция; device — NOT TESTED |
+| AQ-26 Control Center | реализовано: `runTile` для пульта и semantics | компиляция; device — NOT TESTED |
+| AQ-28 stable folder ID | реализовано: `buildHomeOrderRepair` + persist | `HomeOrderTest` (2); instrumented — NOT TESTED |
+| AQ-29 finish cursor | реализовано: `moveUp` guard | компиляция; device — NOT TESTED |
+| AQ-30 permanent denial | реализовано: App Info после отказа | `PermissionRecoveryTest` (4); device — NOT TESTED |
+
+Прогон 0.4.48: **336/336 debug + 336/336 release** юнит, `compileDebugAndroidTestKotlin` BUILD SUCCESSFUL, lint **0 Error / 14 Warning / 5 Information**, `assembleRelease` BUILD SUCCESSFUL. APK `4bf03882…ebdd`, v2, сертификат `327a50…7b10`. **Инструментальный прогон и установка на стенд — NOT TESTED: эмулятор остановлен по просьбе владельца.** Доказательства — `UI_UX_UNIFICATION/evidence-0.4.48/`, запись — `FIXES.md`. Этап 5 не начат; реальный ТВ/4K/LOW/TalkBack и полный benchmark — NOT TESTED.
 
 ## Уровни доказательств
 
@@ -569,7 +584,7 @@ Artwork caches / Aerial catalogue / ExoPlayer / device services
 
 # F. Поэтапный план улучшений
 
-**План. Этапы 1–3 реализованы в 0.4.45–0.4.47 (см. «Статус реализации» выше); этапы 4–5 не начаты.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
+**План. Этапы 1–4 реализованы в 0.4.45–0.4.48 (см. «Статус реализации» выше); этап 5 не начат.** Каждый следующий пункт — небольшой отдельный diff с тестом; крупный рефакторинг и новые зависимости не предполагаются.
 
 Общий gate микроэтапа: зафиксирован исходный working tree/backup → воспроизведение/RED → минимальное изменение → GREEN → полная регрессия → проверенный подписанный APK и установка на изолированный стенд → журнал/артефакты. Не использовать reset/удаление пользовательских данных или отключение тестов для получения зелёного результата.
 

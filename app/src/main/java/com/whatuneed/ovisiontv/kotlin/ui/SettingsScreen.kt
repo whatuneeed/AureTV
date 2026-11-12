@@ -131,6 +131,10 @@ import com.whatuneed.ovisiontv.kotlin.data.HIDDEN_FOLDER_ID
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
+import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
+import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
+import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
+import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.NetworkKind
 import com.whatuneed.ovisiontv.kotlin.data.PerformanceProfile
@@ -517,6 +521,10 @@ fun SettingsScreen(
     var locationAllowed by remember(resumeTick) {
         mutableStateOf(DeviceFactsReader.hasLocation(context))
     }
+    // One state holder instead of two: the Compose/K2 compiler in this
+    // project hits an internal error with one more Boolean state in this huge
+    // composable, while a Set keeps the same information (AQ-30).
+    var permissionsAsked by remember { mutableStateOf(emptySet<String>()) }
     // Device admin or the connected accessibility service: both can lock the
     // screen, so this is the row's "allowed" state, not just the admin flag.
     var powerAllowed by remember(resumeTick) { mutableStateOf(SleepControls.hasAdmin(context)) }
@@ -635,11 +643,13 @@ fun SettingsScreen(
         ActivityResultContracts.RequestPermission(),
     ) {
         listingsAllowed = ContentPreferences.canReadListings(context)
+        permissionsAsked = permissionsAsked + ContentPreferences.READ_TV_LISTINGS
     }
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         locationAllowed = DeviceFactsReader.hasLocation(context)
+        permissionsAsked = permissionsAsked + Manifest.permission.ACCESS_FINE_LOCATION
     }
 
     LaunchedEffect(page, cacheTick, resumeTick) {
@@ -1754,81 +1764,32 @@ fun SettingsScreen(
                 homeOverride = homeOverride,
                 accessibilityConnected = accessibility == AccessibilityStatus.State.CONNECTED,
             )
-            listOf(
-                SettingsRow(
-                    title = stringResource(R.string.settings_perms_home_button),
-                    value = stringResource(
-                        when (accessibility) {
-                            AccessibilityStatus.State.CONNECTED -> R.string.settings_perms_allowed
-                            AccessibilityStatus.State.STALE -> R.string.settings_home_button_stale
-                            AccessibilityStatus.State.OFF -> R.string.settings_perms_allow
-                        },
-                    ),
-                    action = { AccessibilityStatus.open(context) },
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_perms_listings),
-                    value = stringResource(
-                        if (listingsAllowed) {
-                            R.string.settings_perms_allowed
-                        } else {
-                            R.string.settings_perms_allow
-                        },
-                    ),
-                    action = if (listingsAllowed) {
-                        ({ openAppSettings(context) })
-                    } else {
-                        ({ listingsPermission.launch(ContentPreferences.READ_TV_LISTINGS) })
-                    },
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_perms_power),
-                    value = stringResource(
-                        when {
-                            powerAllowed -> R.string.settings_perms_allowed
-                            powerSupported -> R.string.settings_perms_allow
-                            else -> R.string.settings_perms_unavailable
-                        },
-                    ),
-                    action = when {
-                        powerAllowed -> ({ openAppSettings(context) })
-                        powerSupported -> ({ SleepControls.requestPermission(context) })
-                        else -> null
-                    },
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_perms_home),
-                    value = stringResource(
-                        if (homeReady) R.string.settings_yes else R.string.settings_perms_setup,
-                    ),
-                    action = if (homeReady) {
-                        null
-                    } else {
-                        ({ openSystemSettings(context) })
-                    },
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_perms_wifi),
-                    value = stringResource(
-                        if (locationAllowed) {
-                            R.string.settings_perms_allowed
-                        } else {
-                            R.string.settings_perms_allow
-                        },
-                    ),
-                    action = if (locationAllowed) {
-                        ({ openAppSettings(context) })
-                    } else {
-                        ({
-                            locationPermission.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                                ),
-                            )
-                        })
-                    },
-                ),
+            val listingsAsked = ContentPreferences.READ_TV_LISTINGS in permissionsAsked
+            val locationAsked = Manifest.permission.ACCESS_FINE_LOCATION in permissionsAsked
+            permissionsRows(
+                accessibility = accessibility,
+                openAccessibility = { AccessibilityStatus.open(context) },
+                listingsAllowed = listingsAllowed,
+                listingsPermanent = !listingsAllowed &&
+                    isPermanentDenial(context, ContentPreferences.READ_TV_LISTINGS, listingsAsked),
+                requestListings = { listingsPermission.launch(ContentPreferences.READ_TV_LISTINGS) },
+                powerAllowed = powerAllowed,
+                powerSupported = powerSupported,
+                requestPower = { SleepControls.requestPermission(context) },
+                homeReady = homeReady,
+                openHome = { openSystemSettings(context) },
+                locationAllowed = locationAllowed,
+                locationPermanent = !locationAllowed &&
+                    isLocationPermanentDenial(context, locationAsked),
+                requestLocation = {
+                    locationPermission.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                },
+                openAppInfo = { openAppSettings(context) },
             )
         }
 
@@ -2186,6 +2147,9 @@ fun SettingsScreen(
     val docRequester = remember { FocusRequester() }
     val emptyRequester = remember { FocusRequester() }
     val gridState = rememberLazyListState()
+    val modalOpen = citySearchOpen || previewClip != null || nameEditorOpen ||
+        avatarPickerOpen || kidsPadFor != null || kidsLeaveFor != null ||
+        recoveryStep != null || kidsEntryLocked
 
     LaunchedEffect(
         page,
@@ -2197,7 +2161,9 @@ fun SettingsScreen(
         sidebarIndex,
         filterKey,
         focusTick,
+        modalOpen,
     ) {
+        if (modalOpen) return@LaunchedEffect
         if (isDoc) {
             val paragraph = docFocus.coerceIn(0, docParagraphs.lastIndex.coerceAtLeast(0))
             docBringIntoView[paragraph]?.bringIntoView()
@@ -3728,6 +3694,84 @@ private fun openNetworkSettings(context: Context) {
 
 // Not every TV build has a dedicated Home-screen settings screen, so fall back
 // to the system settings entry instead of doing nothing.
+@Composable
+private fun permissionsRows(
+    accessibility: AccessibilityStatus.State,
+    openAccessibility: () -> Unit,
+    listingsAllowed: Boolean,
+    listingsPermanent: Boolean,
+    requestListings: () -> Unit,
+    powerAllowed: Boolean,
+    powerSupported: Boolean,
+    requestPower: () -> Unit,
+    homeReady: Boolean,
+    openHome: () -> Unit,
+    locationAllowed: Boolean,
+    locationPermanent: Boolean,
+    requestLocation: () -> Unit,
+    openAppInfo: () -> Unit,
+): List<SettingsRow> = listOf(
+    SettingsRow(
+        title = stringResource(R.string.settings_perms_home_button),
+        value = stringResource(
+            when (accessibility) {
+                AccessibilityStatus.State.CONNECTED -> R.string.settings_perms_allowed
+                AccessibilityStatus.State.STALE -> R.string.settings_home_button_stale
+                AccessibilityStatus.State.OFF -> R.string.settings_perms_allow
+            },
+        ),
+        action = openAccessibility,
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_perms_listings),
+        value = stringResource(
+            if (listingsAllowed) {
+                R.string.settings_perms_allowed
+            } else if (listingsPermanent) {
+                R.string.settings_perms_denied
+            } else {
+                R.string.settings_perms_allow
+            },
+        ),
+        action = if (listingsAllowed || listingsPermanent) openAppInfo else requestListings,
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_perms_power),
+        value = stringResource(
+            when {
+                powerAllowed -> R.string.settings_perms_allowed
+                powerSupported -> R.string.settings_perms_allow
+                else -> R.string.settings_perms_unavailable
+            },
+        ),
+        action = when {
+            powerAllowed -> openAppInfo
+            powerSupported -> requestPower
+            else -> null
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_perms_home),
+        value = stringResource(
+            if (homeReady) R.string.settings_yes else R.string.settings_perms_setup,
+        ),
+        action = if (homeReady) null else openHome,
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_perms_wifi),
+        value = stringResource(
+            if (locationAllowed) {
+                R.string.settings_perms_allowed
+            } else if (locationPermanent) {
+                R.string.settings_perms_denied
+            } else {
+                R.string.settings_perms_allow
+            },
+        ),
+        action = if (locationAllowed || locationPermanent) openAppInfo else requestLocation,
+    ),
+)
+
 private fun openSystemSettings(context: Context) {
     val opened = runCatching {
         context.startActivity(

@@ -146,6 +146,25 @@ class HomeOrderStoreTest {
         )
     }
 
+    @Test
+    fun a_repaired_folder_id_survives_the_next_read() {
+        context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(
+                LauncherPrefs.KEY_HOME_ORDER,
+                """[{"name":"Folder","apps":["a.one"]}]""",
+            )
+            .commit()
+
+        val store = HomeOrderStore(context)
+        val first = store.applyOrder(listOf(app("a.one")))
+        val firstId = (first.single() as HomeItem.FolderItem).id
+        // applyOrder must persist the generated id; the next read cannot
+        // invent a different UUID (AQ-28).
+        val second = store.applyOrder(listOf(app("a.one")))
+        assertEquals(firstId, (second.single() as HomeItem.FolderItem).id)
+    }
+
     private fun savedPackages(store: HomeOrderStore): List<String> {
         val entries = JSONArray(store.savedOrder())
         return (0 until entries.length()).map { entries.getString(it) }

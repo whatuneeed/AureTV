@@ -532,6 +532,13 @@ internal fun ControlCenter(
         action()
     }
 
+    // One activation path for the remote and for TalkBack: a tile that only
+    // changes its own state keeps the panel open, exactly as [activateFocus]
+    // already did for the remote (AQ-26).
+    fun runTile(tile: CcTile) {
+        if (tile.closes) activate(tile.action) else tile.action()
+    }
+
     val power = CcTile(
         id = LEAD_ID,
         title = stringResource(R.string.cc_power),
@@ -707,7 +714,7 @@ internal fun ControlCenter(
         if (closing) return
         val tile = tileById(focusId)
         if (tile != null) {
-            if (tile.closes) activate(tile.action) else tile.action()
+            runTile(tile)
             return
         }
         circles.firstOrNull { it.id == focusId }?.let { activate(it.action) }
@@ -798,7 +805,7 @@ internal fun ControlCenter(
                 layout = if (powerHeight > CC_TILE_HEIGHT) CcLayout.TALL else CcLayout.ROW,
                 focused = focusId == LEAD_ID,
                 focusRequester = requester(LEAD_ID),
-                onActivate = { activate(power.action) },
+                onActivate = { runTile(power) },
                 modifier = Modifier.offset(x = 0.dp),
             )
 
@@ -814,7 +821,7 @@ internal fun ControlCenter(
                 layout = CcLayout.ROW,
                 focused = focusId == SOUND_ID,
                 focusRequester = requester(SOUND_ID),
-                onActivate = { activate(sound.action) },
+                onActivate = { runTile(sound) },
                 modifier = Modifier.offset(x = 0.dp, y = scale.dp(soundY)),
             )
 
@@ -832,7 +839,7 @@ internal fun ControlCenter(
                     layout = CcLayout.ROW,
                     focused = focusId == id,
                     focusRequester = requester(id),
-                    onActivate = { activate(tile.action) },
+                    onActivate = { runTile(tile) },
                     modifier = Modifier.offset(
                         x = scale.dp(CC_TILE_WIDTH + CC_TILE_GAP),
                         y = scale.dp(index * (CC_TILE_HEIGHT + CC_TILE_GAP)),

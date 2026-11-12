@@ -227,6 +227,7 @@
     <string name="settings_perms_wifi">Имя Wi-Fi в пункте управления</string>
     <string name="settings_perms_allowed">Разрешено</string>
     <string name="settings_perms_allow">Разрешить…</string>
+    <string name="settings_perms_denied">Запрещено</string>
     <string name="settings_perms_setup">Настроить…</string>
     <string name="settings_perms_unavailable">Недоступно на телевизоре</string>
     <string name="settings_perms_all_allowed">Всё разрешено</string>
@@ -287,6 +288,7 @@
     <string name="setup_accessibility_on">Включено</string>
     <string name="setup_accessibility_stale">Перезапустите переключатель</string>
     <string name="setup_access_detail">Рекомендации приложений на полке</string>
+    <string name="setup_access_permanent">Откройте «О приложении», чтобы разрешить вручную</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_continue">Продолжить</string>
     <string name="setup_back">Назад</string>

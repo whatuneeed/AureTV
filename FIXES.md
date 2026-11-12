@@ -218,8 +218,34 @@
 | Погодный цикл Home продолжает работу на pause | 0.4.47 (AQ-21) |
 | Отложенный startup запускает приложение после смены onWake/Kids-политики | 0.4.47 (AQ-27) |
 | Leanback-only приложение не находится для startup | 0.4.47 (AQ-32) |
+| Поздняя загрузка каталога перехватывает фокус у открытого PIN/клавиатуры | 0.4.48 (AQ-22) |
+| TalkBack не активирует кнопки «Назад/Продолжить» мастера | 0.4.48 (AQ-23) |
+| После смены запроса города можно выбрать результат старого запроса | 0.4.48 (AQ-24) |
+| Settings сохраняет старый language context после смены языка в мастере | 0.4.48 (AQ-25) |
+| Semantic click в Control Center закрывает панель, хотя пульт оставляет её | 0.4.48 (AQ-26) |
+| Сгенерированный ID папки не сохраняется и меняется при следующем чтении | 0.4.48 (AQ-28) |
+| Up на финише мастера уводит фокус в пустую область | 0.4.48 (AQ-29) |
+| После permanent denial строка разрешения снова и снова просит систему | 0.4.48 (AQ-30) |
 
 ## Записи
+
+### 13.11.2026 — 0.4.48: этап 4 архитектурного аудита (UX-контракты)
+
+Статус: `versionCode 68` / `versionName 0.4.48`, APK **4 095 078 B**, SHA-256 **`4bf03882bb3a0230878b62cba8ac8d9b748f0549f58feae1f4e4f54bc1d1ebdd`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` (прежний). Закрыты AQ-22/23/24/25/26/28/29/30. **Инструментальный прогон и живой smoke не выполнялись: эмулятор остановлен по просьбе владельца.**
+
+- **AQ-22 — modal focus.** В `SettingsScreen` добавлен `modalOpen` (city search, preview, editors, PIN-пады, recovery, entry gate); эффект фокуса не перехватывает фон, пока модальная поверхность открыта, и восстанавливает фокус после её закрытия.
+- **AQ-23 — semantics мастера.** `SetupButton` получил `onActivate`; `clearAndSetSemantics` вызывает то же действие, что OK, для Back/Continue/Finish.
+- **AQ-24 — владелец city-query.** `WeatherCitySearch` хранит `foundQuery`; результаты старого запроса не показываются и не выбираются, пока не завершён новый.
+- **AQ-25 — language context.** `SettingsActivity` запоминает `appliedLanguage` и на resume делает `recreate()`, если язык изменился в мастере/другом окне.
+- **AQ-26 — Control Center.** `runTile` — единая активация для пульта и TalkBack: `closes=false` оставляет панель открытой в обоих путях.
+- **AQ-28 — stable folder ID.** `buildHomeOrderRepair` возвращает `repairedIds`; `HomeOrderStore.applyOrder` сохраняет сгенерированный id, поэтому следующий parse не создаёт новый UUID. Защита: `HomeOrderTest` (2), `HomeOrderStoreTest` (instrumented, не запускался).
+- **AQ-29 — finish cursor.** `moveUp` при `rowCount == 0` сохраняет фокус кнопки, а не уводит его в `-1`.
+- **AQ-30 — permanent denial.** `permanentDenial`/`isPermanentDenial`/`isLocationPermanentDenial`; мастер и Settings показывают «Запрещено» и открывают App Info вместо повторного запроса. Защита: `PermissionRecoveryTest` (4).
+- **Техническая заметка.** Крупный `SettingsScreen` упирался в внутреннюю ошибку Kotlin/K2 при добавлении двух Boolean-состояний и строк разрешений; флаги объединены в `Set<String>`, а строки страницы разрешений вынесены в `permissionsRows`. Поведение не изменилось, компилятор снова стабилен.
+- **Проверка.** `testDebugUnitTest`/`testReleaseUnitTest`: **336/336** на вариант, 0 failures/errors/skipped. `compileDebugAndroidTestKotlin`: BUILD SUCCESSFUL. `lintDebug`: **0 Error / 14 Warning / 5 Information**. `assembleRelease` — BUILD SUCCESSFUL, подпись v2. **`connectedDebugAndroidTest` и установка на стенд — NOT TESTED (эмулятор остановлен по просьбе владельца).**
+- **Граница.** AQ-22/23/26/29 — UI-поведение, проверенное компиляцией и чтением кода, но не прогоном на устройстве. AQ-28 instrumented-тест написан, но не запускался. AQ-30 permanent denial на реальном диалоге не воспроизводился. Реальный ТВ/4K/LOW/TalkBack — NOT TESTED.
+- **Не делать.** Не возвращать два отдельных Boolean-состояния и inline-строки разрешений в гигантский composable без проверки компилятора; не считать `shouldShowRequestPermissionRationale` доказательством permanent denial до первого запроса.
+- **Доказательства.** `UI_UX_UNIFICATION/evidence-0.4.48/release-signature.txt`, `temp/stage4-verify4.log`, `temp/stage4-release.log`.
 
 ### 12.11.2026 — 0.4.47: этап 3 архитектурного аудита (производительность и lifecycle)
 

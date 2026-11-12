@@ -94,6 +94,7 @@ import com.whatuneed.ovisiontv.kotlin.data.CitySearch
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
+import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
@@ -343,6 +344,7 @@ fun SetupScreen(
     // The city search replaces the weather page for a moment, exactly as the
     // Java wizard swapped its page content; leaving the page drops the state.
     var citySearchOpen by remember(page) { mutableStateOf(false) }
+    var listingsAsked by remember { mutableStateOf(false) }
 
     val listingsPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -350,6 +352,7 @@ fun SetupScreen(
         // The provider itself reports the final state; a grant that the system
         // still treats as denied must not be shown as allowed.
         listingsGranted = ContentPreferences.canReadListings(context)
+        listingsAsked = true
     }
 
     LaunchedEffect(page) {
@@ -372,9 +375,14 @@ fun SetupScreen(
     }
 
     fun requestAccess() {
-        if (listingsGranted) {
-            // The wizard is the only place that asks; re-running setup must not
-            // re-ask a granted permission, so an allowed row opens App info.
+        val permanent = isPermanentDenial(
+            context,
+            ContentPreferences.READ_TV_LISTINGS,
+            listingsAsked,
+        )
+        if (listingsGranted || permanent) {
+            // A granted permission and a permanent denial both recover only in
+            // App Info; asking the system again would do nothing (AQ-30).
             openSystem(
                 context,
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -613,14 +621,29 @@ fun SetupScreen(
                 ),
                 SetupRow(
                     title = stringResource(R.string.settings_listings_access),
-                    detail = stringResource(R.string.setup_access_detail),
+                    detail = stringResource(
+                        if (isPermanentDenial(
+                                context,
+                                ContentPreferences.READ_TV_LISTINGS,
+                                listingsAsked,
+                            )
+                        ) {
+                            R.string.setup_access_permanent
+                        } else {
+                            R.string.setup_access_detail
+                        },
+                    ),
                     kind = RowKind.ACTION,
                     ok = listingsGranted,
                     value = stringResource(
-                        if (listingsGranted) {
-                            R.string.settings_listings_granted
-                        } else {
-                            R.string.setup_allow_action
+                        when {
+                            listingsGranted -> R.string.settings_listings_granted
+                            isPermanentDenial(
+                                context,
+                                ContentPreferences.READ_TV_LISTINGS,
+                                listingsAsked,
+                            ) -> R.string.settings_listings_denied
+                            else -> R.string.setup_allow_action
                         },
                     ),
                     action = ::requestAccess,
@@ -683,6 +706,9 @@ fun SetupScreen(
         if (!inButtons) {
             if (focus > 0) focus--
         } else {
+            // The finish page has no rows; Up must not leave the button focus
+            // pointing at an index that does not exist (AQ-29).
+            if (rowCount == 0) return
             inButtons = false
             focus = rowCount - 1
         }
@@ -932,6 +958,7 @@ fun SetupScreen(
                             focused = inButtons && buttonIndex == 0,
                             scale = scale,
                             focusRequester = backRequester,
+                            onActivate = { back() },
                         )
                     }
                     SetupButton(
@@ -940,6 +967,7 @@ fun SetupScreen(
                         focused = inButtons && (!showBack || buttonIndex == 1),
                         scale = scale,
                         focusRequester = primaryRequester,
+                        onActivate = { next() },
                     )
                 }
             }
@@ -1109,6 +1137,9 @@ internal fun WeatherCitySearch(
     val query = keyboard.text
     // null: no query yet — the presets answer the usual case without typing.
     var found by remember { mutableStateOf<List<CityPlace>?>(null) }
+    // The query the results belong to; a stale list must not be selectable
+    // while the next debounce/network answer is still pending (AQ-24).
+    var foundQuery by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
     var zone by remember { mutableStateOf(CityZone.KEYS) }
     var resultIndex by remember { mutableIntStateOf(0) }
@@ -1137,11 +1168,14 @@ internal fun WeatherCitySearch(
         if (q.length < CITY_MIN_QUERY) {
             searching = false
             found = null
+            foundQuery = null
             return@LaunchedEffect
         }
         delay(CITY_DEBOUNCE_MS)
         searching = true
-        found = withContext(Dispatchers.IO) { CitySearch.search(q, geoLanguage) }
+        val result = withContext(Dispatchers.IO) { CitySearch.search(q, geoLanguage) }
+        found = result
+        foundQuery = q
         searching = false
     }
 
@@ -1155,12 +1189,15 @@ internal fun WeatherCitySearch(
             CityPlace(stringResource(R.string.city_kazan), stringResource(R.string.city_russia), 55.7963, 49.1088),
             CityPlace(stringResource(R.string.city_sochi), stringResource(R.string.city_russia), 43.5855, 39.7231),
         )
-    } else {
+    } else if (foundQuery == trimmed) {
         found.orEmpty()
+    } else {
+        emptyList()
     }
     val note: String? = when {
         trimmed.length < CITY_MIN_QUERY -> null
         searching -> stringResource(R.string.setup_city_searching)
+        foundQuery != trimmed -> null
         found == null -> stringResource(R.string.setup_city_offline)
         places.isEmpty() -> stringResource(R.string.setup_city_nothing)
         else -> null
@@ -1704,6 +1741,7 @@ private fun SetupButton(
     focused: Boolean,
     scale: TvScale,
     focusRequester: FocusRequester,
+    onActivate: () -> Unit,
 ) {
     val idle = if (primary) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.14f)
     // Java grows a focused button by 8% (its medium focus scale), more than a row.
@@ -1731,6 +1769,9 @@ private fun SetupButton(
             .clearAndSetSemantics {
                 contentDescription = text
                 role = Role.Button
+                // TalkBack must run the same action as OK; the key handler is
+                // not reachable from a semantic click (AQ-23).
+                onClick(label = text) { onActivate(); true }
             },
         contentAlignment = Alignment.Center,
     ) {
