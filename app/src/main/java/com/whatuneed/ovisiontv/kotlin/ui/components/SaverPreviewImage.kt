@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.aerialFallbackUrl
 import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
@@ -52,6 +53,9 @@ internal object AerialPreviewStore {
             runCatching { file.readBytes() }.getOrNull()
         } else {
             download(url)?.also { save(dir, fileName, it, KEEP_THUMBS) }
+                ?: aerialFallbackUrl(url)?.let { alt ->
+                    download(alt)?.also { save(dir, fileName, it, KEEP_THUMBS) }
+                }
         } ?: return null
         val bitmap = decodeSampled(bytes, 2)
         if (bitmap == null) {
@@ -120,6 +124,9 @@ internal object AerialPreviewStore {
             runCatching { file.readBytes() }.getOrNull()
         } else {
             download(url)?.also { save(dir, fileName, it, KEEP_FILES) }
+                ?: aerialFallbackUrl(url)?.let { alt ->
+                    download(alt)?.also { save(dir, fileName, it, KEEP_FILES) }
+                }
         } ?: return null
 
         val bitmap = decodeSampled(bytes, 1)

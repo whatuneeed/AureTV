@@ -1925,7 +1925,10 @@ fun SettingsScreen(
                     Section.PROFILES -> currentProfile?.name
                     Section.WEATHER -> when {
                         !weatherEnabled -> stringResource(R.string.saver_off)
-                        weatherPlace.isNotEmpty() -> weatherPlace
+                        // A city saved while the other language was active
+                        // must not show Latin/Cyrillic in the wrong UI.
+                        weatherPlace.isNotEmpty() &&
+                            !Weather.foreignName(weatherPlace, !russian) -> weatherPlace
                         else -> stringResource(R.string.saver_on)
                     }
                     Section.DEVICE -> if (factsReady) facts?.model else null

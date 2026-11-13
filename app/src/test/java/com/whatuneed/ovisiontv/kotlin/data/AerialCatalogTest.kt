@@ -21,7 +21,7 @@ class AerialCatalogTest {
     }
 
     @Test
-    fun every_clip_streams_1080p_h264_from_the_cleartext_cdn_with_both_names() {
+    fun every_clip_streams_1080p_h264_from_the_tls_cdn_with_both_names() {
         clips.forEach { clip ->
             assertTrue(clip.nameEn.isNotBlank())
             assertTrue(clip.nameRu.isNotBlank())
@@ -33,7 +33,37 @@ class AerialCatalogTest {
     }
 
     @Test
-    fun the_cdn_url_is_rewritten_to_cleartext_and_other_hosts_keep_their_scheme() {
+    fun a_stale_smaller_or_previewless_saved_catalogue_falls_back_to_bundled() {
+        val bundled = listOf(clip("a", "http://sylvan.apple.com/a.png"), clip("b", "http://sylvan.apple.com/b.png"))
+        assertEquals(bundled, preferredCatalogue(emptyList(), bundled))
+        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "")), bundled))
+        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "http://x/a.png")), bundled))
+        val saved = bundled + clip("c", "http://sylvan.apple.com/c.png")
+        assertEquals(saved, preferredCatalogue(saved, bundled))
+    }
+
+    private fun clip(id: String, preview: String) = AerialClip(
+        id = id,
+        nameEn = id,
+        nameRu = id,
+        theme = SaverTheme.CITIES,
+        videoUrl = "http://sylvan.apple.com/$id.mov",
+        previewUrl = preview,
+        order = 0,
+    )
+
+    @Test
+    fun the_tls_fallback_exists_only_for_apple_hosts() {
+        assertEquals(
+            "https://sylvan.apple.com/Videos/a.mov",
+            aerialFallbackUrl("http://sylvan.apple.com/Videos/a.mov"),
+        )
+        assertEquals(null, aerialFallbackUrl("https://cdn.example/b.mov"))
+        assertEquals(null, aerialFallbackUrl("https://sylvan.apple.com/Videos/a.mov"))
+    }
+
+    @Test
+    fun a_saved_tls_cdn_url_is_downgraded_to_the_known_good_cleartext_and_other_hosts_keep_their_scheme() {
         val json = """
             {"clips":[
               {"id":"apple","nameEn":"Apple","nameRu":"Эппл","theme":"cities",

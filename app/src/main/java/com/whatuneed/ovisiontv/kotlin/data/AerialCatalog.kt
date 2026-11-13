@@ -27,14 +27,44 @@ data class AerialClip(
  * the screen saver then keeps its drawn scenes instead of going black.
  */
 /**
- * Russian networks block port 443 to Apple's aerial CDN while port 80 serves
- * the same files, which is why the Java launcher streams over cleartext. Every
- * URL from that host is rewritten; other hosts keep the scheme they were
- * published with.
+ * Apple's CDN still serves the same files over cleartext, and some TV networks
+ * block 443 while 80 works (the reason the Java launcher streamed over HTTP).
+ * HTTP stays the primary media scheme so the known-good path is preserved;
+ * [aerialFallbackUrl] offers TLS when port 80 is the blocked one.
  */
 internal fun aerialStreamUrl(url: String): String {
     val secure = "https://sylvan.apple.com/"
-    return if (url.startsWith(secure)) "http://sylvan.apple.com/" + url.removePrefix(secure) else url
+    return if (url.startsWith(secure)) {
+        "http://sylvan.apple.com/" + url.removePrefix(secure)
+    } else {
+        url
+    }
+}
+
+/** The TLS variant of an Apple HTTP URL, for the playback fallback. */
+/**
+ * A saved catalogue from an older build may be the 2019 flat schema with no
+ * stills, or a smaller stale refresh. The bundled tvOS 27 catalogue is the
+ * known-good floor: use the saved one only when it is at least as complete and
+ * can supply a still.
+ */
+internal fun preferredCatalogue(
+    saved: List<AerialClip>,
+    bundled: List<AerialClip>,
+): List<AerialClip> = when {
+    saved.isEmpty() -> bundled
+    saved.none { it.previewUrl.isNotEmpty() } -> bundled
+    saved.size < bundled.size -> bundled
+    else -> saved
+}
+
+internal fun aerialFallbackUrl(url: String): String? {
+    val insecure = "http://sylvan.apple.com/"
+    return if (url.startsWith(insecure)) {
+        "https://sylvan.apple.com/" + url.removePrefix(insecure)
+    } else {
+        null
+    }
 }
 
 private fun isNetworkUrl(url: String): Boolean =
@@ -44,10 +74,11 @@ object AerialCatalog {
     const val ASSET_NAME = "aerial_catalog.json"
 
     fun load(context: Context): List<AerialClip> {
-        AerialStore.load(context).takeIf { it.isNotEmpty() }?.let { return it }
-        return runCatching {
+        val saved = AerialStore.load(context)
+        val bundled = runCatching {
             context.assets.open(ASSET_NAME).bufferedReader().use { parse(it.readText()) }
         }.getOrDefault(emptyList())
+        return preferredCatalogue(saved, bundled)
     }
 
     fun parse(json: String): List<AerialClip> {

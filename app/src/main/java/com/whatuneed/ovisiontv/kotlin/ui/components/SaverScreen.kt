@@ -70,6 +70,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.aerialFallbackUrl
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
@@ -280,12 +281,12 @@ internal fun SaverScreen(
             setSlotVisible(slot, false)
         }
 
-        fun prepare(slot: Int, clip: AerialClip, play: Boolean) {
+        fun prepare(slot: Int, url: String, play: Boolean) {
             val player = planPlayers[slot]
             player.stop()
             player.clearMediaItems()
             renderedFirstFrame[slot] = false
-            player.setMediaItem(MediaItem.fromUri(clip.videoUrl))
+            player.setMediaItem(MediaItem.fromUri(url))
             player.prepare()
             player.playWhenReady = play
         }
@@ -308,14 +309,26 @@ internal fun SaverScreen(
         // network round trip and can outlast the start watchdog on slow
         // decoders, leaving the saver on the still.
         suspend fun startFromHead(slot: Int, clip: AerialClip): Long {
-            prepare(slot, clip, play = true)
+            var url = clip.videoUrl
+            var fallbackTried = false
+            prepare(slot, url, play = true)
             val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
             while (true) {
                 delay(PLAYER_POLL_MS)
-                if (player.playerError != null ||
+                val failed = player.playerError != null ||
                     player.playbackState == Player.STATE_ENDED
-                ) {
+                val timedOut = SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS
+                if (failed || (timedOut && !renderedFirstFrame[slot])) {
+                    // Apple still serves the same files over cleartext; a
+                    // network that blocks 443 must not lose the saver.
+                    val alternate = if (!fallbackTried) aerialFallbackUrl(url) else null
+                    if (alternate != null) {
+                        fallbackTried = true
+                        url = alternate
+                        prepare(slot, url, play = true)
+                        continue
+                    }
                     Log.w(TAG, "saver clip failed to start", player.playerError)
                     return -1L
                 }
@@ -329,7 +342,7 @@ internal fun SaverScreen(
                     setSlotVisible(slot, true)
                     return SystemClock.elapsedRealtime()
                 }
-                if (SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS) {
+                if (timedOut) {
                     Log.w(
                         TAG,
                         "saver clip did not render within $CLIP_START_TIMEOUT_MS ms" +
@@ -346,7 +359,9 @@ internal fun SaverScreen(
         // decoders, leaving the saver on the still. This is also how the Java
         // launcher plays its clips.
         suspend fun prefetch(slot: Int, clip: AerialClip): Boolean {
-            prepare(slot, clip, play = false)
+            var url = clip.videoUrl
+            var fallbackTried = false
+            prepare(slot, url, play = false)
             val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
             while (true) {
@@ -354,6 +369,13 @@ internal fun SaverScreen(
                 if (player.playerError != null ||
                     player.playbackState == Player.STATE_ENDED
                 ) {
+                    val alternate = if (!fallbackTried) aerialFallbackUrl(url) else null
+                    if (alternate != null) {
+                        fallbackTried = true
+                        url = alternate
+                        prepare(slot, url, play = false)
+                        continue
+                    }
                     Log.w(TAG, "saver prefetch failed", player.playerError)
                     return false
                 }
