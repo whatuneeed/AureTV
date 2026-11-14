@@ -1,0 +1,124 @@
+== device ==
+14
+34
+Google
+AOSP TV on x86
+
+== default HOME ==
+priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+ActivityInfo:
+  name=com.whatuneed.ovisiontv.kotlin.MainActivity
+  packageName=com.whatuneed.ovisiontv.kotlin
+  enabled=true exported=true directBootAware=false
+  taskAffinity=com.whatuneed.ovisiontv.kotlin targetActivity=null persistableMode=PERSIST_ROOT_ONLY
+  launchMode=LAUNCH_SINGLE_TASK flags=0x10230 privateFlags=0x2 theme=0x0
+  screenOrientation=0 configChanges=0x1ff3 softInputMode=0x0
+
+== leanback activities ==
+    app.flux.tv/.MainActivity
+    com.android.tv.settings/.MainSettings
+    com.android.vending/com.google.android.finsky.tvmainactivity.TvMainActivity
+    com.github.dimzon.smartrutube.beta/com.github.dimzon.smartrutube.tv.ui.main.SplashActivity
+    com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity
+    com.google.android.youtube.tvmusic/com.google.android.apps.youtube.tvmusic.activity.MainActivity
+    com.hd.videoboxalfa/.ui.splash.SplashActivity
+    com.whatuneed.ovisiontv.kotlin/.MainActivity
+    com.whatuneed.ovisiontv.kotlin/.SettingsActivity
+    com.whatuneed.ovisiontv/.MainActivity
+    io.lift.app/.LauncherActivity
+    org.trackertv.player/.MainActivity
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=3 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    ru.kinopoisk.tv/.presentation.splash.SplashActivity
+    top.rootu.lampa/.MainActivity
+  Activity #0:
+  Activity #10:
+  Activity #11:
+  Activity #12:
+  Activity #13:
+  Activity #1:
+  Activity #2:
+  Activity #3:
+  Activity #4:
+  Activity #5:
+  Activity #6:
+  Activity #7:
+  Activity #8:
+  Activity #9:
+14 activities found:
+count=43
+
+== launcher activities ==
+    app.flux.tv/.MainActivity
+    com.android.vending/com.google.android.finsky.tvmainactivity.TvMainActivity
+    com.github.dimzon.smartrutube.beta/com.github.dimzon.smartrutube.tv.ui.main.SplashActivity
+    com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity
+    com.google.android.youtube.tvmusic/com.google.android.apps.youtube.tvmusic.activity.MainActivity
+    com.hd.videoboxalfa/.ui.splash.SplashActivity
+    io.lift.app/.LauncherActivity
+    org.trackertv.player/.MainActivity
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    ru.kinopoisk.tv/.presentation.splash.SplashActivity
+    top.rootu.lampa/.MainActivity
+  Activity #0:
+  Activity #1:
+  Activity #2:
+  Activity #3:
+  Activity #4:
+  Activity #5:
+  Activity #6:
+  Activity #7:
+  Activity #8:
+  Activity #9:
+10 activities found:
+count=31
+
+== permissions ==
+    requested permissions:
+      android.permission.INTERNET
+      android.permission.ACCESS_NETWORK_STATE
+      android.permission.READ_TV_LISTINGS
+      android.permission.ACCESS_WIFI_STATE
+      android.permission.ACCESS_COARSE_LOCATION
+      android.permission.ACCESS_FINE_LOCATION
+      com.whatuneed.ovisiontv.kotlin.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+    install permissions:
+      com.whatuneed.ovisiontv.kotlin.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
+      android.permission.INTERNET: granted=true
+      android.permission.ACCESS_NETWORK_STATE: granted=true
+      android.permission.ACCESS_WIFI_STATE: granted=true
+
+== exported/filters ==
+Activity Resolver Table:
+        9bfc451 com.whatuneed.ovisiontv.kotlin/.MainActivity filter c1d74b6
+        9bfc451 com.whatuneed.ovisiontv.kotlin/.MainActivity filter cde55b7
+        b527124 com.whatuneed.ovisiontv.kotlin/.SettingsActivity filter 66b548d
+Receiver Resolver Table:
+        bd77b90 com.whatuneed.ovisiontv.kotlin/androidx.profileinstaller.ProfileInstallReceiver filter a6c44af
+        1842642 com.whatuneed.ovisiontv.kotlin/.SleepReceiver$Admin filter 1f89653
+        bd77b90 com.whatuneed.ovisiontv.kotlin/androidx.profileinstaller.ProfileInstallReceiver filter 3c5ac89
+        bd77b90 com.whatuneed.ovisiontv.kotlin/androidx.profileinstaller.ProfileInstallReceiver filter b2648e
+        bd77b90 com.whatuneed.ovisiontv.kotlin/androidx.profileinstaller.ProfileInstallReceiver filter b60c0bc
+Service Resolver Table:
+        538845 com.whatuneed.ovisiontv.kotlin/.OVisionAccessibilityService filter 1743b9a permission android.permission.BIND_ACCESSIBILITY_SERVICE

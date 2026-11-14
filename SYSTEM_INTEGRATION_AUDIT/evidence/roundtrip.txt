@@ -1,0 +1,22 @@
+== home return from Play ==
+    topResumedActivity=ActivityRecord{131fc66 u0 com.android.vending/com.google.android.finsky.unauthenticated.activity.UnauthenticatedMainActivity t22940}
+      topResumedActivity=ActivityRecord{49b66b5 u0 com.whatuneed.ovisiontv.kotlin/.MainActivity t22937}
+
+== back on home ==
+      topResumedActivity=ActivityRecord{49b66b5 u0 com.whatuneed.ovisiontv.kotlin/.MainActivity t22937}
+
+== settings and back ==
+      topResumedActivity=ActivityRecord{a58b281 u0 com.whatuneed.ovisiontv.kotlin/.SettingsActivity t22937}
+      topResumedActivity=ActivityRecord{49b66b5 u0 com.whatuneed.ovisiontv.kotlin/.MainActivity t22937}
+
+== install -r preserving data ==
+Success
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+      topResumedActivity=ActivityRecord{1877467 u0 com.whatuneed.ovisiontv.kotlin/.MainActivity t23005}
+
+== 720p ==
+Physical size: 1920x1080
+Override size: 1280x720
+
+== 4K attempt ==
+Physical size: 1920x1080
