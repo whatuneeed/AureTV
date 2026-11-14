@@ -6,9 +6,9 @@
 
 ---
 
-## Статус реализации (0.4.52 / vc72)
+## Статус реализации (0.5.0 / vc73)
 
-Этап системной интеграции, шаги 1–3, Low hardening, SI-01 и часть SI-06 выполнены в 0.4.50–0.4.52. Код менялся только по перечисленным пунктам; applicationId, подпись и визуальный дизайн не менялись.
+Этап системной интеграции, шаги 1–3, Low hardening, SI-01, часть SI-06 и SI-02/SI-03 выполнены в 0.4.50–0.5.0. Код менялся только по перечисленным пунктам; applicationId, подпись и визуальный дизайн не менялись.
 
 | Пункт | Статус 0.4.50 | Что сделано |
 |---|---|---|
@@ -20,12 +20,12 @@
 | SI-11 disabled components | **реализовано** | `activityInfo.enabled`/`applicationInfo.enabled` фильтруются при чтении |
 | SI-12 HOME settings fallback | **реализовано** | при отсутствии `ACTION_HOME_SETTINGS` открывается общий Settings и показывается подсказка «Настройки → Домой» |
 | SI-01 leanback-маркер | **реализовано** | `TvApp.leanback`, фильтр `filterPhoneOnly`, переключатель «Приложения без ТВ-версии» в Settings (по умолчанию вкл.) |
-| SI-02 MediaSession | **открыто** | требует отдельного решения и, для чужих плееров, notification listener |
-| SI-03 DreamService | **открыто** | системная заставка — отдельная продуктовая фича |
+| SI-02 MediaSession | **реализовано** | своя сессия заставки (metadata/play/pause/stop/seek), активна только пока видна; чужие сессии без notification listener недоступны |
+| SI-03 DreamService | **реализовано, runtime NOT TESTED** | `AerialDreamService` + запись в системном выборе; на стенде dream нельзя запустить без root |
 | SI-06 4K-арты | **частично** | `gridBannerBox`: 400×240 на 1080p, 500×300 при ширине панели ≥2560; иконка/постер/баннер лаунчера не менялись, 4K-растеризация не проверялась |
 | SI-07/SI-13/SI-14 | **без изменений** | accepted/unsupported/PASS |
 
-Проверка 0.4.52: unit **346/346** debug+release, connected **208/208**, lint **0 Error / 14 Warning**, release APK `59f60e1f…3ab0`, v2. Реальный ТВ/API 28/29/35/LOW/4K/TalkBack/HDMI-CEC — NOT TESTED.
+Проверка 0.5.0: unit **346/346** debug+release, connected **208/208**, lint **0 Error / 14 Warning**, release APK `337ca9d8…3ed8`, v2. Реальный ТВ/API 28/29/35/LOW/4K/TalkBack/HDMI-CEC — NOT TESTED.
 
 ---
 

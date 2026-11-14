@@ -230,6 +230,17 @@
 
 ## Записи
 
+### 14.11.2026 — 0.5.0: MediaSession и системная заставка (SI-02/SI-03)
+
+Статус: `versionCode 73` / `versionName 0.5.0`, APK **4 098 222 B**, SHA-256 **`337ca9d8304c0f419d4d6fe32d7f8cd83024dfd78e18ff52be597153125f3ed8`**, подпись v2, прежний сертификат.
+
+- **SI-02 — MediaSession заставки.** `SaverScreen` публикует платформенную `MediaSession` с названием ролика, `OVisionTV/Aerial`, состоянием PLAYING/PAUSED/BUFFERING и действиями play/pause/stop/seek. Сессия активна только пока заставка видна, освобождается на dispose; `sessionActivity` открывает Home. Settings-превью не публикуется (`publishMediaSession=false`). Чужие плееры по-прежнему не читаются: без notification listener/`MEDIA_CONTENT_CONTROL` это невозможно.
+- **SI-03 — DreamService.** Добавлен `AerialDreamService` (`BIND_DREAM_SERVICE`, `android.service.dreams.DreamService`): системная заставка с `ComposeView`, lifecycle-owner, `AerialCatalog`/`SaverPlaylist` и тем же `SaverScreen`; Home-overlay остаётся без изменений. В Настройках → Заставка добавлена строка «Системная заставка» → `ACTION_DREAM_SETTINGS` (fallback в общий Settings с подсказкой). `SaverScreen.handleBack=false` для DreamService, потому что у сервиса нет `OnBackPressedDispatcherOwner`.
+- **Проверка.** Юнит **346/346 debug + 346/346 release**, инструментальные **208/208**, lint **0 Error / 14 Warning**, `assembleRelease` BUILD SUCCESSFUL. MediaSession проверена на API 34 через `dumpsys media_session`: `OVisionTVSaver` активна, metadata «…, OVisionTV, Aerial», state PLAYING; `cmd media_session dispatch pause/play` меняет состояние. Строка «Системная заставка» открывает системный Settings. `release_check.py` PASS.
+- **Граница.** `AerialDreamService` **runtime NOT TESTED**: `cmd dreams start-dreaming` на стенде требует root, а эмулятор не даёт запустить dream из shell; проверены только объявление сервиса, компиляция и отсутствие BackHandler-зависимости. Реальный ТВ/API 28/29/35, OEM-заставки, TalkBack — NOT TESTED. Чужие MediaSession без notification listener недоступны.
+- **Не делать.** Не включать DreamService автоматически вместо Home-overlay; не читать чужие сессии через обходные пути; не добавлять notification listener без явного согласия; не считать объявление сервиса доказательством его runtime-работы.
+- **Доказательства.** `SYSTEM_INTEGRATION_AUDIT/evidence-0.5.0/` (release-check, подпись, media-session.txt, Home/saver/settings, dream-service.txt), `SYSTEM_INTEGRATION_AUDIT/REPORT.md`, `temp/dream-connected2.log`.
+
 ### 14.11.2026 — 0.4.52: 4K-баннер сетки (SI-06, частично)
 
 Статус: `versionCode 72` / `versionName 0.4.52`, APK **4 096 122 B**, SHA-256 **`59f60e1f81d7f4e5739ee4d35de7c8b7304b367bfbfc48ab51d551ee02c83ab0`**, подпись v2, прежний сертификат.

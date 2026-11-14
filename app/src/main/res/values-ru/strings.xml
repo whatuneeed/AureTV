@@ -112,6 +112,10 @@
     <string name="saver_refresh_monthly">Ежемесячно</string>
     <string name="saver_refresh_never">Никогда</string>
     <string name="saver_screen_description">Заставка, %1$s. Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="aerial_dream_label">OVisionTV: воздушные виды</string>
+    <string name="saver_system_title">Системная заставка</string>
+    <string name="saver_system_value">Выбрать в настройках ТВ</string>
+    <string name="saver_system_hint">Выберите «OVisionTV: воздушные виды» в Настройки → Заставка</string>
     <string name="saver_reset">Сбросить настройки заставки</string>
     <string name="saver_reset_title">Сбросить настройки заставки?</string>
     <string name="saver_reset_confirm">Сбросить</string>

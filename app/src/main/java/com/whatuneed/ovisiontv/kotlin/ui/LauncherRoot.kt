@@ -574,6 +574,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 items = saverItems,
                 closing = saverClosing,
                 players = saverPlayers,
+                publishMediaSession = true,
                 onCloseRequested = { saverClosing = true },
                 onDismissed = {
                     saverVisible = false

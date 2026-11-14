@@ -149,6 +149,21 @@
                 android:resource="@xml/ovision_accessibility" />
         </service>
 
+
+        <!-- System screen saver. The user selects it in the TV's own
+             Settings → Screen saver; the in-app Home overlay is unchanged. -->
+        <service
+            android:name=".AerialDreamService"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher"
+            android:label="@string/aerial_dream_label"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+            </intent-filter>
+        </service>
+
         <!-- Sleep Timer alarm. Not exported: only the app's own PendingIntent
              sends this broadcast. -->
         <receiver

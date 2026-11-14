@@ -1,7 +1,12 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.animation.ValueAnimator
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.media.MediaMetadata
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
@@ -68,6 +73,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.aerialFallbackUrl
@@ -84,6 +90,31 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal const val SAVER_SCREEN_TAG = "saver_screen"
+
+/** The system media card follows the active player, not the slot index. */
+private fun updateSaverPlaybackState(session: MediaSession, players: List<Player>) {
+    val player = players.firstOrNull { it.mediaItemCount > 0 }
+    val state = when {
+        player == null -> PlaybackState.STATE_NONE
+        player.playbackState == Player.STATE_BUFFERING -> PlaybackState.STATE_BUFFERING
+        player.isPlaying -> PlaybackState.STATE_PLAYING
+        player.playbackState == Player.STATE_READY -> PlaybackState.STATE_PAUSED
+        else -> PlaybackState.STATE_NONE
+    }
+    val actions = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
+        PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SEEK_TO or
+        PlaybackState.ACTION_STOP
+    session.setPlaybackState(
+        PlaybackState.Builder()
+            .setActions(actions)
+            .setState(
+                state,
+                player?.currentPosition ?: 0L,
+                if (player?.isPlaying == true) 1f else 0f,
+            )
+            .build(),
+    )
+}
 
 // The Apple masters run about six minutes each; tvOS shows an excerpt, and so
 // does the saver. A still keeps the same rhythm when no clip can play.
@@ -145,6 +176,12 @@ internal fun SaverScreen(
     onCloseRequested: () -> Unit = {},
     onDismissed: () -> Unit = {},
     noPictureTimeoutMs: Long = NO_PICTURE_TIMEOUT_MS,
+    // Home and the DreamService expose the saver to system media controls;
+    // the Settings preview stays out of the system's Now Playing.
+    publishMediaSession: Boolean = false,
+    // A DreamService has no OnBackPressedDispatcherOwner; the system owns the
+    // wake keys there, so only the Home overlay installs the BackHandler.
+    handleBack: Boolean = true,
 ) {
     val plan = items
     val context = LocalContext.current
@@ -166,6 +203,72 @@ internal fun SaverScreen(
     val planPlayers = players ?: ownedPlayers
 
     var item by remember(plan) { mutableStateOf(plan.firstOrNull()) }
+
+    // The saver is real playback, so the system may show its title and offer
+    // play/pause. The session is released with the overlay; it never replaces
+    // another app's session while the saver is not visible.
+    val mediaSession = remember(context) { MediaSession(context, "OVisionTVSaver") }
+    DisposableEffect(mediaSession, publishMediaSession) {
+        mediaSession.setFlags(
+            MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or
+                MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS,
+        )
+        mediaSession.setCallback(
+            object : MediaSession.Callback() {
+                override fun onPlay() {
+                    planPlayers.firstOrNull { it.mediaItemCount > 0 }?.play()
+                    updateSaverPlaybackState(mediaSession, planPlayers)
+                }
+
+                override fun onPause() {
+                    planPlayers.forEach { it.pause() }
+                    updateSaverPlaybackState(mediaSession, planPlayers)
+                }
+
+                override fun onStop() {
+                    planPlayers.forEach { it.pause() }
+                    updateSaverPlaybackState(mediaSession, planPlayers)
+                }
+
+                override fun onSeekTo(pos: Long) {
+                    planPlayers.firstOrNull { it.mediaItemCount > 0 }?.seekTo(pos)
+                }
+            },
+        )
+        mediaSession.setSessionActivity(
+            PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
+        if (publishMediaSession) mediaSession.isActive = true
+        onDispose {
+            mediaSession.isActive = false
+            mediaSession.release()
+        }
+    }
+    LaunchedEffect(item, language, publishMediaSession) {
+        if (!publishMediaSession) return@LaunchedEffect
+        val clip = item ?: return@LaunchedEffect
+        mediaSession.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, clip.name(language))
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "OVisionTV")
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, "Aerial")
+                .build(),
+        )
+        updateSaverPlaybackState(mediaSession, planPlayers)
+    }
+    LaunchedEffect(mediaSession, planPlayers, publishMediaSession) {
+        if (!publishMediaSession) return@LaunchedEffect
+        while (true) {
+            updateSaverPlaybackState(mediaSession, planPlayers)
+            delay(1_000)
+        }
+    }
+
     var slot0Visible by remember { mutableStateOf(false) }
     var slot1Visible by remember { mutableStateOf(false) }
     val slot0Alpha by animateFloatAsState(
@@ -648,7 +751,9 @@ internal fun SaverScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    BackHandler { if (!closing) onCloseRequested() }
+    if (handleBack) {
+        BackHandler { if (!closing) onCloseRequested() }
+    }
 
     var captionVisible by remember { mutableStateOf(false) }
     LaunchedEffect(item) {

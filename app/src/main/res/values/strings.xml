@@ -110,6 +110,10 @@
     <string name="saver_refresh_monthly">Monthly</string>
     <string name="saver_refresh_never">Never</string>
     <string name="saver_screen_description">Screen Saver, %1$s. Press any button to exit.</string>
+    <string name="aerial_dream_label">OVisionTV Aerial</string>
+    <string name="saver_system_title">System screen saver</string>
+    <string name="saver_system_value">Choose in TV settings</string>
+    <string name="saver_system_hint">Choose OVisionTV Aerial in Settings → Screen saver</string>
     <string name="saver_reset">Reset Screen Saver</string>
     <string name="saver_reset_title">Reset screen saver?</string>
     <string name="saver_reset_confirm">Reset</string>

@@ -1046,6 +1046,12 @@ fun SettingsScreen(
                 },
             ),
             SettingsRow(
+                title = stringResource(R.string.saver_system_title),
+                value = stringResource(R.string.saver_system_value),
+                chevron = true,
+                action = { openDreamSettings(context) },
+            ),
+            SettingsRow(
                 title = stringResource(R.string.saver_reset),
                 chevron = true,
                 // Cancel is the safe default, as on the layout reset page.
@@ -3796,6 +3802,25 @@ private fun permissionsRows(
         action = if (locationAllowed || locationPermanent) openAppInfo else requestLocation,
     ),
 )
+
+private fun openDreamSettings(context: Context) {
+    val opened = runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_DREAM_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }.isSuccess
+    if (opened) return
+    val fallback = runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }.isSuccess
+    if (fallback) {
+        Toast.makeText(context, R.string.saver_system_hint, Toast.LENGTH_LONG).show()
+    } else {
+        showUnavailable(context)
+    }
+}
 
 private fun openSystemSettings(context: Context) {
     val home = runCatching {

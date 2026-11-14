@@ -71,6 +71,6 @@ python tools/release_check.py
 
 ## 8. Текущее состояние
 
-- 0.4.52 (vc72): системная интеграция Android TV — hidden PowerManager убран, startup только с Home/stock-launcher, accessibility без чтения content, KeyUp/disabled/component-hardening, фильтр phone-only приложений, 4K-баннер сетки (ветка ≥2560 px). `connectedDebugAndroidTest` **208/208**, юнит **346/346**, lint 0/14, `release_check.py` PASS, Home/Control Center/переключатель проверены на API 34.
+- 0.5.0 (vc73): системная интеграция Android TV — hidden PowerManager убран, startup только с Home/stock-launcher, accessibility без чтения content, KeyUp/disabled/component-hardening, фильтр phone-only, 4K-баннер сетки, MediaSession заставки и `AerialDreamService` (runtime NOT TESTED). `connectedDebugAndroidTest` **208/208**, юнит **346/346**, lint 0/14, `release_check.py` PASS, Home/Control Center/переключатель/MediaSession проверены на API 34.
 - Этап 5 выполнен в доступном объёме: release gate, контрактные тесты и soak добавлены; 0.4.49 — saver-хотфикс после регрессии HTTPS-схемы. Аппаратная/API-матрица из §3 остаётся **NOT TESTED** и не выдаётся за PASS.
 - API 28/29/35, реальный ТВ, LOW, 4K, голосовой TalkBack и длительный soak требуют отдельного стенда; для них нет ни образа, ни железа.

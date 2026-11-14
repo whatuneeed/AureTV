@@ -1621,8 +1621,9 @@ class SettingsScreenTest {
         setSettings()
         openSaver()
 
-        // The reset row is last, after Choose, Start After, Music, Themes, Frequency.
-        repeat(5) { press(Key.DirectionDown) }
+        // The reset row is last, after Choose, Start After, Music, Themes,
+        // Frequency and the system screen-saver row.
+        repeat(6) { press(Key.DirectionDown) }
         press(Key.DirectionCenter)
         rule.onNodeWithText(string(R.string.saver_reset_title))
             .assertIsDisplayed()
