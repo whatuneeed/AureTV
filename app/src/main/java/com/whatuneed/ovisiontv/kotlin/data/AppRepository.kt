@@ -164,7 +164,9 @@ class AppRepository(context: Context) {
 
         val activities = collectActivities(packageManager)
         activities
-            .mapNotNull { activity -> readApp(packageManager, activity, withArtwork) }
+            .mapNotNull { activity ->
+                readApp(packageManager, activity.info, activity.leanback, withArtwork)
+            }
             .sortedWith(
                 compareBy(collator) { app: TvApp -> app.label }
                     .thenBy { app: TvApp -> app.packageName },
@@ -176,14 +178,16 @@ class AppRepository(context: Context) {
      * point must be opened through the TV one. Deduplicated by package because
      * the grid shows one tile per app.
      */
-    private fun collectActivities(packageManager: PackageManager): List<ActivityInfo> {
-        val byPackage = LinkedHashMap<String, ActivityInfo>()
+    private data class DiscoveredActivity(val info: ActivityInfo, val leanback: Boolean)
+
+    private fun collectActivities(packageManager: PackageManager): List<DiscoveredActivity> {
+        val byPackage = LinkedHashMap<String, DiscoveredActivity>()
         val categories = listOf(
-            Intent.CATEGORY_LEANBACK_LAUNCHER,
-            Intent.CATEGORY_LAUNCHER,
+            Intent.CATEGORY_LEANBACK_LAUNCHER to true,
+            Intent.CATEGORY_LAUNCHER to false,
         )
 
-        for (category in categories) {
+        for ((category, leanback) in categories) {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(category)
             val resolved = try {
                 packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
@@ -200,7 +204,7 @@ class AppRepository(context: Context) {
                     continue
                 }
                 if (activity.name == null) continue
-                byPackage.putIfAbsent(activity.packageName, activity)
+                byPackage.putIfAbsent(activity.packageName, DiscoveredActivity(activity, leanback))
             }
         }
         return byPackage.values.toList()
@@ -209,6 +213,7 @@ class AppRepository(context: Context) {
     private fun readApp(
         packageManager: PackageManager,
         activity: ActivityInfo,
+        leanback: Boolean,
         withArtwork: Boolean,
     ): TvApp? {
         // PackageInfo carries both the application entry and lastUpdateTime, so
@@ -219,6 +224,8 @@ class AppRepository(context: Context) {
             return null
         }
         val appInfo = packageInfo.applicationInfo ?: return null
+        // A component disabled after the scan must not keep a dead tile.
+        if (!activity.enabled || !appInfo.enabled) return null
 
         // The system TV Settings is also labelled "Настройки"/"Settings", so the
         // launcher tile needs its own name to stay distinguishable in the grid.
@@ -270,6 +277,7 @@ class AppRepository(context: Context) {
             banner = banner,
             icon = icon,
             system = appInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0,
+            leanback = leanback,
         )
     }
 

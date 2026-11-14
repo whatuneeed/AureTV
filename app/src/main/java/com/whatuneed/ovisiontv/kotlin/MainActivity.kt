@@ -52,10 +52,12 @@ class MainActivity : TvRemoteActivity() {
     // drops the repeat, so registering here keeps wakes working without it.
     private val screenOnReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            StartupPreferences.onScreenOn(this@MainActivity)
             // SCREEN_ON and onResume can arrive in either order, so a resumed
             // Home takes the wake now and a paused one keeps it for its resume.
             if (resumed) {
+                // "Start with the TV" belongs to a Home wake. If another app
+                // was in front, waking it must not hand the screen away.
+                StartupPreferences.onScreenOn(this@MainActivity)
                 wakeTick.intValue++
             } else {
                 pendingWakeAt = SystemClock.elapsedRealtime()

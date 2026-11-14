@@ -6,6 +6,29 @@
 
 ---
 
+## Статус реализации (0.4.50 / vc70)
+
+Этап системной интеграции, шаги 1–3 и Low hardening выполнены в 0.4.50. Код менялся только по перечисленным пунктам; applicationId, подпись и визуальный дизайн не менялись.
+
+| Пункт | Статус 0.4.50 | Что сделано |
+|---|---|---|
+| SI-04 hidden PowerManager | **реализовано** | `SleepControls.powerOff` = документированный `sleepNow` (DeviceAdmin/accessibility); reflection `shutdown/goToSleep` удалён; плитка «Power Off» переименована в «Sleep/Режим ожидания» |
+| SI-05 startup на SCREEN_ON | **реализовано** | `MainActivity` запускает wake-старт только когда Home resumed; accessibility service — только если последняя поверхность Home/stock launcher (`lastPackage`) |
+| SI-08 accessibility content | **реализовано** | `canRetrieveWindowContent=false`; сервис больше не читает `rootInActiveWindow`, только package/class событий |
+| SI-09 Control Center KeyUp | **реализовано** | KeyUp поглощается только для обработанных D-pad/OK/BACK; volume/media отдаются системе |
+| SI-10 AccessibilityStatus | **реализовано** | точное сравнение component + проверка глобального `ACCESSIBILITY_ENABLED` |
+| SI-11 disabled components | **реализовано** | `activityInfo.enabled`/`applicationInfo.enabled` фильтруются при чтении |
+| SI-12 HOME settings fallback | **реализовано** | при отсутствии `ACTION_HOME_SETTINGS` открывается общий Settings и показывается подсказка «Настройки → Домой» |
+| SI-01 leanback-маркер | **частично** | `TvApp.leanback` сохраняется из категории; UI-фильтр/метка не добавлены — продуктовое решение |
+| SI-02 MediaSession | **открыто** | требует отдельного решения и, для чужих плееров, notification listener |
+| SI-03 DreamService | **открыто** | системная заставка — отдельная продуктовая фича |
+| SI-06 4K-арты | **открыто** | требует замера памяти перед повышением 256/400×240/1280 |
+| SI-07/SI-13/SI-14 | **без изменений** | accepted/unsupported/PASS |
+
+Проверка 0.4.50: unit **344/344** debug+release, connected **208/208**, lint **0 Error / 14 Warning**, release APK `d60bfda0…9e28`, v2. Реальный ТВ/API 28/29/35/LOW/4K/TalkBack/HDMI-CEC — NOT TESTED.
+
+---
+
 ## A. Текущее состояние интеграции
 
 **Оценка:** интеграция с Android TV у лаунчера уже реальная, а не «обычное приложение на большом экране». HOME/LEANBACK объявлены, Package Visibility ограничена `<queries>`, `QUERY_ALL_PACKAGES` не используется, системные экраны открываются через документированные Intent, пульт обрабатывается D-pad-движком с защитой от повторов, фокус восстанавливается, а обновление/установка/удаление приложений перестраивают сетку без потери раскладки.

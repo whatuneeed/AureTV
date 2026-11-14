@@ -229,6 +229,22 @@
 
 ## Записи
 
+### 14.11.2026 — 0.4.50: системная интеграция Android TV (безопасность и startup)
+
+Статус: `versionCode 70` / `versionName 0.4.50`, APK **4 095 638 B**, SHA-256 **`d60bfda02147930049b824ccc8c861a5222a8ca5abcd199127174e1154b09e28`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10`.
+
+- **SI-04 — hidden PowerManager.** Удалены reflection-вызовы `PowerManager.shutdown`/`goToSleep`; `SleepControls.powerOff` теперь только документированный `sleepNow` (DeviceAdmin `lockNow` или accessibility `GLOBAL_ACTION_LOCK_SCREEN`). Плитка «Power Off» переименована в «Sleep / Режим ожидания»; подсказка DeviceAdmin обновлена.
+- **SI-05 — startup на SCREEN_ON.** `MainActivity` запускает wake-старт только когда Home resumed; accessibility service — только если последняя поверхность Home/stock launcher (`lastPackage`). Пробуждение другого приложения больше не отдаёт ему экран.
+- **SI-08 — accessibility content.** `canRetrieveWindowContent=false`; сервис не читает `rootInActiveWindow`, только package/class событий. Home-takeover и boot/wake остаются.
+- **SI-09 — Control Center KeyUp.** Поглощаются только KeyUp обработанных D-pad/OK/BACK; volume/media отдаются системе.
+- **SI-10 — AccessibilityStatus.** Точное сравнение component (full/short) и проверка глобального `ACCESSIBILITY_ENABLED`, а не любой сервис пакета.
+- **SI-11 — disabled components.** `activityInfo.enabled`/`applicationInfo.enabled` фильтруются; `TvApp.leanback` сохраняется из категории для будущего фильтра.
+- **SI-12 — HOME settings.** При отсутствии `ACTION_HOME_SETTINGS` открывается общий Settings и показывается подсказка «Настройки → Домой».
+- **Проверка.** Юнит **344/344 debug + 344/344 release**, инструментальные **208/208**, lint **0 Error / 14 Warning**, `assembleRelease` BUILD SUCCESSFUL. На API 34: установка, мастер RU, Home, Control Center с «Режим ожидания», нажатие плитки без admin открывает системный accessibility-экран, BACK возвращает Home; crash-буфер пуст. `release_check.py` PASS.
+- **Граница.** SI-01 (UI-фильтр phone-only), SI-02 (MediaSession), SI-03 (DreamService), SI-06 (4K-арты) остаются открытыми как продуктовые/измерительные решения. Реальный ТВ, API 28/29/35, OEM, LOW, 4K, TalkBack, HDMI-CEC — NOT TESTED.
+- **Не делать.** Не возвращать reflection Power API; не запускать startup поверх чужого foreground-приложения; не включать `canRetrieveWindowContent` без реальной необходимости; не добавлять `QUERY_ALL_PACKAGES`.
+- **Доказательства.** `SYSTEM_INTEGRATION_AUDIT/evidence-0.4.50/` (release-check, подпись, Home/Control Center), `SYSTEM_INTEGRATION_AUDIT/REPORT.md`, `temp/si-connected.log`.
+
 ### 14.11.2026 — 0.4.49: заставки снова показываются после HTTPS-only
 
 Статус: `versionCode 69` / `versionName 0.4.49`, APK **4 095 078 B**, SHA-256 **`2b96ab59fd1560b5f02702cf223b522c72e6f144aff205354bcbd643480129a0`**, подпись v2, сертификат `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10`.

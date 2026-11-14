@@ -3776,16 +3776,22 @@ private fun permissionsRows(
 )
 
 private fun openSystemSettings(context: Context) {
-    val opened = runCatching {
+    val home = runCatching {
         context.startActivity(
             Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess || runCatching {
+    }.isSuccess
+    if (home) return
+    val fallback = runCatching {
         context.startActivity(
             Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }.isSuccess
-    if (!opened) showUnavailable(context)
+    if (fallback) {
+        Toast.makeText(context, R.string.home_settings_hint, Toast.LENGTH_LONG).show()
+    } else {
+        showUnavailable(context)
+    }
 }
 
 // Revoking a normal permission is a system screen, not a launcher dialog: what

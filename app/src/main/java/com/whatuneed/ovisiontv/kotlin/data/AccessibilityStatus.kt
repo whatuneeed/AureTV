@@ -36,10 +36,18 @@ object AccessibilityStatus {
             )
         }.getOrNull() ?: return false
         val component = ComponentName(context, OVisionAccessibilityService::class.java)
-        return enabled.split(':').any {
-            it.equals(component.flattenToString(), ignoreCase = true) ||
-                it.startsWith(context.packageName + "/")
+        val full = component.flattenToString()
+        val short = component.flattenToShortString()
+        val listed = enabled.split(':').any {
+            it.equals(full, ignoreCase = true) || it.equals(short, ignoreCase = true)
         }
+        if (!listed) return false
+        // A listed service is not connected while accessibility is globally off.
+        return Settings.Secure.getInt(
+            context.contentResolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0,
+        ) == 1
     }
 
     /** False when the TV maps the screen to an empty stub or has none at all. */

@@ -2,6 +2,7 @@ package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.graphics.Bitmap
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -602,7 +603,7 @@ fun SetupScreen(
                         // Read back on resume: the system Home picker runs in
                         // another activity, so the old value is still current
                         // for a moment after this returns.
-                        openSystem(context, Intent(Settings.ACTION_HOME_SETTINGS))
+                        openHomeSettings(context)
                     },
                 ),
                 SetupRow(
@@ -1049,6 +1050,23 @@ private fun finish(context: Context, onFinish: () -> Unit) {
 }
 
 /** A vendor TV may hide the exact system page; Android Settings is the way out. */
+private fun openHomeSettings(context: Context) {
+    val opened = runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }.isSuccess
+    if (opened) return
+    val fallback = runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }.isSuccess
+    if (fallback) {
+        Toast.makeText(context, R.string.home_settings_hint, Toast.LENGTH_LONG).show()
+    }
+}
+
 private fun openSystem(context: Context, intent: Intent, fallback: Boolean = true) {
     runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         .recoverCatching {

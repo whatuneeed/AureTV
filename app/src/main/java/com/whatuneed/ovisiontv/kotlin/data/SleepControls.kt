@@ -7,8 +7,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.PowerManager
-import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
 import com.whatuneed.ovisiontv.kotlin.OVisionAccessibilityService
@@ -16,11 +14,11 @@ import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SleepReceiver
 
 /**
- * Power Off and the Sleep Timer, as in the Java build. Device admin is the
+ * Standby and the Sleep Timer, as in the Java build. Device admin is the
  * primary route (force-lock only); when the TV has no device-admin screen the
- * accessibility switch's lock action stands in. A stock launcher cannot really
- * power the TV off, so "Power Off" ends in standby — what Apple TV's Power
- * Off does on a TV set as well.
+ * accessibility switch's lock action stands in. A stock launcher cannot power
+ * the panel off with a documented API, so the Control Center action is named
+ * "Sleep" and ends in standby, not a hidden PowerManager call.
  */
 object SleepControls {
     const val PREFS = "controls"
@@ -53,24 +51,8 @@ object SleepControls {
         return OVisionAccessibilityService.sleep()
     }
 
-    fun powerOff(context: Context): Boolean =
-        hiddenShutdown(context) || hiddenSleep(context) || sleepNow(context)
-
-    private fun hiddenShutdown(context: Context): Boolean = runCatching {
-        val manager = context.getSystemService(PowerManager::class.java) ?: return false
-        PowerManager::class.java
-            .getMethod("shutdown", Boolean::class.javaPrimitiveType)
-            .invoke(manager, false)
-        true
-    }.getOrDefault(false)
-
-    private fun hiddenSleep(context: Context): Boolean = runCatching {
-        val manager = context.getSystemService(PowerManager::class.java) ?: return false
-        PowerManager::class.java
-            .getMethod("goToSleep", Long::class.javaPrimitiveType)
-            .invoke(manager, SystemClock.uptimeMillis())
-        true
-    }.getOrDefault(false)
+    /** Documented routes only: device-admin lock or the accessibility lock action. */
+    fun powerOff(context: Context): Boolean = sleepNow(context)
 
     fun timerLeft(context: Context): Int =
         timerLeft(at = sleepAt(context), now = System.currentTimeMillis())

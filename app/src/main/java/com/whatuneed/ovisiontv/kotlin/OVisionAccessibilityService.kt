@@ -6,8 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
@@ -22,9 +20,10 @@ import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
  */
 class OVisionAccessibilityService : AccessibilityService() {
 
-    private val handler = Handler(Looper.getMainLooper())
     private var screenOn: BroadcastReceiver? = null
     private var lastRedirect = 0L
+    @Volatile
+    private var lastPackage: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -32,7 +31,11 @@ class OVisionAccessibilityService : AccessibilityService() {
 
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                StartupPreferences.onScreenOn(this@OVisionAccessibilityService)
+                // Only a Home/stock-launcher wake may start the chosen app;
+                // waking another app must not have the screen stolen from it.
+                if (isHomeSurface()) {
+                    StartupPreferences.onScreenOn(this@OVisionAccessibilityService)
+                }
             }
         }
         screenOn = receiver
@@ -45,20 +48,19 @@ class OVisionAccessibilityService : AccessibilityService() {
 
         // Bound early after boot, and allowed to open screens: a reliable boot trigger too.
         if (StartupPreferences.justBooted()) StartupPreferences.onBoot(this)
-        // The stock launcher may already be on screen: no window change will be
-        // reported for it, so look once now.
-        handler.postDelayed({ homeIfStockShowing() }, 800)
     }
 
-    private fun homeIfStockShowing() {
-        if (!StartupPreferences.homeOverrideWanted(this)) return
-        val packageName = rootInActiveWindow?.packageName?.toString() ?: return
-        if (stockHomes(this).any { it.startsWith("$packageName/") }) redirect()
+    /** The last reported window belongs to Home or to a stock launcher. */
+    private fun isHomeSurface(): Boolean {
+        val packageName = lastPackage ?: return false
+        return packageName == this.packageName ||
+            stockHomes(this).any { it.startsWith("$packageName/") }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
+        lastPackage = packageName
         val className = event.className?.toString() ?: return
         if (!StartupPreferences.homeOverrideWanted(this)) return
         if ("$packageName/$className" !in stockHomes(this)) return
@@ -84,7 +86,7 @@ class OVisionAccessibilityService : AccessibilityService() {
         screenOn?.let { runCatching { unregisterReceiver(it) } }
         screenOn = null
         instance = null
-        handler.removeCallbacksAndMessages(null)
+        lastPackage = null
         super.onDestroy()
     }
 

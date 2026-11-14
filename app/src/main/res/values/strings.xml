@@ -307,6 +307,7 @@
     <string name="setup_city_searching">Searching…</string>
     <string name="setup_city_nothing">Nothing found</string>
     <string name="setup_city_offline">Could not search. Check the internet connection.</string>
+    <string name="home_settings_hint">Open Settings → Home and choose OVisionTV</string>
     <string name="setup_home_setup">Set Up ›</string>
     <string name="setup_allow_action">Allow ›</string>
     <string name="city_moscow">Moscow</string>
@@ -329,7 +330,7 @@
     <string name="cc_system">Android Settings</string>
     <string name="cc_accessibility">Accessibility</string>
     <string name="cc_controllers">Controllers</string>
-    <string name="cc_power">Power Off</string>
+    <string name="cc_power">Sleep</string>
     <string name="cc_sleep_timer">Sleep Timer</string>
     <string name="cc_minutes">%1$d min</string>
     <string name="weather_title">Weather</string>

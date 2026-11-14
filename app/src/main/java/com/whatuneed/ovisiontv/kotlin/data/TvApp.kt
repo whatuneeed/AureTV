@@ -19,6 +19,12 @@ data class TvApp(
     // System and preinstalled apps cannot be removed by the user; the app menu
     // offers Uninstall only when this is false.
     val system: Boolean = false,
+    /**
+     * True when the tile came from CATEGORY_LEANBACK_LAUNCHER. A phone-only
+     * fallback is still shown, but a future TV-compatibility filter can use
+     * this without re-querying PackageManager.
+     */
+    val leanback: Boolean = false,
 )
 
 /** The launcher's own Settings tile: in kids mode it is a gated surface, not an app. */

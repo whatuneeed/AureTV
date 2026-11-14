@@ -734,6 +734,15 @@ internal fun ControlCenter(
             .focusRequester(rootRequester)
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp) {
+                    val handled = when (event.key) {
+                        Key.DirectionLeft, Key.DirectionRight,
+                        Key.DirectionUp, Key.DirectionDown,
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
+                        Key.Back,
+                        -> true
+                        else -> false
+                    }
+                    if (!handled) return@onKeyEvent false
                     keyRepeat.release(event.key)
                     return@onKeyEvent true
                 }

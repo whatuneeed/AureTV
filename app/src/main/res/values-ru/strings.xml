@@ -215,7 +215,7 @@
     <string name="settings_airplay_open">Открыть AirPlay</string>
     <string name="settings_system_hint">Переключатель специальных возможностей открывает OVisionTV вместо чужого главного экрана.</string>
     <string name="settings_system_unavailable">Недоступно на этом устройстве</string>
-    <string name="settings_power_admin_explanation">Позволяет OVisionTV Launcher выключать экран для функции «Выключить» и таймера сна. Больше ничего приложение делать не может.</string>
+    <string name="settings_power_admin_explanation">Позволяет OVisionTV Launcher переводить телевизор в режим ожидания и работать таймеру сна. Больше ничего приложение делать не может.</string>
     <string name="settings_power_accessibility_hint">Включите переключатель OVisionTV, чтобы он мог переводить телевизор в спящий режим.</string>
     <string name="settings_power_unavailable">Этот телевизор не позволяет приложениям выключать экран. Используйте кнопку питания на пульте.</string>
 
@@ -315,6 +315,7 @@
     <string name="setup_city_searching">Ищем…</string>
     <string name="setup_city_nothing">Ничего не найдено</string>
     <string name="setup_city_offline">Не удалось найти. Проверьте подключение к интернету.</string>
+    <string name="home_settings_hint">Откройте Настройки → Домой и выберите OVisionTV</string>
     <string name="setup_home_setup">Настроить ›</string>
     <string name="setup_allow_action">Разрешить ›</string>
     <string name="city_moscow">Москва</string>
@@ -337,7 +338,7 @@
     <string name="cc_system">Настройки Android</string>
     <string name="cc_accessibility">Специальные возможности</string>
     <string name="cc_controllers">Контроллеры</string>
-    <string name="cc_power">Выключить</string>
+    <string name="cc_power">Режим ожидания</string>
     <string name="cc_sleep_timer">Таймер сна</string>
     <string name="cc_minutes">%1$d мин</string>
     <string name="weather_title">Погода</string>
