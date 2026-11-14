@@ -1241,8 +1241,9 @@ class SettingsScreenTest {
         setSettings()
 
         openHome()
-        // Move to "Reset layout": the last row after the content toggles.
-        repeat(4) { press(Key.DirectionDown) }
+        // Move to "Reset layout": the last row after the content toggles
+        // (recommendations, continue watching, phone-only apps, access, hidden).
+        repeat(5) { press(Key.DirectionDown) }
         waitForFocus(string(R.string.settings_reset_layout))
         press(Key.Back)
         rule.waitForIdle()

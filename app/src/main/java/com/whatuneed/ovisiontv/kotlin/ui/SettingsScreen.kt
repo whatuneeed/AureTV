@@ -131,6 +131,8 @@ import com.whatuneed.ovisiontv.kotlin.data.HIDDEN_FOLDER_ID
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
+import com.whatuneed.ovisiontv.kotlin.data.setShowPhoneApps
+import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
@@ -513,6 +515,7 @@ fun SettingsScreen(
     var contentContinue by remember(resumeTick) {
         mutableStateOf(ContentPreferences.continueWatching(context))
     }
+    var showPhoneOnlyApps by remember(resumeTick) { mutableStateOf(showPhoneApps(context)) }
     // Grants change on system screens, so their rows are re-read on every
     // return instead of keeping the value from the first composition.
     var listingsAllowed by remember(resumeTick) {
@@ -1409,6 +1412,25 @@ fun SettingsScreen(
                 action = {
                     contentContinue = !contentContinue
                     ContentPreferences.setContinueWatching(context, contentContinue)
+                },
+            ),
+            SettingsRow(
+                title = stringResource(R.string.settings_show_phone_apps),
+                value = stringResource(
+                    if (showPhoneOnlyApps) R.string.saver_on else R.string.saver_off,
+                ),
+                toggleState = showPhoneOnlyApps,
+                action = {
+                    showPhoneOnlyApps = !showPhoneOnlyApps
+                    setShowPhoneApps(context, showPhoneOnlyApps)
+                    scope.launch {
+                        val loaded = withContext(Dispatchers.IO) {
+                            AppRepository(context).load(withArtwork = false)
+                        }
+                        catalog = loaded
+                        items = orderStore.applyOrder(loaded)
+                        itemsOwner = currentProfileId
+                    }
                 },
             ),
             SettingsRow(

@@ -67,6 +67,7 @@
     <string name="settings_hidden_apps">Hidden Apps</string>
     <string name="settings_recommendations">Shelf Recommendations</string>
     <string name="settings_continue_watching">Continue Watching</string>
+    <string name="settings_show_phone_apps">Phone-only apps</string>
     <string name="settings_listings_access">Recommendations Access</string>
     <string name="settings_listings_granted">Allowed</string>
     <string name="settings_listings_denied">Not allowed</string>

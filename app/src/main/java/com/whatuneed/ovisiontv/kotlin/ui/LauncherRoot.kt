@@ -71,6 +71,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SaverPlaylist
 import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
 import com.whatuneed.ovisiontv.kotlin.data.SaverSchedule
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
+import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
@@ -357,6 +358,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // catalog must not overwrite the newer one when it finishes last.
     var reloadJob by remember { mutableStateOf<Job?>(null) }
     var reloadGeneration by remember { mutableIntStateOf(0) }
+    var appsShowPhoneOnly by remember { mutableStateOf(showPhoneApps(context)) }
     fun reload() {
         reloadJob?.cancel()
         val generation = ++reloadGeneration
@@ -401,6 +403,14 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // The same return may have switched, renamed or removed a profile, so the
     // current profile is re-read first: it owns which layout is on screen.
     LaunchedEffect(resumeTick) {
+        // The phone-only filter lives in Settings; returning Home must rebuild
+        // the grid when that preference changed.
+        val showPhone = showPhoneApps(context)
+        if (showPhone != appsShowPhoneOnly) {
+            appsShowPhoneOnly = showPhone
+            reload()
+            return@LaunchedEffect
+        }
         val fresh = profileStore.list()
         if (fresh != profiles) profiles = fresh
         val current = profileStore.current()

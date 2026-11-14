@@ -69,6 +69,7 @@
     <string name="settings_hidden_apps">Скрытые приложения</string>
     <string name="settings_recommendations">Рекомендации на полке</string>
     <string name="settings_continue_watching">Продолжить просмотр</string>
+    <string name="settings_show_phone_apps">Приложения без ТВ-версии</string>
     <string name="settings_listings_access">Доступ к рекомендациям</string>
     <string name="settings_listings_granted">Разрешено</string>
     <string name="settings_listings_denied">Нет доступа</string>

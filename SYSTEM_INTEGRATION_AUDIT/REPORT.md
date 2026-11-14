@@ -6,9 +6,9 @@
 
 ---
 
-## Статус реализации (0.4.50 / vc70)
+## Статус реализации (0.4.51 / vc71)
 
-Этап системной интеграции, шаги 1–3 и Low hardening выполнены в 0.4.50. Код менялся только по перечисленным пунктам; applicationId, подпись и визуальный дизайн не менялись.
+Этап системной интеграции, шаги 1–3, Low hardening и SI-01 выполнены в 0.4.50–0.4.51. Код менялся только по перечисленным пунктам; applicationId, подпись и визуальный дизайн не менялись.
 
 | Пункт | Статус 0.4.50 | Что сделано |
 |---|---|---|
@@ -19,13 +19,13 @@
 | SI-10 AccessibilityStatus | **реализовано** | точное сравнение component + проверка глобального `ACCESSIBILITY_ENABLED` |
 | SI-11 disabled components | **реализовано** | `activityInfo.enabled`/`applicationInfo.enabled` фильтруются при чтении |
 | SI-12 HOME settings fallback | **реализовано** | при отсутствии `ACTION_HOME_SETTINGS` открывается общий Settings и показывается подсказка «Настройки → Домой» |
-| SI-01 leanback-маркер | **частично** | `TvApp.leanback` сохраняется из категории; UI-фильтр/метка не добавлены — продуктовое решение |
+| SI-01 leanback-маркер | **реализовано** | `TvApp.leanback`, фильтр `filterPhoneOnly`, переключатель «Приложения без ТВ-версии» в Settings (по умолчанию вкл.) |
 | SI-02 MediaSession | **открыто** | требует отдельного решения и, для чужих плееров, notification listener |
 | SI-03 DreamService | **открыто** | системная заставка — отдельная продуктовая фича |
 | SI-06 4K-арты | **открыто** | требует замера памяти перед повышением 256/400×240/1280 |
 | SI-07/SI-13/SI-14 | **без изменений** | accepted/unsupported/PASS |
 
-Проверка 0.4.50: unit **344/344** debug+release, connected **208/208**, lint **0 Error / 14 Warning**, release APK `d60bfda0…9e28`, v2. Реальный ТВ/API 28/29/35/LOW/4K/TalkBack/HDMI-CEC — NOT TESTED.
+Проверка 0.4.51: unit **345/345** debug+release, connected **208/208**, lint **0 Error / 14 Warning**, release APK `5f8cd784…ce55`, v2. Реальный ТВ/API 28/29/35/LOW/4K/TalkBack/HDMI-CEC — NOT TESTED.
 
 ---
 

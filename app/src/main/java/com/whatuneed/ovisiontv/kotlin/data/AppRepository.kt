@@ -140,6 +140,21 @@ internal fun artKey(key: String, art: ImageBitmap?): String? =
         key
     }
 
+/** Phone-only apps stay visible by default; Settings can hide them. */
+internal fun showPhoneApps(context: Context): Boolean =
+    context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
+        .getBoolean(LauncherPrefs.KEY_SHOW_PHONE_APPS, true)
+
+internal fun setShowPhoneApps(context: Context, show: Boolean) {
+    context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(LauncherPrefs.KEY_SHOW_PHONE_APPS, show)
+        .apply()
+}
+
+internal fun filterPhoneOnly(apps: List<TvApp>, showPhoneApps: Boolean): List<TvApp> =
+    if (showPhoneApps) apps else apps.filter { it.leanback }
+
 class AppRepository(context: Context) {
     // The launcher language lives in its own preference and is applied by
     // wrapping an Activity; the application context keeps the system locale.
@@ -163,10 +178,12 @@ class AppRepository(context: Context) {
         }
 
         val activities = collectActivities(packageManager)
-        activities
-            .mapNotNull { activity ->
+        filterPhoneOnly(
+            activities.mapNotNull { activity ->
                 readApp(packageManager, activity.info, activity.leanback, withArtwork)
-            }
+            },
+            showPhoneApps(context),
+        )
             .sortedWith(
                 compareBy(collator) { app: TvApp -> app.label }
                     .thenBy { app: TvApp -> app.packageName },
