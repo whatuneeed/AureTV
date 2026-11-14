@@ -25,6 +25,13 @@ class BannerFitTest {
     }
 
     @Test
+    fun a4kPanelGetsALargerGridBannerDecode() {
+        assertEquals(400 to 240, gridBannerBox(1920))
+        assertEquals(500 to 300, gridBannerBox(2560))
+        assertEquals(500 to 300, gridBannerBox(3840))
+    }
+
+    @Test
     fun theGridThumbnailKeepsTheSourceAspect() {
         assertEquals(400 to 225, fitInside(640, 360, 400, 240))
         assertEquals(400 to 240, fitInside(400, 240, 400, 240))

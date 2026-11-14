@@ -155,6 +155,15 @@ internal fun setShowPhoneApps(context: Context, show: Boolean) {
 internal fun filterPhoneOnly(apps: List<TvApp>, showPhoneApps: Boolean): List<TvApp> =
     if (showPhoneApps) apps else apps.filter { it.leanback }
 
+/**
+ * Grid banners are painted into a 250x150 design tile. At 1080p a 400x240
+ * source is already oversampled; a 4K panel doubles the tile to 500x300, so
+ * only then is the larger decode worth its memory. The threshold is the panel
+ * width, not the Launcher profile.
+ */
+internal fun gridBannerBox(panelWidthPx: Int): Pair<Int, Int> =
+    if (panelWidthPx >= 2560) 500 to 300 else 400 to 240
+
 class AppRepository(context: Context) {
     // The launcher language lives in its own preference and is applied by
     // wrapping an Activity; the application context keeps the system locale.
@@ -263,9 +272,17 @@ class AppRepository(context: Context) {
         val banner = if (!withArtwork || ownSettings) {
             null
         } else {
-            val key = "${activity.packageName}|$stamp|$KIND_BANNER|400x240"
-            artKey(key, AppArtCache.get(key)
-                ?: drawableToImage(appInfo.loadBannerSafe(packageManager), 400, 240))
+            val (bannerWidth, bannerHeight) =
+                gridBannerBox(context.resources.displayMetrics.widthPixels)
+            val key = "${activity.packageName}|$stamp|$KIND_BANNER|${bannerWidth}x$bannerHeight"
+            artKey(
+                key,
+                AppArtCache.get(key) ?: drawableToImage(
+                    appInfo.loadBannerSafe(packageManager),
+                    bannerWidth,
+                    bannerHeight,
+                ),
+            )
         }
         val icon = if (!withArtwork || banner != null) {
             null
