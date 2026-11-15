@@ -17,7 +17,7 @@ enum class SaverDelay(val minutes: Int) {
     }
 }
 
-/** tvOS "Download Frequency" values (10_SETTINGS §4.4). */
+/** Catalogue check frequency values; the stored key keeps its old name. */
 enum class SaverRefresh {
     DAILY,
     WEEKLY,

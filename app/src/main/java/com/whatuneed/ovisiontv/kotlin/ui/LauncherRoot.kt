@@ -215,7 +215,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         }
     }
 
-    // Download Frequency is checked on resume, not on a background schedule:
+    // Catalogue check frequency is evaluated on resume, not on a background schedule:
     // the launcher only exists while it is the home screen.
     LaunchedEffect(foreground, context, ambient.mode) {
         if (!foreground || ambient.mode != AmbientMode.AERIAL) return@LaunchedEffect

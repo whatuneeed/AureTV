@@ -165,11 +165,12 @@
     <string name="saver_category_count">%1$d из %2$d</string>
     <string name="saver_preview_hint">Удерживайте OK на ролике, чтобы посмотреть заставку.</string>
     <string name="saver_preview_action">Посмотреть заставку</string>
-    <string name="saver_refresh">Частота загрузки роликов</string>
+    <string name="saver_refresh">Проверка каталога</string>
     <string name="saver_refresh_daily">Ежедневно</string>
     <string name="saver_refresh_weekly">Еженедельно</string>
     <string name="saver_refresh_monthly">Ежемесячно</string>
     <string name="saver_refresh_never">Никогда</string>
+    <string name="saver_refresh_hint">Публичный каталог Apple сегодня старее встроенного, поэтому проверка обычно оставляет встроенные ролики.</string>
     <string name="saver_screen_description">Заставка, %1$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="aerial_dream_label">OVisionTV: заставка</string>
     <string name="saver_system_title">Системная заставка</string>

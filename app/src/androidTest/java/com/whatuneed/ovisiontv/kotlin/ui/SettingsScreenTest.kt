@@ -1160,6 +1160,7 @@ class SettingsScreenTest {
         click(row(string(R.string.saver_refresh), string(R.string.saver_refresh_weekly)))
         click(string(R.string.saver_refresh_monthly))
 
+        rule.onNodeWithText(string(R.string.saver_refresh_hint)).assertIsDisplayed()
         assertEquals(SaverRefresh.MONTHLY, SaverPreferences.refresh(context))
         rule.onNodeWithContentDescription(string(R.string.saver_refresh_monthly))
             .assert(

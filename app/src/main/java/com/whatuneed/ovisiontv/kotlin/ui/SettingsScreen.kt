@@ -2586,6 +2586,7 @@ fun SettingsScreen(
         PAGE_SAVER_SESSION -> stringResource(R.string.saver_max_session_hint)
         PAGE_STORAGE_CLEAR -> stringResource(R.string.settings_cache_clear_hint)
         PAGE_SAVER_THEMES -> stringResource(R.string.saver_themes_hint)
+        PAGE_SAVER_REFRESH -> stringResource(R.string.saver_refresh_hint)
         PAGE_STORAGE -> stringResource(R.string.settings_storage_hint)
         PAGE_NETWORK -> stringResource(R.string.settings_network_hint)
         PAGE_SYSTEM -> stringResource(R.string.settings_system_hint)

@@ -1,7 +1,7 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
 **Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4b — 0.5.4 (`versionCode 77`), `minSdk 28`, `targetSdk 35`
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4b — 0.5.5 (`versionCode 78`), `minSdk 28`, `targetSdk 35`
 **Дата аудита:** 2026-11-15
 **Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
 **Реализация:** Stage 2–4b проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
@@ -202,14 +202,14 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3–4b частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, Photos, отдельный Weather-режим, blackout и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3–4b частично закрыты AMB-01, AMB-02, AMB-04, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, Photos, отдельный Weather-режим, blackout и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
 | AMB-01 | High (product) | Нет Ambient-режимов: только Aerial. «Choose Screen Saver» — выбор с одним пунктом. | `SettingsScreen.kt:1218–1225`, `SaverTheme` |
 | AMB-02 | High (product) | Нет IA «Personalization → Ambient Experience»; заставка спрятана в `Interface`. | `SettingsScreen.kt:1316–1332` |
 | AMB-03 | High (quality) | Только 1080p H.264 SDR; нет 4K/HEVC/HDR/10-bit/display-mode. На 4K-панели — upscale. | `AerialCatalogBuilder.kt:66`, `AerialPosterStore.kt:27–28` |
-| AMB-04 | High (truthfulness) | Download Frequency не обновляет каталог в текущей публичной выдаче Apple: flat schema → `UNCHANGED`. | `AerialRefresh.kt:110–115` |
+| AMB-04 | High (truthfulness) | Download Frequency не обновляет каталог в текущей публичной выдаче Apple: flat schema → `UNCHANGED`. **Частично закрыто:** строка переименована в `Catalogue Check`, на странице честно сказано, что публичный каталог Apple старее встроенного; поведение (проверка → `UNCHANGED`) не выдаётся за загрузку. | `AerialRefresh.kt:110–115`, `SettingsScreen.kt` |
 | AMB-05 | High (OLED) | Нет pixel shift, dim, blackout, max session; статический градиент и подпись. | `SaverScreen.kt` bottom gradient/caption |
 | AMB-06 | Medium (architecture) | `SaverScreen` — монолит: плееры, плейлист, still, media session, анимации, captions, watchdog в одном файле 922 строки. Новый режим нельзя добавить без усложнения. | `SaverScreen.kt` |
 | AMB-07 | Medium (power) | Два декодера + два TextureView + still + readback; нет измерений и low-power режима. | `createSaverPlayers`, `capturePoster` |

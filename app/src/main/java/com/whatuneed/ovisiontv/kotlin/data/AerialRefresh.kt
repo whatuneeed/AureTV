@@ -12,7 +12,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** tvOS Download Frequency, as whole intervals. Never means never. */
+/** Catalogue check frequency, as whole intervals. Never means never. */
 internal object SaverRefreshSchedule {
     private const val DAY_MS = 24L * 60 * 60 * 1000
 
@@ -61,7 +61,7 @@ internal object AerialStore {
 }
 
 /**
- * Keeps the aerial catalogue as fresh as the chosen Download Frequency.
+ * Keeps the aerial catalogue as fresh as the chosen check frequency.
  * Failure is silent and keeps the previous catalogue: a TV without working
  * TLS to Apple must still have a screen saver.
  */

@@ -163,11 +163,12 @@
     <string name="saver_category_count">%1$d of %2$d</string>
     <string name="saver_preview_hint">Hold OK on a clip to preview the saver.</string>
     <string name="saver_preview_action">Preview saver</string>
-    <string name="saver_refresh">Download Frequency</string>
+    <string name="saver_refresh">Catalogue Check</string>
     <string name="saver_refresh_daily">Daily</string>
     <string name="saver_refresh_weekly">Weekly</string>
     <string name="saver_refresh_monthly">Monthly</string>
     <string name="saver_refresh_never">Never</string>
+    <string name="saver_refresh_hint">Apple’s public catalogue is older than the built-in one today, so a check normally keeps the built-in clips.</string>
     <string name="saver_screen_description">Screen Saver, %1$s. Press any button to exit.</string>
     <string name="aerial_dream_label">OVisionTV Ambient</string>
     <string name="saver_system_title">System screen saver</string>

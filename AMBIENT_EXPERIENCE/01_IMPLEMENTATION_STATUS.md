@@ -1,7 +1,7 @@
 # Ambient Experience — статус реализации Stage 2–4b
 
 **Дата:** 2026-11-15
-**База:** OVisionTV Launcher 0.5.4, `versionCode 77`
+**База:** OVisionTV Launcher 0.5.5, `versionCode 78`
 **Статус:** Stage 2–3 реализованы; Stage 4a — опциональные Dim After и Max Session; Stage 4b — opt-in погода на часах (только из кэша).
 **Не реализовано и не обещается:** 4K/HDR, Photo Gallery, отдельный Weather-режим (погода — только строка на часах), Cinematic Photography, Abstract Motion, blackout, энергоизмерения, физические ТВ. Pixel shift/dim — не «OLED-safe» и не гарантия от burn-in.
 
@@ -71,6 +71,7 @@ Settings
 - `PAGE_SAVER_CLOCK_FORMAT` — System / 12-hour / 24-hour; в Clock виден `Pixel Shift` toggle.
 - `PAGE_SAVER_DIM`, `PAGE_SAVER_SESSION` — radio-страницы; по умолчанию `Never`, поведение без явного выбора не меняется.
 - В Clock/Minimal Aerial-строки скрыты, чтобы не предлагать темы, которые не рисуются.
+- `Download Frequency` переименована в `Catalogue Check`: публичный каталог Apple сегодня старее встроенного, поэтому проверка обычно оставляет встроенные ролики. Ключ `saver_refresh` не менялся.
 - `Choose Screen Saver` переименован в `Aerial Clips`; тупиковый выбор с одним пунктом убран.
 - Preview в Settings: Aerial — реальный still; Clock — локальные часы и, если включено, cached погода; Minimal — локальный градиент. Декодер не запускается.
 
@@ -88,7 +89,7 @@ Settings
 | `:app:testDebugUnitTest` | **457/457** |
 | `:app:connectedDebugAndroidTest` на AVD `hume-tv` API 34 | **242/242** |
 | `:app:lintDebug` | **0 errors / 18 warnings / 5 info** |
-| `:app:assembleRelease` | **Success**, APK **4 685 502 B**, подпись SHA-256 `327a5045…67d7b10` (не изменилась) |
+| `:app:assembleRelease` | **Success**, APK **4 686 206 B**, подпись SHA-256 `327a5045…67d7b10` (не изменилась) |
 | AVD, визуально | Home → Personalization → Ambient Experience; Aerials/Clock; Clock Format; Dim After/Max Session; Show Weather; preview с реальной погодой; full-screen clock; any key exits |
 | Backup | режим, формат, pixel shift, dim, max session и showWeather входят в backup/restore; старый архив без полей → Aerial / System / On / Never / Off |
 | Aerial | старый `SaverScreen` остаётся рендерером; поведение не менялось |
