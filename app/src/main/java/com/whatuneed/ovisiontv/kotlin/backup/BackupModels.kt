@@ -252,6 +252,8 @@ internal data class SaverData(
     /** Added after schema 1; absent in older archives means system clock. */
     val clockFormat: String = "system",
     val pixelShift: Boolean = true,
+    val dimAfter: String = "never",
+    val maxSession: String = "never",
 )
 
 internal data class LanguageData(

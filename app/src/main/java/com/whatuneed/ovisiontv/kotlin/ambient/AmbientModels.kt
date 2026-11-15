@@ -47,6 +47,34 @@ enum class AmbientClockFormat(val key: String) {
     }
 }
 
+/** Dimming starts after the chosen delay; it never blacks the surface out. */
+enum class AmbientDim(val key: String, val minutes: Int) {
+    NEVER("never", 0),
+    TEN("ten", 10),
+    TWENTY("twenty", 20),
+    THIRTY("thirty", 30),
+    ;
+
+    companion object {
+        fun fromKey(raw: String?): AmbientDim =
+            entries.firstOrNull { it.key == raw } ?: NEVER
+    }
+}
+
+/** A voluntary safety limit for an unattended ambient surface. */
+enum class AmbientSession(val key: String, val minutes: Int) {
+    NEVER("never", 0),
+    THIRTY("thirty", 30),
+    SIXTY("sixty", 60),
+    ONE_TWENTY("one_twenty", 120),
+    ;
+
+    companion object {
+        fun fromKey(raw: String?): AmbientSession =
+            entries.firstOrNull { it.key == raw } ?: NEVER
+    }
+}
+
 /**
  * Everything the ambient surface needs for one session. It is a snapshot, not
  * a live prefs reader: Home and the DreamService read it once and then keep a
@@ -61,6 +89,8 @@ data class AmbientSettings(
     val refresh: SaverRefresh,
     val clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
     val pixelShift: Boolean = true,
+    val dimAfter: AmbientDim = AmbientDim.NEVER,
+    val maxSession: AmbientSession = AmbientSession.NEVER,
 )
 
 /**
@@ -72,6 +102,8 @@ object AmbientSettingsStore {
     const val KEY_MODE = "ambient_mode"
     const val KEY_CLOCK_FORMAT = "ambient_clock_format"
     const val KEY_PIXEL_SHIFT = "ambient_pixel_shift"
+    const val KEY_DIM_AFTER = "ambient_dim_after"
+    const val KEY_MAX_SESSION = "ambient_max_session"
 
     fun load(context: Context): AmbientSettings = AmbientSettings(
         mode = mode(context),
@@ -82,6 +114,8 @@ object AmbientSettingsStore {
         refresh = SaverPreferences.refresh(context),
         clockFormat = clockFormat(context),
         pixelShift = pixelShift(context),
+        dimAfter = dimAfter(context),
+        maxSession = maxSession(context),
     )
 
     fun mode(context: Context): AmbientMode =
@@ -109,12 +143,32 @@ object AmbientSettingsStore {
         prefs(context).edit().putBoolean(KEY_PIXEL_SHIFT, enabled).apply()
     }
 
+    fun dimAfter(context: Context): AmbientDim =
+        AmbientDim.fromKey(
+            SafePreferences.string(prefs(context), KEY_DIM_AFTER, null),
+        )
+
+    fun setDimAfter(context: Context, dim: AmbientDim) {
+        prefs(context).edit().putString(KEY_DIM_AFTER, dim.key).apply()
+    }
+
+    fun maxSession(context: Context): AmbientSession =
+        AmbientSession.fromKey(
+            SafePreferences.string(prefs(context), KEY_MAX_SESSION, null),
+        )
+
+    fun setMaxSession(context: Context, session: AmbientSession) {
+        prefs(context).edit().putString(KEY_MAX_SESSION, session.key).apply()
+    }
+
     /** Reset is the same reset the Aerial page always did, plus ambient fields. */
     fun reset(context: Context) {
         SaverPreferences.reset(context)
         setMode(context, AmbientMode.AERIAL)
         setClockFormat(context, AmbientClockFormat.SYSTEM)
         setPixelShift(context, true)
+        setDimAfter(context, AmbientDim.NEVER)
+        setMaxSession(context, AmbientSession.NEVER)
     }
 
     internal fun prefs(context: Context) =

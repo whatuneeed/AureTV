@@ -124,6 +124,18 @@
     <string name="saver_clock_format_hint">«Системный» следует настройке ТВ. 12- и 24-часовой форматы переопределяют его только для часов.</string>
     <string name="saver_pixel_shift">Сдвиг пикселей</string>
     <string name="saver_pixel_shift_hint">Часы немного смещаются раз в минуту, чтобы один яркий элемент не оставался на одних и тех же пикселях. Это не гарантия от выгорания.</string>
+    <string name="saver_dim_after">Затемнение через</string>
+    <string name="saver_dim_never">Никогда</string>
+    <string name="saver_dim_10">10 мин</string>
+    <string name="saver_dim_20">20 мин</string>
+    <string name="saver_dim_30">30 мин</string>
+    <string name="saver_dim_hint" formatted="false">Через выбранное время часы и минимальная заставка тускнеют до 80%, ещё через пять минут — до 60%. Экран не становится чёрным.</string>
+    <string name="saver_max_session">Максимальная сессия</string>
+    <string name="saver_session_never">Никогда</string>
+    <string name="saver_session_30">30 мин</string>
+    <string name="saver_session_60">60 мин</string>
+    <string name="saver_session_120">2 часа</string>
+    <string name="saver_max_session_hint">Закрывает заставку через выбранное время. По умолчанию выключено.</string>
     <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="saver_choose">Ролики</string>

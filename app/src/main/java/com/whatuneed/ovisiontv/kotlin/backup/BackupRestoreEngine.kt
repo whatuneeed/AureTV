@@ -3,7 +3,9 @@ package com.whatuneed.ovisiontv.kotlin.backup
 import android.content.Context
 import android.content.SharedPreferences
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
@@ -206,6 +208,14 @@ internal class BackupRestoreEngine(private val context: Context) {
                     AmbientClockFormat.fromKey(saver.clockFormat).key,
                 )
                 editor.putBoolean(AmbientSettingsStore.KEY_PIXEL_SHIFT, saver.pixelShift)
+                editor.putString(
+                    AmbientSettingsStore.KEY_DIM_AFTER,
+                    AmbientDim.fromKey(saver.dimAfter).key,
+                )
+                editor.putString(
+                    AmbientSettingsStore.KEY_MAX_SESSION,
+                    AmbientSession.fromKey(saver.maxSession).key,
+                )
             }
         }
 

@@ -89,6 +89,8 @@ class BackupCodecTest {
             mode = "clock",
             clockFormat = "twenty_four",
             pixelShift = false,
+            dimAfter = "twenty",
+            maxSession = "sixty",
         ),
         language = LanguageData("ru", showPhoneApps = false),
         content = ContentData(recommendations = true, continueWatching = false),
@@ -148,6 +150,8 @@ class BackupCodecTest {
         assertEquals("clock", validated.data.saver?.mode)
         assertEquals("twenty_four", validated.data.saver?.clockFormat)
         assertFalse(validated.data.saver?.pixelShift ?: true)
+        assertEquals("twenty", validated.data.saver?.dimAfter)
+        assertEquals("sixty", validated.data.saver?.maxSession)
         assertEquals("app:com.example.one", validated.data.startup?.target)
     }
 

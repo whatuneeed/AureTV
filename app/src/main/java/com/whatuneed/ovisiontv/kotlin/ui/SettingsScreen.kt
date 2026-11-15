@@ -148,7 +148,9 @@ import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
@@ -178,7 +180,9 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
+import com.whatuneed.ovisiontv.kotlin.ui.components.ambientDimLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientModeLabel
+import com.whatuneed.ovisiontv.kotlin.ui.components.ambientSessionLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.saverThemeLabel
 import kotlinx.coroutines.Dispatchers
@@ -291,6 +295,8 @@ private const val PAGE_SAVER_THEMES = 6
 private const val PAGE_SAVER_REFRESH = 7
 private const val PAGE_SAVER_MODE = 43
 private const val PAGE_SAVER_CLOCK_FORMAT = 44
+private const val PAGE_SAVER_DIM = 45
+private const val PAGE_SAVER_SESSION = 46
 private const val PAGE_NETWORK = 8
 private const val PAGE_DEVICE = 9
 private const val PAGE_STORAGE = 10
@@ -689,6 +695,10 @@ fun SettingsScreen(
     var ambientPixelShift by remember(resumeTick) {
         mutableStateOf(AmbientSettingsStore.pixelShift(context))
     }
+    var ambientDim by remember(resumeTick) { mutableStateOf(AmbientSettingsStore.dimAfter(context)) }
+    var ambientSession by remember(resumeTick) {
+        mutableStateOf(AmbientSettingsStore.maxSession(context))
+    }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -907,6 +917,7 @@ fun SettingsScreen(
         PAGE_SAVER -> PAGE_INTERFACE
         PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
         PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
+        PAGE_SAVER_DIM, PAGE_SAVER_SESSION,
         -> PAGE_SAVER
         PAGE_STORAGE_CLEAR -> PAGE_STORAGE
         PAGE_NETWORK, PAGE_DEVICE, PAGE_STORAGE, PAGE_PERMISSIONS, PAGE_SYSTEM ->
@@ -1090,6 +1101,8 @@ fun SettingsScreen(
         ambientMode = AmbientSettingsStore.mode(context)
         ambientClockFormat = AmbientSettingsStore.clockFormat(context)
         ambientPixelShift = AmbientSettingsStore.pixelShift(context)
+        ambientDim = AmbientSettingsStore.dimAfter(context)
+        ambientSession = AmbientSettingsStore.maxSession(context)
         saverMusic = SaverPreferences.music(context)
         saverRefresh = SaverPreferences.refresh(context)
         saverThemes = SaverPreferences.themes(context)
@@ -1295,6 +1308,33 @@ fun SettingsScreen(
                     ),
                 )
             }
+            // Dimming and the session limit apply to both local surfaces. They
+            // do not touch Aerial video, where the player already owns power.
+            if (ambientMode != AmbientMode.AERIAL) {
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_dim_after),
+                        value = ambientDimLabel(ambientDim),
+                        chevron = true,
+                        action = {
+                            open(PAGE_SAVER_DIM, focus = AmbientDim.entries.indexOf(ambientDim))
+                        },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_max_session),
+                        value = ambientSessionLabel(ambientSession),
+                        chevron = true,
+                        action = {
+                            open(
+                                PAGE_SAVER_SESSION,
+                                focus = AmbientSession.entries.indexOf(ambientSession),
+                            )
+                        },
+                    ),
+                )
+            }
             // The Aerial catalogue only matters to the Aerial mode. Hiding
             // these rows in Clock/Minimal keeps the page honest instead of
             // offering themes that would never be drawn.
@@ -1379,6 +1419,30 @@ fun SettingsScreen(
                 action = {
                     ambientClockFormat = format
                     AmbientSettingsStore.setClockFormat(context, format)
+                },
+            )
+        }
+
+        PAGE_SAVER_DIM -> AmbientDim.entries.map { dim ->
+            SettingsRow(
+                title = ambientDimLabel(dim),
+                checked = dim == ambientDim,
+                choice = true,
+                action = {
+                    ambientDim = dim
+                    AmbientSettingsStore.setDimAfter(context, dim)
+                },
+            )
+        }
+
+        PAGE_SAVER_SESSION -> AmbientSession.entries.map { session ->
+            SettingsRow(
+                title = ambientSessionLabel(session),
+                checked = session == ambientSession,
+                choice = true,
+                action = {
+                    ambientSession = session
+                    AmbientSettingsStore.setMaxSession(context, session)
                 },
             )
         }
@@ -2369,6 +2433,8 @@ fun SettingsScreen(
                 PAGE_SAVER -> R.string.settings_saver
                 PAGE_SAVER_MODE -> R.string.saver_mode
                 PAGE_SAVER_CLOCK_FORMAT -> R.string.saver_clock_format
+                PAGE_SAVER_DIM -> R.string.saver_dim_after
+                PAGE_SAVER_SESSION -> R.string.saver_max_session
                 PAGE_SAVER_CHOOSER -> R.string.saver_choose
                 PAGE_SAVER_DELAY -> R.string.saver_start_after
                 PAGE_SAVER_THEMES -> R.string.saver_themes
@@ -2483,6 +2549,8 @@ fun SettingsScreen(
         }
         PAGE_SAVER_MODE -> stringResource(R.string.saver_mode_hint)
         PAGE_SAVER_CLOCK_FORMAT -> stringResource(R.string.saver_clock_format_hint)
+        PAGE_SAVER_DIM -> stringResource(R.string.saver_dim_hint)
+        PAGE_SAVER_SESSION -> stringResource(R.string.saver_max_session_hint)
         PAGE_STORAGE_CLEAR -> stringResource(R.string.settings_cache_clear_hint)
         PAGE_SAVER_THEMES -> stringResource(R.string.saver_themes_hint)
         PAGE_STORAGE -> stringResource(R.string.settings_storage_hint)
@@ -3212,7 +3280,8 @@ fun SettingsScreen(
                             // Radio rows in one list are one selectable group.
                             if (page == PAGE_LANGUAGE || page == PAGE_SAVER_DELAY ||
                                 page == PAGE_SAVER_REFRESH || page == PAGE_SAVER_MODE ||
-                                page == PAGE_SAVER_CLOCK_FORMAT ||
+                                page == PAGE_SAVER_CLOCK_FORMAT || page == PAGE_SAVER_DIM ||
+                                page == PAGE_SAVER_SESSION ||
                                 page == PAGE_WEATHER_LOCATION ||
                                 page == PAGE_WEATHER_UNITS || page == PAGE_WEATHER_SOURCE ||
                                 page == PAGE_WEATHER_REFRESH
@@ -4103,6 +4172,7 @@ private fun sectionOf(page: Int): Section? = when (page) {
     PAGE_INTERFACE, PAGE_LANGUAGE,
     PAGE_SAVER, PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
     PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
+    PAGE_SAVER_DIM, PAGE_SAVER_SESSION,
     -> Section.INTERFACE
     PAGE_HOME_SCREEN, PAGE_HIDDEN, PAGE_RESET, PAGE_DISCOVERY,
     PAGE_DISCOVERY_HIDDEN, PAGE_DISCOVERY_CLEAR ->

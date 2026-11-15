@@ -130,6 +130,8 @@ private fun DreamSaver(onFinished: () -> Unit) {
         items = items,
         clockFormat = settings.clockFormat,
         pixelShift = settings.pixelShift,
+        dimAfter = settings.dimAfter,
+        maxSession = settings.maxSession,
         onCloseRequested = onFinished,
         onDismissed = onFinished,
         publishMediaSession = settings.mode == AmbientMode.AERIAL,

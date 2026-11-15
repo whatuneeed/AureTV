@@ -81,6 +81,21 @@ class AmbientModelsTest {
     }
 
     @Test
+    fun protection_keys_are_stable_and_fall_back_to_off() {
+        assertEquals(AmbientDim.NEVER, AmbientDim.fromKey(null))
+        assertEquals(AmbientDim.NEVER, AmbientDim.fromKey("future"))
+        assertEquals(AmbientDim.TEN, AmbientDim.fromKey("ten"))
+        assertEquals(AmbientDim.TWENTY, AmbientDim.fromKey("twenty"))
+        assertEquals(AmbientDim.THIRTY, AmbientDim.fromKey("thirty"))
+        assertEquals(AmbientSession.NEVER, AmbientSession.fromKey(null))
+        assertEquals(AmbientSession.NEVER, AmbientSession.fromKey("future"))
+        assertEquals(AmbientSession.THIRTY, AmbientSession.fromKey("thirty"))
+        assertEquals(AmbientSession.SIXTY, AmbientSession.fromKey("sixty"))
+        assertEquals(AmbientSession.ONE_TWENTY, AmbientSession.fromKey("one_twenty"))
+        assertEquals("one_twenty", AmbientSession.ONE_TWENTY.key)
+    }
+
+    @Test
     fun only_aerial_needs_clips() {
         assertTrue(AmbientScheduler.needsClips(AmbientMode.AERIAL))
         assertFalse(AmbientScheduler.needsClips(AmbientMode.CLOCK))

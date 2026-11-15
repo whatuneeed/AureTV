@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.View
 import androidx.activity.compose.BackHandler
@@ -54,8 +55,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClock
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPixelShift
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPowerPolicy
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
@@ -79,6 +83,7 @@ private const val AMBIENT_EXIT_MS = 330
 private const val AMBIENT_REDUCED_MS = 400
 private const val AMBIENT_SCALE = 1.03f
 private const val CLOCK_DRIFT_MS = 15_000L
+private const val POWER_TICK_MS = 15_000L
 
 /**
  * One ambient surface for every mode. Aerial delegates to the existing
@@ -91,6 +96,8 @@ internal fun AmbientScreen(
     items: List<AerialClip>,
     clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
     pixelShift: Boolean = true,
+    dimAfter: AmbientDim = AmbientDim.NEVER,
+    maxSession: AmbientSession = AmbientSession.NEVER,
     closing: Boolean = false,
     swallowOpeningPress: Boolean = false,
     players: List<ExoPlayer>? = null,
@@ -116,6 +123,8 @@ internal fun AmbientScreen(
         mode = mode,
         clockFormat = clockFormat,
         pixelShift = pixelShift,
+        dimAfter = dimAfter,
+        maxSession = maxSession,
         closing = closing,
         swallowOpeningPress = swallowOpeningPress,
         onCloseRequested = onCloseRequested,
@@ -129,6 +138,8 @@ private fun AmbientStillScreen(
     mode: AmbientMode,
     clockFormat: AmbientClockFormat,
     pixelShift: Boolean,
+    dimAfter: AmbientDim,
+    maxSession: AmbientSession,
     closing: Boolean,
     swallowOpeningPress: Boolean,
     onCloseRequested: () -> Unit,
@@ -163,6 +174,26 @@ private fun AmbientStillScreen(
     var entered by remember { mutableStateOf(false) }
     var openingPressReleased by remember { mutableStateOf(!swallowOpeningPress) }
     LaunchedEffect(Unit) { entered = true }
+
+    // The protection clock starts when the surface appears. Dimming is a
+    // visible alpha change; the optional session limit closes the surface
+    // through the same exit path as BACK.
+    val startedAt = remember { SystemClock.elapsedRealtime() }
+    var elapsedMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(dimAfter, maxSession) {
+        if (dimAfter == AmbientDim.NEVER && maxSession == AmbientSession.NEVER) {
+            return@LaunchedEffect
+        }
+        while (true) {
+            elapsedMs = SystemClock.elapsedRealtime() - startedAt
+            if (AmbientPowerPolicy.sessionExpired(elapsedMs, maxSession)) {
+                onCloseRequested()
+                return@LaunchedEffect
+            }
+            delay(POWER_TICK_MS)
+        }
+    }
+    val dimAlpha = AmbientPowerPolicy.dimAlpha(elapsedMs, dimAfter)
 
     val screenAlpha by animateFloatAsState(
         targetValue = if (entered && !closing) 1f else 0f,
@@ -207,7 +238,7 @@ private fun AmbientStillScreen(
         Modifier
             .fillMaxSize()
             .graphicsLayer {
-                alpha = screenAlpha
+                alpha = screenAlpha * dimAlpha
                 scaleX = screenScale
                 scaleY = screenScale
             }

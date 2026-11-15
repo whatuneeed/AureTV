@@ -48,7 +48,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefreshResult
@@ -784,6 +786,28 @@ class SettingsScreenTest {
             ),
         )
         assertFalse(AmbientSettingsStore.pixelShift(context))
+    }
+
+    @Test
+    fun the_clock_page_sets_dim_and_max_session() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        click(string(R.string.saver_mode_clock))
+        press(Key.Back)
+
+        // Clock rows: Mode, Start After, Music, Clock Format, Pixel Shift,
+        // Dim After, Max Session, System screen saver, Reset.
+        repeat(5) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        click(string(R.string.saver_dim_20))
+        assertEquals(AmbientDim.TWENTY, AmbientSettingsStore.dimAfter(context))
+
+        press(Key.Back)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        click(string(R.string.saver_session_60))
+        assertEquals(AmbientSession.SIXTY, AmbientSettingsStore.maxSession(context))
     }
 
     @Test

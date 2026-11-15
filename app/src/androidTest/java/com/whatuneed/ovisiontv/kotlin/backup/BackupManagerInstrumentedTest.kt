@@ -10,7 +10,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
@@ -128,6 +130,8 @@ class BackupManagerInstrumentedTest {
         assertEquals(AmbientMode.AERIAL, AmbientSettingsStore.mode(context))
         assertEquals(AmbientClockFormat.SYSTEM, AmbientSettingsStore.clockFormat(context))
         assertTrue(AmbientSettingsStore.pixelShift(context))
+        assertEquals(AmbientDim.NEVER, AmbientSettingsStore.dimAfter(context))
+        assertEquals(AmbientSession.NEVER, AmbientSettingsStore.maxSession(context))
 
         assertTrue(WeatherPreferences.enabled(context))
         assertTrue(WeatherPreferences.manual(context))
@@ -360,6 +364,8 @@ class BackupManagerInstrumentedTest {
         AmbientSettingsStore.setMode(context, AmbientMode.CLOCK)
         AmbientSettingsStore.setClockFormat(context, AmbientClockFormat.TWENTY_FOUR)
         AmbientSettingsStore.setPixelShift(context, false)
+        AmbientSettingsStore.setDimAfter(context, AmbientDim.TWENTY)
+        AmbientSettingsStore.setMaxSession(context, AmbientSession.SIXTY)
     }
 
     private fun profile(

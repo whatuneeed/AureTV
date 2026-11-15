@@ -122,6 +122,18 @@
     <string name="saver_clock_format_hint">System follows the TV. The 12-hour and 24-hour choices override it for the clock only.</string>
     <string name="saver_pixel_shift">Pixel Shift</string>
     <string name="saver_pixel_shift_hint">Moves the clock slightly once a minute so one bright element does not stay on the same pixels. This is not a guarantee against burn-in.</string>
+    <string name="saver_dim_after">Dim After</string>
+    <string name="saver_dim_never">Never</string>
+    <string name="saver_dim_10">10 min</string>
+    <string name="saver_dim_20">20 min</string>
+    <string name="saver_dim_30">30 min</string>
+    <string name="saver_dim_hint" formatted="false">Dims the clock and minimal surface to 80% after the delay, then to 60% five minutes later. It never goes black.</string>
+    <string name="saver_max_session">Max Session</string>
+    <string name="saver_session_never">Never</string>
+    <string name="saver_session_30">30 min</string>
+    <string name="saver_session_60">60 min</string>
+    <string name="saver_session_120">2 hours</string>
+    <string name="saver_max_session_hint">Closes the ambient screen after the chosen time. Off by default.</string>
     <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
     <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
     <string name="saver_choose">Aerial Clips</string>

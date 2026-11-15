@@ -1,12 +1,12 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
 **Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–3 — 0.5.2 (`versionCode 75`), `minSdk 28`, `targetSdk 35`
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4a — 0.5.3 (`versionCode 76`), `minSdk 28`, `targetSdk 35`
 **Дата аудита:** 2026-11-15
 **Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
-**Реализация:** Stage 2–3 проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
+**Реализация:** Stage 2–4a проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
 **Аудит выполнялся read-only;** изменения кода — отдельный этап после него.
-**Следующий шаг:** Stage 4 — OLED/energy decisions и Weather, затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
+**Следующий шаг:** Weather как opt-in режим; blackout/ночное расписание — только после решения владельца; затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
 
 ---
 
@@ -202,7 +202,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3 частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift часов); 4K, Photos, Weather, dim/blackout/session и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3–4a частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session); 4K, Photos, Weather, blackout и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
