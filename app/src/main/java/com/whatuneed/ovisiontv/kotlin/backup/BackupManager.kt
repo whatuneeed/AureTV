@@ -269,6 +269,10 @@ internal class BackupManager(private val context: Context) {
         }
         val components = LinkedHashMap<String, JSONObject>()
         val entries = ArrayList<ComponentEntry>(encoded.size)
+        // A corrupt/unreadable store can disappear from the snapshot even when
+        // the user selected its category. Record what was actually written so
+        // the archive remains self-consistent; the warning still names the loss.
+        val actualSelection = encoded.mapTo(LinkedHashSet()) { it.type.category }
         encoded.forEachIndexed { index, component ->
             val path = "${BackupContract.COMPONENT_DIR}%04d.json".format(Locale.ROOT, index)
             val json = component.json
@@ -294,7 +298,7 @@ internal class BackupManager(private val context: Context) {
             sourceSdk = Build.VERSION.SDK_INT,
             sourceModel = Build.MODEL.orEmpty(),
             sourceLocale = Locale.getDefault().toLanguageTag(),
-            selection = selection.categories(),
+            selection = actualSelection,
             components = entries,
             encryption = null,
             payload = null,

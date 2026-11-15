@@ -2,6 +2,7 @@ package com.whatuneed.ovisiontv.kotlin
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import com.whatuneed.ovisiontv.kotlin.backup.BackupMaintenance
 import com.whatuneed.ovisiontv.kotlin.backup.BackupRecovery
 import com.whatuneed.ovisiontv.kotlin.backup.BackupScheduler
 import com.whatuneed.ovisiontv.kotlin.data.CrashReport
@@ -21,6 +22,7 @@ class OVisionApp : Application() {
         // commits; undo it before Home reads a half-restored profile file.
         BackupRecovery.recoverIfNeeded(this)
         BackupScheduler.ensureScheduled(this)
+        BackupMaintenance.start(this)
     }
 
     override fun onTrimMemory(level: Int) {

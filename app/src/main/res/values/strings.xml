@@ -519,9 +519,7 @@
     <string name="backup_restore_local">Restore a local backup</string>
     <string name="backup_auto">Automatic local backup</string>
     <string name="backup_auto_hint">Once a day, locally. The system may delay it</string>
-    <string name="backup_last_never">No backups yet</string>
     <string name="backup_last">Last backup: %1$s</string>
-    <string name="backup_categories">What to include</string>
     <string name="backup_category_profiles">Profiles and home layout</string>
     <string name="backup_category_home">Home layout and folders</string>
     <string name="backup_category_discovery">Favorites and recommendations</string>
@@ -531,7 +529,6 @@
     <string name="backup_category_language">Language and content</string>
     <string name="backup_category_startup">Start with the TV</string>
     <string name="backup_encrypt">Protect with a password</string>
-    <string name="backup_encrypt_hint">Needed for favorites, history and a saved city</string>
     <string name="backup_password">Password</string>
     <string name="backup_password_confirm">Repeat password</string>
     <string name="backup_password_hint">At least 8 characters. It cannot be recovered</string>
@@ -545,7 +542,6 @@
     <string name="backup_local_done">Backup saved on this TV</string>
     <string name="backup_no_files">This TV has no file picker</string>
     <string name="backup_no_copies">No local backups</string>
-    <string name="backup_select_copy">Select a backup to inspect</string>
     <string name="backup_encrypted">Password protected</string>
     <string name="backup_plain">Not protected</string>
     <string name="backup_schema">Data version %1$d</string>
@@ -564,11 +560,10 @@
     <string name="backup_stage_export">Preparing the backup</string>
     <string name="backup_stage_read">Reading the backup</string>
     <string name="backup_stage_apply">Restoring settings</string>
-    <string name="backup_delete">Delete local backup</string>
-    <string name="backup_delete_confirm">Delete this local backup?</string>
     <string name="backup_settings">Backup settings</string>
     <string name="backup_retention">Local copies kept: %1$d</string>
     <string name="backup_open">Open</string>
     <string name="backup_password_mismatch">Passwords do not match</string>
     <string name="backup_category_content">Content sources</string>
+    <string name="backup_password_too_short">Use at least 8 characters</string>
 </resources>

@@ -208,6 +208,21 @@ class BackupCodecTest {
     }
 
     @Test
+    fun aSelectedCategoryWithoutItsComponentIsRefused() {
+        val missingWeather = data().copy(weather = null)
+        try {
+            BackupValidator.validateForWrite(
+                manifest(BackupJson.encode(missingWeather, all)),
+                missingWeather,
+                enforcePlainPolicy = false,
+            )
+            fail("selection must not claim a component that is absent")
+        } catch (expected: BackupException) {
+            assertEquals(BackupStage.SCHEMA, expected.stage)
+        }
+    }
+
+    @Test
     fun newerSchemaIsRefused() {
         val components = BackupJson.encode(data(), all)
         val current = manifest(components)

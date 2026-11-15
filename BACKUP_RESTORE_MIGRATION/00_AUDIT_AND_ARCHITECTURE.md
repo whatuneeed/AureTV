@@ -3,8 +3,8 @@
 **Проект:** OVisionTV Kotlin Launcher (`com.whatuneed.ovisiontv.kotlin`)  
 **Версия на момент аудита:** `versionCode = 73`, `versionName = "0.5.0"`, `minSdk = 28`, `targetSdk = 35`  
 **Дата:** 2026-11-15  
-**Статус:** **Stage 1 (аудит) и Stage 2 (архитектура) завершены; реализация Stage 0–5 начата и зафиксирована в `01_IMPLEMENTATION_STATUS.md`.**  
-**Текущая граница:** ядро формата, локальные копии, шифрование, restore engine, SAF-UI и модель отсутствующих приложений уже в коде; end-to-end проверка на AVD/физических TV, rollback, auto backup и migration manager ещё не завершены.  
+**Статус:** **Stage 1–8 реализованы; Stage 9 (устройства/физические TV) частично. AVD-прогон зелёный, release собирается.**  
+**Текущая граница:** формат, локальные копии, encryption, restore/journal/rollback, SAF-UI, missing-app model, auto receiver и baseline migration gate уже в коде; SAF picker на реальных TV, process death, Doze/reboot, физическая матрица и future-schema registry ещё не проверены.  
 **Источник актуального состояния:** `BACKUP_RESTORE_MIGRATION/01_IMPLEMENTATION_STATUS.md`.
 
 ---

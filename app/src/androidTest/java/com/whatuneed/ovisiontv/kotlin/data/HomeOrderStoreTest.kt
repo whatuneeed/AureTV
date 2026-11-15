@@ -8,6 +8,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.PrefsSnapshot
 import org.json.JSONArray
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -168,6 +169,26 @@ class HomeOrderStoreTest {
         // invent a different UUID (AQ-28).
         val second = store.applyOrder(listOf(app("a.one")))
         assertEquals(firstId, (second.single() as HomeItem.FolderItem).id)
+    }
+
+    @Test
+    fun a_missing_package_keeps_its_saved_position_and_is_marked_unavailable() {
+        context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(
+                LauncherPrefs.KEY_HOME_ORDER,
+                """["a.one","a.gone","a.two"]""",
+            )
+            .commit()
+
+        val restored = HomeOrderStore(context).applyOrder(
+            listOf(app("a.one"), app("a.two")),
+        )
+
+        assertEquals(listOf("a.one", "a.gone", "a.two"), restored.map { it.key })
+        val missing = (restored[1] as HomeItem.AppItem).app
+        assertEquals("a.gone", missing.packageName)
+        assertFalse(missing.available)
     }
 
     private fun savedPackages(store: HomeOrderStore): List<String> {

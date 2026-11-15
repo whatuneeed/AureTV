@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -43,6 +44,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -134,6 +136,9 @@ fun BackupScreen(onClose: () -> Unit) {
             page = BackupPage.HOME,
             working = null,
             message = context.getString(R.string.backup_error, message),
+            password = "",
+            passwordConfirm = "",
+            pendingPassword = "",
         )
         if (error is BackupException) {
             android.util.Log.w("BackupScreen", "backup failed at ${stage.name}", error)
@@ -151,7 +156,14 @@ fun BackupScreen(onClose: () -> Unit) {
             try {
                 manager.export(uri, selection, password?.toCharArray())
                 Toast.makeText(context, R.string.backup_export_done, Toast.LENGTH_SHORT).show()
-                ui = ui.copy(page = BackupPage.HOME, working = null, message = null)
+                ui = ui.copy(
+                    page = BackupPage.HOME,
+                    working = null,
+                    message = null,
+                    password = "",
+                    passwordConfirm = "",
+                    pendingPassword = "",
+                )
                 refresh()
             } catch (error: Throwable) {
                 fail(BackupStage.IO, error)
@@ -162,7 +174,17 @@ fun BackupScreen(onClose: () -> Unit) {
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri ->
-        if (uri != null) performExport(uri)
+        if (uri != null) {
+            performExport(uri)
+        } else {
+            ui = ui.copy(
+                page = ui.passwordReturn,
+                working = null,
+                pendingPassword = "",
+                password = "",
+                passwordConfirm = "",
+            )
+        }
     }
 
     fun loadImport(uri: Uri, password: String?) {
@@ -248,7 +270,7 @@ fun BackupScreen(onClose: () -> Unit) {
             pendingSelection = ui.selection,
             pendingPassword = ui.password,
             passwordPurpose = PasswordPurpose.EXPORT,
-            passwordReturn = BackupPage.CREATE,
+            passwordReturn = ui.page,
             passwordError = null,
         )
         if (needsPassword) {
@@ -276,7 +298,13 @@ fun BackupScreen(onClose: () -> Unit) {
                 passwordConfirm = "",
             )
 
-            BackupPage.PREVIEW -> ui.copy(page = BackupPage.SOURCE, preview = null)
+            BackupPage.PREVIEW -> ui.copy(
+                page = BackupPage.SOURCE,
+                preview = null,
+                password = "",
+                passwordConfirm = "",
+                pendingPassword = "",
+            )
             else -> ui.copy(page = BackupPage.HOME, password = "", passwordConfirm = "")
         }
         focusIndex = 0
@@ -291,7 +319,7 @@ fun BackupScreen(onClose: () -> Unit) {
     val rows = when (ui.page) {
         BackupPage.HOME -> buildList {
             add(BackupRow(stringResource(R.string.backup_create)) { beginCreate() })
-            add(BackupRow(stringResource(R.string.backup_export)) { beginCreate() })
+            add(BackupRow(stringResource(R.string.backup_export)) { requestExport() })
             add(
                 BackupRow(stringResource(R.string.backup_restore_local)) {
                     ui = ui.copy(page = BackupPage.SOURCE)
@@ -462,7 +490,7 @@ fun BackupScreen(onClose: () -> Unit) {
             add(
                 BackupRow(stringResource(R.string.backup_password_continue)) {
                     if (ui.password.length < BackupContract.PASSWORD_MIN_CHARS) {
-                        ui = ui.copy(passwordError = context.getString(R.string.backup_password_hint))
+                        ui = ui.copy(passwordError = context.getString(R.string.backup_password_too_short))
                     } else if (ui.password != ui.passwordConfirm) {
                         ui = ui.copy(
                             passwordError = context.getString(R.string.backup_password_mismatch),
@@ -491,8 +519,10 @@ fun BackupScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(ui.page) {
-        focusIndex = 0
-        if (ui.page == BackupPage.PASSWORD) passwordRequester.requestFocus()
+        // On the password page the text field owns the first focus; -1 keeps
+        // the Continue row from stealing it on the first composition.
+        focusIndex = if (ui.page == BackupPage.PASSWORD) -1 else 0
+        if (ui.page == BackupPage.PASSWORD) passwordRequester.requestWhenAttached()
     }
     LaunchedEffect(ui.page, focusIndex, rows.size) {
         if (ui.page != BackupPage.PASSWORD && focusIndex !in rows.indices) {
@@ -559,13 +589,14 @@ fun BackupScreen(onClose: () -> Unit) {
                 LazyColumn(
                     modifier = Modifier
                         .width(scale.dp(1200f))
-                        .height(scale.dp(760f)),
+                        .height(scale.dp(760f))
+                        .testTag("backup_rows"),
                     verticalArrangement = Arrangement.spacedBy(scale.dp(8f)),
                 ) {
                     itemsIndexed(rows) { index, row ->
                         val requester = remember(ui.page, index) { FocusRequester() }
                         if (index == focusIndex) {
-                            LaunchedEffect(ui.page, index) { requester.requestFocus() }
+                            LaunchedEffect(ui.page, index) { requester.requestWhenAttached() }
                         }
                         BackupRowView(
                             row = row,
@@ -634,6 +665,7 @@ private fun PasswordFields(
         value = ui.password,
         scale = scale,
         requester = requester,
+        tag = "backup_password",
         onValueChange = onPassword,
     )
     Spacer(Modifier.height(scale.dp(10f)))
@@ -641,6 +673,7 @@ private fun PasswordFields(
         label = stringResource(R.string.backup_password_confirm),
         value = ui.passwordConfirm,
         scale = scale,
+        tag = "backup_password_confirm",
         onValueChange = onConfirm,
     )
 }
@@ -651,15 +684,22 @@ private fun PasswordField(
     value: String,
     scale: TvScale,
     requester: FocusRequester? = null,
+    tag: String? = null,
     onValueChange: (String) -> Unit,
 ) {
     val focus = requester ?: remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    if (requester != null) {
+        LaunchedEffect(focus) {
+            // The text field is the focus target, not the surrounding card;
+            // ask again after its first layout instead of only from the page.
+            withFrameNanos { }
+            runCatching { focus.requestFocus() }
+        }
+    }
     Column(
         Modifier
             .width(scale.dp(760f))
-            .focusRequester(focus)
-            .onFocusChanged { focused = it.isFocused }
             .background(
                 Color.White.copy(alpha = if (focused) 0.16f else 0.08f),
                 RoundedCornerShape(scale.dp(14f)),
@@ -689,7 +729,10 @@ private fun PasswordField(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = scale.dp(4f)),
+                .padding(top = scale.dp(4f))
+                .then(if (tag != null) Modifier.testTag(tag) else Modifier)
+                .focusRequester(focus)
+                .onFocusChanged { focused = it.isFocused },
         )
     }
 }
@@ -710,7 +753,10 @@ private fun BackupRowView(
             .height(scale.dp(66f))
             .focusRequester(requester)
             .onFocusChanged { if (it.isFocused) onFocus() }
-            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            // Every row is a focus target even when it only carries a warning;
+            // an info row with no action must still be reachable and must not
+            // leave the page without an initial focus owner.
+            .clickable { onClick?.invoke() }
             .background(
                 if (focused) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.075f),
                 shape,
@@ -763,6 +809,16 @@ private fun lastLabel(info: BackupInfo): String = runCatching {
     val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
     formatter.format(Instant.parse(info.createdAt).atZone(ZoneId.systemDefault()))
 }.getOrDefault(info.createdAt.ifBlank { "—" })
+
+// A requester created by this composition is not attached until the next
+// layout pass. Retry across a few frames instead of dropping the first focus.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
+}
 
 private fun fileName(): String {
     val stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")

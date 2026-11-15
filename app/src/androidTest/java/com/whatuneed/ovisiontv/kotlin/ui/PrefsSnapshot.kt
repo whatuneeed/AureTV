@@ -20,6 +20,16 @@ internal object PrefsSnapshot {
 
     fun capture(context: Context): Map<String, Any?> = read(context, LauncherPrefs.NAME)
 
+    /** Generic hooks for tests that touch more than the launcher's own file. */
+    internal fun capturePrefs(context: Context, name: String): Map<String, Any?> =
+        read(context, name)
+
+    internal fun restorePrefs(context: Context, name: String, values: Map<String, Any?>) =
+        write(context, name, values)
+
+    internal fun clearPrefs(context: Context, name: String) =
+        context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
+
     fun restore(context: Context, values: Map<String, Any?>) =
         write(context, LauncherPrefs.NAME, values)
 

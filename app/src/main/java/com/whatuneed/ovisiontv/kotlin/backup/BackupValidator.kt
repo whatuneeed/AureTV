@@ -41,6 +41,7 @@ internal object BackupValidator {
                 component to raw
             },
         )
+        validateSelection(read.manifest.selection, decoded)
         val warnings = validateData(decoded, enforcePlainPolicy = enforcePlainPolicy)
         return ValidatedBackup(read.manifest, decoded, warnings)
     }
@@ -51,6 +52,7 @@ internal object BackupValidator {
         enforcePlainPolicy: Boolean,
     ): List<BackupWarning> {
         validateManifest(manifest, BackupContract.FORMAT_VERSION, BackupContract.DATA_SCHEMA)
+        validateSelection(manifest.selection, data)
         return validateData(data, enforcePlainPolicy = enforcePlainPolicy)
     }
 
@@ -119,6 +121,41 @@ internal object BackupValidator {
             }
         } else if (manifest.payload != null) {
             throw BackupException(BackupStage.MANIFEST, "payload without encryption")
+        }
+    }
+
+    /**
+     * A selected category must carry its component. Without this check a
+     * hand-edited archive can claim "profiles + home" while containing only
+     * home, and restore would silently leave the profile catalogue untouched.
+     */
+    private fun validateSelection(selection: Set<BackupCategory>, data: BackupData) {
+        if (BackupCategory.PROFILES in selection && data.profiles == null) {
+            throw BackupException(BackupStage.SCHEMA, "profiles were selected but are missing")
+        }
+        if (BackupCategory.HOME in selection && data.homes.isEmpty()) {
+            throw BackupException(BackupStage.SCHEMA, "home layout was selected but is missing")
+        }
+        if (BackupCategory.DISCOVERY in selection && data.discovery.isEmpty()) {
+            throw BackupException(BackupStage.SCHEMA, "discovery was selected but is missing")
+        }
+        if (BackupCategory.KIDS in selection && data.kids.isEmpty()) {
+            throw BackupException(BackupStage.SCHEMA, "kids allowlist was selected but is missing")
+        }
+        if (BackupCategory.WEATHER in selection && data.weather == null) {
+            throw BackupException(BackupStage.SCHEMA, "weather was selected but is missing")
+        }
+        if (BackupCategory.SAVER in selection && data.saver == null) {
+            throw BackupException(BackupStage.SCHEMA, "screen saver was selected but is missing")
+        }
+        if (BackupCategory.LANGUAGE in selection && data.language == null) {
+            throw BackupException(BackupStage.SCHEMA, "language was selected but is missing")
+        }
+        if (BackupCategory.CONTENT in selection && data.content == null) {
+            throw BackupException(BackupStage.SCHEMA, "content was selected but is missing")
+        }
+        if (BackupCategory.STARTUP in selection && data.startup == null) {
+            throw BackupException(BackupStage.SCHEMA, "startup was selected but is missing")
         }
     }
 
@@ -301,8 +338,10 @@ internal object BackupValidator {
         if (data.weather?.enabled == true || data.language != null || data.content != null) {
             warnings += BackupWarning.PERMISSIONS_NOT_RESTORED
         }
-        if (data.weather != null) warnings += BackupWarning.WEATHER_REQUIRES_ENCRYPTION
-        if (data.discovery.isNotEmpty()) warnings += BackupWarning.DISCOVERY_REQUIRES_ENCRYPTION
+        // A local copy is intentionally plain, so "needs an encrypted file"
+        // would be false on the preview page. Export is where the policy is
+        // enforced: a plain export containing discovery or a manual city is
+        // rejected above instead of being described as merely risky.
         return warnings.toList()
     }
 
