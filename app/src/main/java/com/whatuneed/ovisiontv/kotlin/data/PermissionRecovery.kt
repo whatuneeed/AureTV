@@ -1,6 +1,5 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
-import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
@@ -22,6 +21,5 @@ internal fun isPermanentDenial(context: Context, permission: String, asked: Bool
     return permanentDenial(granted, asked, rationale)
 }
 
-internal fun isLocationPermanentDenial(context: Context, asked: Boolean): Boolean =
-    isPermanentDenial(context, Manifest.permission.ACCESS_FINE_LOCATION, asked) &&
-        isPermanentDenial(context, Manifest.permission.ACCESS_COARSE_LOCATION, asked)
+internal fun isWifiNamePermanentDenial(context: Context, asked: Boolean): Boolean =
+    isPermanentDenial(context, DeviceFactsReader.wifiNamePermission(), asked)

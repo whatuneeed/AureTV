@@ -1,9 +1,9 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
-import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.util.Log
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -64,6 +64,8 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -111,6 +113,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.whatuneed.ovisiontv.kotlin.BackupActivity
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SetupActivity
@@ -121,9 +124,11 @@ import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefresh
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefreshResult
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
+import com.whatuneed.ovisiontv.kotlin.data.AppLoadResult
 import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.CityPlace
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
+import com.whatuneed.ovisiontv.kotlin.data.CrashReport
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFacts
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFormat
@@ -133,10 +138,8 @@ import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.setShowPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
-import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
-import com.whatuneed.ovisiontv.kotlin.data.isLocationPermanentDenial
-import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
+import com.whatuneed.ovisiontv.kotlin.data.isWifiNamePermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.NetworkKind
 import com.whatuneed.ovisiontv.kotlin.data.PerformanceProfile
@@ -144,6 +147,9 @@ import com.whatuneed.ovisiontv.kotlin.data.PermissionSummary
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
 import com.whatuneed.ovisiontv.kotlin.data.SaverPlaylist
 import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
@@ -268,6 +274,7 @@ private const val GRID_HALO = 20f
 // deliberate hold, not on a normal OK press that toggles the clip.
 private const val PREVIEW_HOLD_MS = 600L
 
+private const val TAG = "OVisionSettings"
 private const val PAGE_ROOT = 0
 private const val PAGE_INTERFACE = 1
 private const val PAGE_HOME_SCREEN = 2
@@ -307,6 +314,10 @@ private const val PAGE_KIDS_PIN_REMOVE = 35
 private const val PAGE_KIDS_APPS = 36
 private const val PAGE_DEVICE_GROUP = 37
 private const val PAGE_ABOUT_GROUP = 38
+private const val PAGE_DISCOVERY_HIDDEN = 39
+private const val PAGE_DISCOVERY_CLEAR = 40
+private const val PAGE_DISCOVERY = 41
+private const val PAGE_WEATHER_CLEAR = 42
 
 private val PROFILE_PAGES = setOf(
     PAGE_PROFILES,
@@ -373,6 +384,103 @@ private data class SettingsRow(
     // TalkBack reads the click action as "double-tap to …"; a row whose title is
     // a noun (an app name) needs the verb stated separately.
     val actionLabel: String? = null,
+)
+
+/**
+ * One holder for the discovery rows. The huge Settings composable hits a K2
+ * internal error when it gains several independent states (AQ-30), so the four
+ * values travel together and are replaced with copy() instead.
+ */
+private data class DiscoveryUi(
+    val recommendations: Boolean,
+    val continueWatching: Boolean,
+    val personalization: Boolean,
+    val hidden: List<DiscoveryItem>,
+)
+
+@Composable
+private fun discoverySettingsRows(
+    ui: DiscoveryUi,
+    onUiChange: (DiscoveryUi) -> Unit,
+    settings: DiscoverySettings,
+    onOpenHidden: () -> Unit,
+    onOpenClear: () -> Unit,
+): List<SettingsRow> = listOf(
+    SettingsRow(
+        title = stringResource(R.string.settings_recommendations),
+        value = stringResource(if (ui.recommendations) R.string.saver_on else R.string.saver_off),
+        toggleState = ui.recommendations,
+        action = {
+            val next = ui.copy(recommendations = !ui.recommendations)
+            onUiChange(next)
+            settings.setRecommendations(next.recommendations)
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_continue_watching),
+        value = stringResource(if (ui.continueWatching) R.string.saver_on else R.string.saver_off),
+        toggleState = ui.continueWatching,
+        action = {
+            val next = ui.copy(continueWatching = !ui.continueWatching)
+            onUiChange(next)
+            settings.setContinueWatching(next.continueWatching)
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.discovery_personalization),
+        value = stringResource(if (ui.personalization) R.string.saver_on else R.string.saver_off),
+        toggleState = ui.personalization,
+        action = {
+            val next = ui.copy(personalization = !ui.personalization)
+            onUiChange(next)
+            settings.setPersonalization(next.personalization)
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.discovery_hidden),
+        value = ui.hidden.size.toString(),
+        chevron = true,
+        action = onOpenHidden,
+    ),
+    SettingsRow(
+        title = stringResource(R.string.discovery_clear),
+        chevron = true,
+        action = onOpenClear,
+    ),
+)
+
+@Composable
+private fun discoveryHiddenRows(
+    hidden: List<DiscoveryItem>,
+    onRestore: (DiscoveryItem) -> Unit,
+): List<SettingsRow> = if (hidden.isEmpty()) {
+    listOf(SettingsRow(title = stringResource(R.string.discovery_hidden_empty)))
+} else {
+    hidden.map { item ->
+        SettingsRow(
+            title = item.title,
+            value = item.packageLabel ?: item.packageName,
+            chevron = true,
+            actionLabel = stringResource(R.string.discovery_restore),
+            action = { onRestore(item) },
+        )
+    }
+}
+
+@Composable
+private fun discoveryClearRows(
+    onClear: () -> Unit,
+    onCancel: () -> Unit,
+): List<SettingsRow> = listOf(
+    SettingsRow(
+        title = stringResource(R.string.discovery_clear_confirm),
+        destructive = true,
+        action = onClear,
+    ),
+    SettingsRow(
+        title = stringResource(R.string.settings_cancel),
+        action = onCancel,
+    ),
 )
 
 private data class ListEntry(
@@ -449,6 +557,17 @@ fun SettingsScreen(
     val orderStore = remember(context, currentProfileId) {
         HomeOrderStore(context, ProfileStore.homePrefsName(currentProfileId))
     }
+    // Discovery settings and history live in the same profile file as the
+    // layout, so switching a profile in Settings switches both together.
+    val discoverySettings = remember(context, currentProfileId) {
+        DiscoverySettings(context, ProfileStore.homePrefsName(currentProfileId))
+    }
+    val discoveryStore = remember(context, currentProfileId) {
+        DiscoveryStore(
+            context.applicationContext,
+            ProfileStore.homePrefsName(currentProfileId),
+        )
+    }
     val currentProfile = profiles.firstOrNull { it.id == currentProfileId }
     val editingProfile = profiles.firstOrNull { it.id == editingProfileId }
     val reduceMotion = remember { !android.animation.ValueAnimator.areAnimatorsEnabled() }
@@ -459,6 +578,9 @@ fun SettingsScreen(
     // A switch creates a new order store before the new load finishes, so a
     // mutation in that window must not write the old layout into it (AQ-14).
     var itemsOwner by remember { mutableStateOf<String?>(null) }
+    // A scan failure is a visible, retryable state, not an empty hidden folder.
+    var itemsFailed by remember { mutableStateOf(false) }
+    var loadAttempt by remember { mutableIntStateOf(0) }
     // A package installed or removed while this screen is open leaves the list
     // stale: the hidden folder would keep a row for an app that is already gone.
     var packageRefresh by remember { mutableIntStateOf(0) }
@@ -477,13 +599,37 @@ fun SettingsScreen(
         )
         onDispose { context.unregisterReceiver(receiver) }
     }
-    LaunchedEffect(apps, packageRefresh, refreshKey, orderStore) {
-        itemsOwner = null
+    LaunchedEffect(apps, packageRefresh, refreshKey, loadAttempt, orderStore) {
         val owner = currentProfileId
-        val loaded = apps ?: AppRepository(context).load(withArtwork = false)
-        catalog = loaded
-        items = orderStore.applyOrder(loaded)
-        itemsOwner = owner
+        val previousOwner = itemsOwner
+        itemsOwner = null
+        val result = apps?.let { AppLoadResult.Loaded(it) }
+            ?: AppRepository(context).loadResult(withArtwork = false)
+        when (result) {
+            is AppLoadResult.Loaded -> {
+                val ordered = runCatching {
+                    orderStore.applyOrder(result.apps)
+                }.onFailure {
+                    android.util.Log.w("SettingsScreen", "app order could not be applied", it)
+                }.getOrNull()
+                if (ordered == null) {
+                    if (previousOwner != owner) items = null
+                    itemsFailed = true
+                } else {
+                    catalog = result.apps
+                    items = ordered
+                    itemsOwner = owner
+                    itemsFailed = false
+                }
+            }
+
+            is AppLoadResult.Failed -> {
+                // Keep a list that already belongs to this profile; a profile
+                // switch must not leave the previous person's apps on screen.
+                if (previousOwner != owner) items = null
+                itemsFailed = true
+            }
+        }
     }
 
     // The Home picker, the wizard and another Settings window can change the
@@ -499,21 +645,44 @@ fun SettingsScreen(
     var page by rememberSaveable { mutableIntStateOf(PAGE_ROOT) }
     var focusIndex by rememberSaveable { mutableIntStateOf(0) }
     // Every page keeps the row the user left it on, so going back into a list
-    // does not send a long hidden-apps list to its first row again.
-    val pageFocus = remember { mutableStateMapOf<Int, Int>() }
+    // does not send a long hidden-apps list to its first row again. Both the
+    // row memory and the walked history survive a process restore; otherwise
+    // the saved page would be paired with a fresh history and the wrong row.
+    val pageFocus = rememberSaveable(
+        saver = mapSaver(
+            save = { map -> map.entries.associate { it.key.toString() to it.value } },
+            restore = { saved ->
+                mutableStateMapOf<Int, Int>().apply {
+                    saved.forEach { (key, value) ->
+                        val page = key.toIntOrNull()
+                        if (page != null && value is Int) put(page, value)
+                    }
+                }
+            },
+        ),
+    ) { mutableStateMapOf<Int, Int>() }
     // The licenses document is reachable from both About and Legal, so the way
     // back is what the user actually walked, not a fixed parent per page.
-    val history = remember { mutableStateListOf<Int>() }
+    val history = rememberSaveable(
+        saver = listSaver(
+            save = { it.toList() },
+            restore = { saved -> mutableStateListOf<Int>().apply { addAll(saved) } },
+        ),
+    ) { mutableStateListOf<Int>() }
 
     // The wizard and the Home screen write the same preferences while this
     // screen is paused; every one of them is re-read on resume so a row never
     // shows the value from the first composition.
     var saverDelay by remember(resumeTick) { mutableStateOf(SaverPreferences.delay(context)) }
-    var contentRecommendations by remember(resumeTick) {
-        mutableStateOf(ContentPreferences.recommendations(context))
-    }
-    var contentContinue by remember(resumeTick) {
-        mutableStateOf(ContentPreferences.continueWatching(context))
+    var discoveryUi by remember(resumeTick, currentProfileId) {
+        mutableStateOf(
+            DiscoveryUi(
+                recommendations = discoverySettings.recommendations(),
+                continueWatching = discoverySettings.continueWatching(),
+                personalization = discoverySettings.personalization(),
+                hidden = discoveryStore.hidden(),
+            ),
+        )
     }
     var showPhoneOnlyApps by remember(resumeTick) { mutableStateOf(showPhoneApps(context)) }
     // Grants change on system screens, so their rows are re-read on every
@@ -522,7 +691,7 @@ fun SettingsScreen(
         mutableStateOf(ContentPreferences.canReadListings(context))
     }
     var locationAllowed by remember(resumeTick) {
-        mutableStateOf(DeviceFactsReader.hasLocation(context))
+        mutableStateOf(DeviceFactsReader.hasWifiNamePermission(context))
     }
     // One state holder instead of two: the Compose/K2 compiler in this
     // project hits an internal error with one more Boolean state in this huge
@@ -531,7 +700,12 @@ fun SettingsScreen(
     // Device admin or the connected accessibility service: both can lock the
     // screen, so this is the row's "allowed" state, not just the admin flag.
     var powerAllowed by remember(resumeTick) { mutableStateOf(SleepControls.hasAdmin(context)) }
-    var defaultHome by remember(resumeTick) { mutableStateOf(DeviceFactsReader.isDefaultHome(context)) }
+    var defaultHome by remember(resumeTick) { mutableStateOf(false) }
+    // A PackageManager resolve is IO-bound; the row appears after the query
+    // instead of stalling the first Settings frame (ST-14).
+    LaunchedEffect(resumeTick) {
+        defaultHome = withContext(Dispatchers.IO) { DeviceFactsReader.isDefaultHome(context) }
+    }
     var saverMusic by remember(resumeTick) { mutableStateOf(SaverPreferences.music(context)) }
     var saverRefresh by remember(resumeTick) { mutableStateOf(SaverPreferences.refresh(context)) }
     var saverThemes by remember(resumeTick) { mutableStateOf(SaverPreferences.themes(context)) }
@@ -571,6 +745,13 @@ fun SettingsScreen(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var holdHandled by remember { mutableStateOf(false) }
     var okDown by remember { mutableStateOf(false) }
+    // A constructor starts a pending hold for the preview. Leaving the page
+    // must cancel it, otherwise the preview can open after the user has gone.
+    fun cancelPendingHold() {
+        if (holdJob != null) holdHandled = true
+        holdJob?.cancel()
+        holdJob = null
+    }
     // The preview is a real decoder surface. Leaving Settings must stop it
     // instead of waiting for composition disposal (AQ-20).
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -651,8 +832,8 @@ fun SettingsScreen(
     val locationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
-        locationAllowed = DeviceFactsReader.hasLocation(context)
-        permissionsAsked = permissionsAsked + Manifest.permission.ACCESS_FINE_LOCATION
+        locationAllowed = DeviceFactsReader.hasWifiNamePermission(context)
+        permissionsAsked = permissionsAsked + DeviceFactsReader.wifiNamePermission()
     }
 
     LaunchedEffect(page, cacheTick, resumeTick) {
@@ -664,9 +845,9 @@ fun SettingsScreen(
         startupLabel = StartupPreferences.label(context)
         startupOnWake = StartupPreferences.onWake(context)
         listingsAllowed = ContentPreferences.canReadListings(context)
-        locationAllowed = DeviceFactsReader.hasLocation(context)
+        locationAllowed = DeviceFactsReader.hasWifiNamePermission(context)
         powerAllowed = SleepControls.hasAdmin(context)
-        defaultHome = DeviceFactsReader.isDefaultHome(context)
+        defaultHome = withContext(Dispatchers.IO) { DeviceFactsReader.isDefaultHome(context) }
         when (page) {
             PAGE_STORAGE -> {
                 facts = withContext(Dispatchers.IO) { DeviceFactsReader.read(context) }
@@ -705,7 +886,8 @@ fun SettingsScreen(
     )
 
     fun parentOf(current: Int): Int = when (current) {
-        PAGE_HIDDEN, PAGE_RESET -> PAGE_HOME_SCREEN
+        PAGE_HIDDEN, PAGE_RESET, PAGE_DISCOVERY, PAGE_DISCOVERY_HIDDEN, PAGE_DISCOVERY_CLEAR ->
+            PAGE_HOME_SCREEN
         PAGE_LANGUAGE -> PAGE_INTERFACE
         PAGE_SAVER -> PAGE_INTERFACE
         PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
@@ -714,8 +896,9 @@ fun SettingsScreen(
         PAGE_STORAGE_CLEAR -> PAGE_STORAGE
         PAGE_NETWORK, PAGE_DEVICE, PAGE_STORAGE, PAGE_PERMISSIONS, PAGE_SYSTEM ->
             PAGE_DEVICE_GROUP
-        PAGE_WEATHER_LOCATION, PAGE_WEATHER_UNITS, PAGE_WEATHER_SOURCE, PAGE_WEATHER_REFRESH ->
-            PAGE_WEATHER
+        PAGE_WEATHER_LOCATION, PAGE_WEATHER_UNITS, PAGE_WEATHER_SOURCE, PAGE_WEATHER_REFRESH,
+        PAGE_WEATHER_CLEAR,
+        -> PAGE_WEATHER
         PAGE_STARTUP, PAGE_STARTUP_WHEN -> PAGE_SYSTEM
         PAGE_PROFILE_EDIT -> PAGE_PROFILES
         PAGE_PROFILE_DELETE -> PAGE_PROFILE_EDIT
@@ -726,8 +909,10 @@ fun SettingsScreen(
     }
 
     fun open(target: Int, focus: Int? = null) {
-        // A held arrow must not keep walking the page that just opened.
+        // A held arrow must not keep walking the page that just opened, and a
+        // pending preview hold belongs to the page being left.
         keyRepeat.stopRepeat()
+        cancelPendingHold()
         pageFocus[page] = focusIndex
         if (target != page) history.add(page)
         page = target
@@ -738,6 +923,7 @@ fun SettingsScreen(
 
     fun back() {
         keyRepeat.stopRepeat()
+        cancelPendingHold()
         pageFocus[page] = focusIndex
         inSidebar = false
         if (page == PAGE_ROOT && history.isEmpty()) {
@@ -749,6 +935,16 @@ fun SettingsScreen(
         val previous = history.removeLastOrNull() ?: parentOf(page)
         page = previous
         focusIndex = pageFocus[previous] ?: 0
+    }
+
+    // The category rail is part of the page: the first BACK leaves it for the
+    // list, only the next one already follows the page history.
+    fun backFromSidebarOrPage() {
+        if (inSidebar) {
+            inSidebar = false
+        } else {
+            back()
+        }
     }
 
     fun refreshProfiles() {
@@ -848,6 +1044,9 @@ fun SettingsScreen(
                 AerialClipCache.cleanup(context)
                 AerialPreviewStore.clear(context)
                 AerialPosterStore.clear(context)
+                // The last crash trace is local diagnostics, not a media cache;
+                // clearing Storage must still remove it.
+                CrashReport.clear(context)
             }
             cacheSizes = CacheSizes(0, 0)
             cacheTick++
@@ -858,6 +1057,16 @@ fun SettingsScreen(
 
     fun confirmClearCaches() {
         clearCaches { back() }
+    }
+
+    fun clearWeatherData() {
+        WeatherPreferences.clearData(context)
+        weatherEnabled = false
+        weatherManual = false
+        weatherPlace = ""
+        weatherUpdatedAt = 0L
+        Toast.makeText(context, R.string.weather_cleared, Toast.LENGTH_SHORT).show()
+        back()
     }
 
     fun resetSaver() {
@@ -1004,7 +1213,8 @@ fun SettingsScreen(
         Weather.SRC_WTTR to stringResource(R.string.weather_source_wttr),
     )
 
-    val rows = when (page) {
+    @Composable
+    fun pageRows(): List<SettingsRow> = when (page) {
         PAGE_SAVER -> listOf(
             SettingsRow(
                 title = stringResource(R.string.saver_choose),
@@ -1403,22 +1613,12 @@ fun SettingsScreen(
 
         PAGE_HOME_SCREEN -> listOf(
             SettingsRow(
-                title = stringResource(R.string.settings_recommendations),
-                value = stringResource(if (contentRecommendations) R.string.saver_on else R.string.saver_off),
-                toggleState = contentRecommendations,
-                action = {
-                    contentRecommendations = !contentRecommendations
-                    ContentPreferences.setRecommendations(context, contentRecommendations)
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.settings_continue_watching),
-                value = stringResource(if (contentContinue) R.string.saver_on else R.string.saver_off),
-                toggleState = contentContinue,
-                action = {
-                    contentContinue = !contentContinue
-                    ContentPreferences.setContinueWatching(context, contentContinue)
-                },
+                title = stringResource(R.string.discovery_settings_title),
+                value = stringResource(
+                    if (discoveryUi.recommendations) R.string.saver_on else R.string.saver_off,
+                ),
+                chevron = true,
+                action = { open(PAGE_DISCOVERY) },
             ),
             SettingsRow(
                 title = stringResource(R.string.settings_show_phone_apps),
@@ -1430,12 +1630,29 @@ fun SettingsScreen(
                     showPhoneOnlyApps = !showPhoneOnlyApps
                     setShowPhoneApps(context, showPhoneOnlyApps)
                     scope.launch {
-                        val loaded = withContext(Dispatchers.IO) {
-                            AppRepository(context).load(withArtwork = false)
+                        when (val result = AppRepository(context).loadResult(withArtwork = false)) {
+                            is AppLoadResult.Loaded -> {
+                                val ordered = runCatching {
+                                    orderStore.applyOrder(result.apps)
+                                }.onFailure {
+                                    android.util.Log.w(
+                                        "SettingsScreen",
+                                        "app order could not be applied",
+                                        it,
+                                    )
+                                }.getOrNull()
+                                if (ordered == null) {
+                                    itemsFailed = true
+                                } else {
+                                    catalog = result.apps
+                                    items = ordered
+                                    itemsOwner = currentProfileId
+                                    itemsFailed = false
+                                }
+                            }
+
+                            is AppLoadResult.Failed -> itemsFailed = true
                         }
-                        catalog = loaded
-                        items = orderStore.applyOrder(loaded)
-                        itemsOwner = currentProfileId
                     }
                 },
             ),
@@ -1463,6 +1680,29 @@ fun SettingsScreen(
                 // Cancel is the safe default: the destructive row must be reached.
                 action = { open(PAGE_RESET, focus = 1) },
             ),
+        )
+
+        PAGE_DISCOVERY -> discoverySettingsRows(
+            ui = discoveryUi,
+            onUiChange = { discoveryUi = it },
+            settings = discoverySettings,
+            onOpenHidden = { open(PAGE_DISCOVERY_HIDDEN) },
+            onOpenClear = { open(PAGE_DISCOVERY_CLEAR, focus = 1) },
+        )
+
+        PAGE_DISCOVERY_HIDDEN -> discoveryHiddenRows(discoveryUi.hidden) { item ->
+            discoveryStore.unhide(item.id)
+            discoveryUi = discoveryUi.copy(hidden = discoveryStore.hidden())
+        }
+
+        PAGE_DISCOVERY_CLEAR -> discoveryClearRows(
+            onClear = {
+                discoveryStore.clearHistory()
+                discoveryUi = discoveryUi.copy(hidden = discoveryStore.hidden())
+                Toast.makeText(context, R.string.discovery_clear_done, Toast.LENGTH_SHORT).show()
+                back()
+            },
+            onCancel = { back() },
         )
 
         PAGE_HIDDEN -> hidden.map { app ->
@@ -1558,6 +1798,24 @@ fun SettingsScreen(
                 title = stringResource(R.string.weather_refresh_now),
                 value = if (weatherBusy) stringResource(R.string.weather_refreshing_status) else null,
                 action = { refreshWeatherNow() },
+            ),
+            SettingsRow(
+                title = stringResource(R.string.weather_clear_data),
+                chevron = true,
+                // Cancel is the safe default on the confirmation page.
+                action = { open(PAGE_WEATHER_CLEAR, focus = 1) },
+            ),
+        )
+
+        PAGE_WEATHER_CLEAR -> listOf(
+            SettingsRow(
+                title = stringResource(R.string.weather_clear_confirm),
+                destructive = true,
+                action = { clearWeatherData() },
+            ),
+            SettingsRow(
+                title = stringResource(R.string.settings_cancel),
+                action = { back() },
             ),
         )
 
@@ -1780,6 +2038,14 @@ fun SettingsScreen(
                     },
                     actionLabel = stringResource(R.string.settings_airplay_open),
                 ),
+                SettingsRow(
+                    title = stringResource(R.string.backup_title),
+                    value = stringResource(R.string.backup_open),
+                    chevron = true,
+                    action = {
+                        context.startActivity(Intent(context, BackupActivity::class.java))
+                    },
+                ),
             )
         }
 
@@ -1793,7 +2059,7 @@ fun SettingsScreen(
                 accessibilityConnected = accessibility == AccessibilityStatus.State.CONNECTED,
             )
             val listingsAsked = ContentPreferences.READ_TV_LISTINGS in permissionsAsked
-            val locationAsked = Manifest.permission.ACCESS_FINE_LOCATION in permissionsAsked
+            val locationAsked = DeviceFactsReader.wifiNamePermission() in permissionsAsked
             permissionsRows(
                 accessibility = accessibility,
                 openAccessibility = { AccessibilityStatus.open(context) },
@@ -1808,14 +2074,9 @@ fun SettingsScreen(
                 openHome = { openSystemSettings(context) },
                 locationAllowed = locationAllowed,
                 locationPermanent = !locationAllowed &&
-                    isLocationPermanentDenial(context, locationAsked),
+                    isWifiNamePermanentDenial(context, locationAsked),
                 requestLocation = {
-                    locationPermission.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
+                    locationPermission.launch(DeviceFactsReader.wifiNamePermissions())
                 },
                 openAppInfo = { openAppSettings(context) },
             )
@@ -1919,7 +2180,9 @@ fun SettingsScreen(
                         // state, not a quiet success.
                         val result = refreshCatalog?.invoke()
                             ?: AerialRefresh.update(context)
-                        if (clips == null) clipList = AerialCatalog.load(context)
+                        if (clips == null) {
+                            clipList = withContext(Dispatchers.IO) { AerialCatalog.load(context) }
+                        }
                         catalogBusy = false
                         catalogStatus = when (result) {
                             AerialRefreshResult.UPDATED -> R.string.settings_catalog_updated
@@ -1938,37 +2201,53 @@ fun SettingsScreen(
 
         PAGE_LEGAL -> legalRows(onOpen = ::open)
 
-        PAGE_ROOT -> Section.entries.map { section ->
-            SettingsRow(
-                title = stringResource(section.title),
-                value = when (section) {
-                    Section.INTERFACE -> languageSummary
-                    Section.HOME_SCREEN -> stringResource(
-                        if (contentRecommendations) {
-                            R.string.settings_shelf_state_on
-                        } else {
-                            R.string.settings_shelf_state_off
+        PAGE_ROOT -> buildList {
+            if (itemsFailed) {
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.settings_load_failed),
+                        value = stringResource(R.string.settings_load_retry),
+                        action = { loadAttempt++ },
+                    ),
+                )
+            }
+            addAll(
+                Section.entries.map { section ->
+                    SettingsRow(
+                        title = stringResource(section.title),
+                        value = when (section) {
+                            Section.INTERFACE -> languageSummary
+                            Section.HOME_SCREEN -> stringResource(
+                                if (discoveryUi.recommendations) {
+                                    R.string.settings_shelf_state_on
+                                } else {
+                                    R.string.settings_shelf_state_off
+                                },
+                            )
+                            Section.PROFILES -> currentProfile?.name
+                            Section.WEATHER -> when {
+                                !weatherEnabled -> stringResource(R.string.saver_off)
+                                // A city saved while the other language was active
+                                // must not show Latin/Cyrillic in the wrong UI.
+                                weatherPlace.isNotEmpty() &&
+                                    !Weather.foreignName(weatherPlace, !russian) -> weatherPlace
+                                else -> stringResource(R.string.saver_on)
+                            }
+                            Section.DEVICE -> if (factsReady) facts?.model else null
+                            Section.ABOUT -> BuildConfig.VERSION_NAME
                         },
+                        chevron = true,
+                        action = { open(pageOf(section)) },
                     )
-                    Section.PROFILES -> currentProfile?.name
-                    Section.WEATHER -> when {
-                        !weatherEnabled -> stringResource(R.string.saver_off)
-                        // A city saved while the other language was active
-                        // must not show Latin/Cyrillic in the wrong UI.
-                        weatherPlace.isNotEmpty() &&
-                            !Weather.foreignName(weatherPlace, !russian) -> weatherPlace
-                        else -> stringResource(R.string.saver_on)
-                    }
-                    Section.DEVICE -> if (factsReady) facts?.model else null
-                    Section.ABOUT -> BuildConfig.VERSION_NAME
                 },
-                chevron = true,
-                action = { open(pageOf(section)) },
             )
         }
 
         else -> emptyList()
     }
+
+    val rows = pageRows()
+
 
     val isGrid = page == PAGE_SAVER_CHOOSER
     val isDoc = page in DOC_PAGES
@@ -1995,6 +2274,7 @@ fun SettingsScreen(
                 PAGE_WEATHER_UNITS -> R.string.weather_temperature
                 PAGE_WEATHER_SOURCE -> R.string.weather_source
                 PAGE_WEATHER_REFRESH -> R.string.weather_refresh_every
+                PAGE_WEATHER_CLEAR -> R.string.weather_clear_data
                 PAGE_NETWORK -> R.string.settings_network
                 PAGE_DEVICE_GROUP -> R.string.settings_device
                 PAGE_DEVICE -> R.string.settings_about_device
@@ -2009,6 +2289,9 @@ fun SettingsScreen(
                 PAGE_LEGAL -> R.string.settings_legal
                 PAGE_LANGUAGE -> R.string.settings_language
                 PAGE_HIDDEN -> R.string.settings_hidden_apps
+                PAGE_DISCOVERY -> R.string.discovery_settings_title
+                PAGE_DISCOVERY_HIDDEN -> R.string.discovery_hidden
+                PAGE_DISCOVERY_CLEAR -> R.string.discovery_clear
                 PAGE_RESET -> R.string.settings_reset_title
                 PAGE_SAVER_RESET -> R.string.saver_reset_title
                 PAGE_STORAGE_CLEAR -> R.string.settings_cache_clear_title
@@ -2075,7 +2358,12 @@ fun SettingsScreen(
     var descriptionLines by remember(page) { mutableIntStateOf(1) }
     val description = when (page) {
         PAGE_RESET -> stringResource(R.string.settings_reset_hint)
+        PAGE_HOME_SCREEN -> stringResource(R.string.discovery_source_note)
+        PAGE_DISCOVERY -> stringResource(R.string.discovery_source_note)
+        PAGE_DISCOVERY_HIDDEN -> stringResource(R.string.discovery_hidden_hint)
+        PAGE_DISCOVERY_CLEAR -> stringResource(R.string.discovery_clear_hint)
         PAGE_WEATHER -> stringResource(R.string.weather_hint)
+        PAGE_WEATHER_CLEAR -> stringResource(R.string.weather_clear_hint)
         PAGE_PROFILES -> stringResource(R.string.profile_hint)
         PAGE_PROFILE_DELETE -> stringResource(R.string.profile_delete_hint)
         // Java shows the honest boundary note next to the Kids Mode rows; this
@@ -2119,7 +2407,9 @@ fun SettingsScreen(
 
     val density = LocalDensity.current
     val listScroll = remember { Animatable(0f) }
-    LaunchedEffect(page) { listScroll.snapTo(0f) }
+    // Do not snap to the top when a page opens: the focus effect below knows
+    // the remembered row and reveals it by the smallest amount. Snapping first
+    // produced a visible jump up followed by a scroll back down (FOCUS-12).
     LaunchedEffect(focusIndex, scale, layout) {
         if (isGrid || isDoc) return@LaunchedEffect
         val viewport = with(density) { scale.dp(listViewport).toPx() }
@@ -2147,8 +2437,11 @@ fun SettingsScreen(
     val docId = remember(page, russian) {
         if (page in DOC_PAGES) docResource(page, russian) else 0
     }
-    val docText = remember(docId) {
-        if (docId == 0) null else loadRawText(context, docId)
+    var docText by remember(docId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(docId) {
+        docText = if (docId == 0) null else withContext(Dispatchers.IO) {
+            loadRawText(context, docId)
+        }
     }
     val docParagraphs = remember(docText) {
         docText.orEmpty().split("\n\n").map { it.trim() }.filter { it.isNotEmpty() }
@@ -2245,8 +2538,6 @@ fun SettingsScreen(
                 withFrameNanos { }
                 delay(32)
             }
-        } else if (!isGrid) {
-            delay(60)
         }
         // A package change can empty the open list while its old row still
         // holds a requester; attaching focus to a removed node throws.
@@ -2255,24 +2546,26 @@ fun SettingsScreen(
                 val paragraph = docFocus.coerceIn(0, docParagraphs.lastIndex.coerceAtLeast(0))
                 val target = docRequesters[paragraph]
                     ?: if (docText == null) docRequester else null
-                target?.requestFocus()
+                target?.requestWhenAttached()
             }
 
             isGrid && inSidebar -> {
                 val index = sidebarIndex.coerceIn(0, categories.lastIndex.coerceAtLeast(0))
-                sidebarRequesters[index]?.requestFocus() ?: focusRequester.requestFocus()
+                sidebarRequesters[index]?.requestWhenAttached()
+                    ?: focusRequester.requestWhenAttached()
             }
 
-            isGrid -> tileRequesters[focusIndex]?.requestFocus()
-                ?: focusRequester.requestFocus()
+            isGrid -> tileRequesters[focusIndex]?.requestWhenAttached()
+                ?: focusRequester.requestWhenAttached()
 
             page == PAGE_HIDDEN && items != null && rows.isEmpty() ->
-                emptyRequester.requestFocus()
+                emptyRequester.requestWhenAttached()
 
             focusIndex in rows.indices ->
-                rowRequesters[focusIndex]?.requestFocus() ?: focusRequester.requestFocus()
+                rowRequesters[focusIndex]?.requestWhenAttached()
+                    ?: focusRequester.requestWhenAttached()
 
-            else -> focusRequester.requestFocus()
+            else -> focusRequester.requestWhenAttached()
         }
     }
 
@@ -2384,7 +2677,7 @@ fun SettingsScreen(
     BackHandler(
         enabled = page != PAGE_ROOT && !citySearchOpen && !nameEditorOpen && !avatarPickerOpen &&
             kidsPadFor == null && recoveryStep == null && !kidsEntryLocked,
-    ) { back() }
+    ) { backFromSidebarOrPage() }
 
     Box(
         Modifier
@@ -2471,7 +2764,7 @@ fun SettingsScreen(
                             }
 
                             Key.Back -> {
-                                back()
+                                backFromSidebarOrPage()
                                 true
                             }
 
@@ -3102,9 +3395,10 @@ private fun SettingsRowCard(
 ) {
     // One progress drives scale, fill and border, so the row cannot grow before
     // its highlight appears.
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "settingsRowFocus",
     )
     val shape = RoundedCornerShape(scale.dp(ROW_RADIUS))
@@ -3243,9 +3537,10 @@ private fun ChooserCategoryRow(
     focusRequester: FocusRequester,
     onActivate: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "chooserCategoryFocus",
     )
     val shape = RoundedCornerShape(scale.dp(SIDEBAR_ROW_RADIUS))
@@ -3328,9 +3623,10 @@ private fun SaverTile(
     onToggle: () -> Unit,
     onPreview: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "saverTileFocus",
     )
     val frame = rememberThumbnail(clip.previewUrl)
@@ -3686,7 +3982,9 @@ private fun sectionOf(page: Int): Section? = when (page) {
     PAGE_SAVER, PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
     PAGE_SAVER_RESET,
     -> Section.INTERFACE
-    PAGE_HOME_SCREEN, PAGE_HIDDEN, PAGE_RESET -> Section.HOME_SCREEN
+    PAGE_HOME_SCREEN, PAGE_HIDDEN, PAGE_RESET, PAGE_DISCOVERY,
+    PAGE_DISCOVERY_HIDDEN, PAGE_DISCOVERY_CLEAR ->
+        Section.HOME_SCREEN
     PAGE_PROFILES, PAGE_PROFILE_EDIT, PAGE_PROFILE_DELETE, PAGE_KIDS_PIN_REMOVE, PAGE_KIDS_APPS ->
         Section.PROFILES
     PAGE_WEATHER, PAGE_WEATHER_LOCATION, PAGE_WEATHER_UNITS, PAGE_WEATHER_SOURCE,
@@ -3719,7 +4017,7 @@ private fun openNetworkSettings(context: Context) {
         context.startActivity(
             Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open Wi-Fi settings", it) }.isSuccess
     if (!opened) showUnavailable(context)
 }
 
@@ -3808,13 +4106,13 @@ private fun openDreamSettings(context: Context) {
         context.startActivity(
             Intent(Settings.ACTION_DREAM_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open dream settings", it) }.isSuccess
     if (opened) return
     val fallback = runCatching {
         context.startActivity(
             Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open fallback settings", it) }.isSuccess
     if (fallback) {
         Toast.makeText(context, R.string.saver_system_hint, Toast.LENGTH_LONG).show()
     } else {
@@ -3827,13 +4125,13 @@ private fun openSystemSettings(context: Context) {
         context.startActivity(
             Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open Home settings", it) }.isSuccess
     if (home) return
     val fallback = runCatching {
         context.startActivity(
             Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open fallback settings", it) }.isSuccess
     if (fallback) {
         Toast.makeText(context, R.string.home_settings_hint, Toast.LENGTH_LONG).show()
     } else {
@@ -3851,7 +4149,7 @@ private fun openAppSettings(context: Context) {
                 Uri.parse("package:${context.packageName}"),
             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open app details", it) }.isSuccess
     if (!opened) showUnavailable(context)
 }
 
@@ -3864,7 +4162,7 @@ private fun openAirPlay(context: Context) {
     }
     val opened = runCatching {
         context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }.isSuccess
+    }.onFailure { Log.w(TAG, "cannot open AirPlay receiver", it) }.isSuccess
     if (!opened) showUnavailable(context)
 }
 
@@ -4070,4 +4368,13 @@ private fun selectLanguage(context: Context, language: String) {
     if (LocalePreference.get(context) == language) return
     LocalePreference.set(context, language)
     (context as? Activity)?.recreate()
+}
+
+// The layout pass, not a fixed 60 ms, decides when a row can take focus.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

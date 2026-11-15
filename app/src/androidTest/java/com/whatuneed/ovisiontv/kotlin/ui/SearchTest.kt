@@ -125,12 +125,15 @@ class SearchTest {
         rule.onNodeWithText(context.getString(R.string.search_title)).assertIsDisplayed()
     }
 
-    // The layout starts in the device language; "абв" exists only while the
-    // Latin or digit layout is showing, so tapping it switches to Cyrillic.
+    // The layout starts in the device language. The mode key is named for
+    // TalkBack by its spoken layout name, not by the short "абв" label, so the
+    // test switches through that same accessible name.
     private fun typeCyrillic(text: String) {
-        if (rule.onAllNodesWithContentDescription("абв").fetchSemanticsNodes().isNotEmpty()) {
-            rule.onNodeWithContentDescription("абв")
-                .performSemanticsAction(SemanticsActions.OnClick)
+        if (rule.onAllNodesWithContentDescription("й").fetchSemanticsNodes().isEmpty()) {
+            rule.onNodeWithContentDescription(
+                context.getString(R.string.keyboard_mode_cyrillic),
+            ).performSemanticsAction(SemanticsActions.OnClick)
+            rule.waitForIdle()
         }
         for (char in text) {
             rule.onNodeWithContentDescription(char.toString())
@@ -167,9 +170,10 @@ class SearchTest {
     fun keyboard_keys_stay_inside_the_panel() {
         setHome()
         openSearch()
-        if (rule.onAllNodesWithContentDescription("абв").fetchSemanticsNodes().isNotEmpty()) {
-            rule.onNodeWithContentDescription("абв")
-                .performSemanticsAction(SemanticsActions.OnClick)
+        if (rule.onAllNodesWithContentDescription("й").fetchSemanticsNodes().isEmpty()) {
+            rule.onNodeWithContentDescription(
+                context.getString(R.string.keyboard_mode_cyrillic),
+            ).performSemanticsAction(SemanticsActions.OnClick)
             rule.waitForIdle()
         }
 

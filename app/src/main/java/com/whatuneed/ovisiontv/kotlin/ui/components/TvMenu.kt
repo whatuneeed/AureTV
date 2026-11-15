@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,9 +51,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.TvRadius
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
+import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import com.whatuneed.ovisiontv.kotlin.ui.TvType
@@ -114,6 +117,7 @@ fun TvMenu(
     val appear = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val keyRepeat = rememberTvKeyRepeat()
+    val reduceMotion = LocalReduceMotion.current
 
     val rows = entries.size
     val height = MENU_PADDING * 2 + MENU_TITLE_HEIGHT + rows * MENU_ROW_HEIGHT +
@@ -135,7 +139,7 @@ fun TvMenu(
         if (closing) return
         closing = true
         scope.launch {
-            appear.animateTo(0f, tween(MENU_EXIT_MS))
+            appear.animateTo(0f, tween(motionDuration(MENU_EXIT_MS, reduceMotion)))
             then?.invoke()
             onDismiss()
         }
@@ -151,13 +155,13 @@ fun TvMenu(
     // into Android focus so TalkBack announces the entry the user is on.
     val rowRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     LaunchedEffect(focusIndex) {
-        delay(60)
-        rowRequesters[focusIndex]?.requestFocus() ?: focusRequester.requestFocus()
+        rowRequesters[focusIndex]?.requestWhenAttached()
+            ?: focusRequester.requestWhenAttached()
     }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-        appear.animateTo(1f, tween(MENU_APPEAR_MS))
+        appear.animateTo(1f, tween(motionDuration(MENU_APPEAR_MS, reduceMotion)))
     }
 
     BackHandler { close() }
@@ -315,9 +319,10 @@ private fun TvMenuRow(
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(scale.dp(MENU_ROW_RADIUS))
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "menuRowFocus",
     )
     Box(
@@ -351,4 +356,14 @@ private fun TvMenuRow(
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+// The menu grows during its appear animation; a fixed delay either steals the
+// animation or fires before the row exists. Retry on the layout clock instead.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

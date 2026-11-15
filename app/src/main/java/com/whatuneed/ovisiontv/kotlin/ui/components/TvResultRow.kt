@@ -23,9 +23,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import com.whatuneed.ovisiontv.kotlin.ui.TvRadius
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
+import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 
 private const val RESULT_WIDTH = 720f
 private const val RESULT_HEIGHT = 96f
@@ -51,9 +53,10 @@ fun TvResultRow(
     content: @Composable BoxScope.(focus: Float) -> Unit,
 ) {
     val shape = RoundedCornerShape(scale.dp(TvRadius.result))
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "resultRowFocus",
     )
     Box(

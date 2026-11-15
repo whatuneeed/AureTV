@@ -25,6 +25,12 @@ data class TvApp(
      * this without re-querying PackageManager.
      */
     val leanback: Boolean = false,
+    /**
+     * False for a package remembered by the layout but not installed on this
+     * TV. It keeps its position (restore/backup) and is drawn as unavailable,
+     * but no launch path may try to start it.
+     */
+    val available: Boolean = true,
 )
 
 /** The launcher's own Settings tile: in kids mode it is a gated surface, not an app. */

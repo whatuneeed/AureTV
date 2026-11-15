@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.data
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -69,6 +70,52 @@ class ProfileStoreTest {
         val third = store.add("B")!!
         assertNotEquals(second.id, third.id)
         assertEquals("p3", third.id)
+    }
+
+    @Test
+    fun a_repaired_profile_list_keeps_the_original_raw_value() {
+        context.getSharedPreferences(ProfileStore.FILE, Context.MODE_PRIVATE)
+            .edit().clear().putString("list", "{not json").commit()
+
+        val profiles = ProfileStore(context).list()
+
+        assertEquals(1, profiles.size)
+        assertEquals(
+            "{not json",
+            context.getSharedPreferences(ProfileStore.FILE, Context.MODE_PRIVATE)
+                .getString("list_quarantine", null),
+        )
+    }
+
+    @Test
+    fun a_repeated_delete_finishes_cleanup_of_orphaned_profile_data() {
+        context.getSharedPreferences(ProfileStore.FILE, Context.MODE_PRIVATE)
+            .edit().clear().commit()
+        val store = ProfileStore(context)
+        store.list()
+        val second = store.add("A")!!
+        assertTrue(store.delete(second.id))
+
+        // Simulate a crash after the list write but before the cleanup writes:
+        // stale layout, discovery history, allowlist and PIN remain behind.
+        val layout = context.getSharedPreferences(
+            ProfileStore.homePrefsName(second.id),
+            Context.MODE_PRIVATE,
+        )
+        layout.edit()
+            .putString(LauncherPrefs.KEY_HOME_ORDER, "[]")
+            .putString("discovery_usage", "{}")
+            .commit()
+        val kids = KidsStore(context)
+        kids.setAllowlist(second.id, setOf("orphan.app"))
+        runBlocking { kids.setPin(second.id, "1234") }
+
+        assertEquals(false, store.delete(second.id))
+
+        assertEquals(null, layout.all[LauncherPrefs.KEY_HOME_ORDER])
+        assertEquals(null, layout.all["discovery_usage"])
+        assertTrue(kids.allowlist(second.id).isEmpty())
+        assertEquals(false, kids.hasPin(second.id))
     }
 
     @Test

@@ -1,27 +1,55 @@
 Privacy
 
-The launcher needs no account and collects no personal data. Below is what stays on the device and what goes over the network.
+Policy version 2, updated 2026-11-15.
+
+The launcher needs no account and has no developer-operated server. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
 Stored on the device
 
-Tile order, folders, hidden apps, screen saver settings and the chosen language are kept locally in app storage. They never leave the TV and are removed with the app.
+Tile order, folders, hidden apps, profiles, the selected profile, screen-saver settings, language and content preferences are kept locally in app storage. The launcher also keeps a small amount of local discovery data: which apps you launched, favorite and hidden recommendation cards, and which cards were already shown. That data is used only to arrange this launcher.
 
-Not collected
+Weather is off until you choose it. If you turn it on, the city you pick (or an approximate location derived from the internet address), the last forecast, units and source are kept locally. Turning weather off stops further weather refreshes. Settings → Weather → Clear Weather Data deletes the saved city, coordinates and last forecast immediately; otherwise the last forecast remains until it is overwritten or the app data is cleared.
 
-The launcher sends no analytics, crash reports, device identifiers, installed-app lists or launch history. It contains no advertising or analytics libraries.
+Kids Mode stores a salted PBKDF2 hash of its PIN, a recovery hint and hash, the app allowlist and lockout state. The PIN itself is never stored. The recovery hint and app names are stored in plain text inside the app's private storage.
+
+The launcher reads the list of installed apps and the public TV provider rows (Watch Next / Preview Programs) to draw Home and the recommendation shelf. Those lists are not uploaded. It also keeps the last uncaught crash trace in its private cache: the thread name and stack trace, limited to 32 KiB. The trace is never uploaded and can be removed with Settings → Storage → Clear cache.
 
 Network requests
 
-The only external host is Apple's public server, used to download the aerial catalogue, posters and video clips. Those requests carry no personal data beyond what HTTPS needs. Aerial caches stay on the device and can be cleared in Storage.
+No account, cookie, API key or advertising identifier is sent. Like any internet request, a request reveals the TV's IP address and ordinary connection details to the host that receives it.
+
+Apple's screen saver: the public Apple CDN at sylvan.apple.com, over HTTPS, supplies the aerial catalogue, still images and video clips. These requests carry no personal data beyond ordinary HTTPS connection details.
+
+Weather (only when you turn it on): Open-Meteo (api.open-meteo.com) supplies forecasts; MET Norway (api.met.no) and wttr.in are fallbacks. If you choose "Automatic", the launcher asks an IP-geolocation service (ipapi.co, then ipwho.is, then get.geojs.io) for an approximate city and coordinates. Those coordinates, the language and the chosen units are sent to the weather service. A city search sends the text you type to Open-Meteo's geocoding service (geocoding-api.open-meteo.com); a reverse-geocoding fallback may send coordinates to Nominatim (nominatim.openstreetmap.org). Weather is optional and can be turned off at any time.
 
 Permissions
 
-Internet access is used by the screen saver. Network state access is used only to show the connection type and IP address on the Network page. The launcher does not request location, contacts, microphone or user storage access.
+Internet access is used for Apple's screen saver and, if enabled, weather.
+
+Network state access is used to show the connection type and the local IP address on the Network page.
+
+Wi-Fi state is used by the Control Center's Wi-Fi tile. Showing the Wi-Fi network name needs the narrower Wi-Fi permission on Android 13+ and fine location on older Android TV releases; Android 12–12L also require the coarse grant alongside fine. The launcher asks only when you press the tile and shows "Connected" if you decline. That grant is used for the network name, not for weather.
+
+TV listings access is used to read the recommendation rows that TV apps publish. Without it the shelf simply has fewer cards.
+
+The accessibility switch is optional. It lets the launcher take over the TV's Home button and open a chosen app after boot or wake. The service looks only at the package and window class that opened; it does not read the screen or anything you type.
+
+Device admin is optional and used only for standby / the sleep timer. Android asks for confirmation and the launcher requests only the force-lock policy.
+
+The launcher does not request contacts, microphone, camera, calendar, SMS, call log or user storage access.
 
 Third-party apps
 
-Apps you start from the home screen handle data under their own policies. The launcher does not see their content and does not pass information about you to them.
+Apps you start from Home handle their own data under their own policies. The launcher passes them the launch intent they published; it does not read their private content.
+
+Kids Mode
+
+Kids Mode is a local launcher filter and PIN gate. It is not Android parental control: system Settings, another Home app or a third-party launcher can still leave it, and content inside an allowed app is not filtered.
+
+Your controls
+
+Turn weather off, clear saved weather data, hide recommendation rows, clear discovery history, delete a profile, or clear the app's cache. Deleting a profile removes its layout, discovery data, PIN, recovery data and allowlist. Clearing app data removes everything the launcher stored; Clear cache removes saved media and the local crash trace, not your settings.
 
 Questions
 
-The launcher is an open project: its network code and permission list can be reviewed in the sources.
+The launcher is an open project: its network code, permission list and this page can be reviewed in the sources.

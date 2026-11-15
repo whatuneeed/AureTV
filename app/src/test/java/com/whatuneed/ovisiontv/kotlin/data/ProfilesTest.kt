@@ -103,6 +103,23 @@ class ProfilesTest {
     }
 
     @Test
+    fun an_oversized_profile_list_is_capped_and_marked_repaired() {
+        val many = (1..40).map { Profile("p$it", "Name $it", ProfileCatalog.EMOJIS[0], 3) }
+        val parsed = parseProfiles(serializeProfiles(many), "Me")
+
+        assertEquals(32, parsed.profiles.size)
+        assertTrue(parsed.repaired)
+    }
+
+    @Test
+    fun an_oversized_raw_blob_falls_back_without_parsing_it() {
+        val parsed = parseProfiles("[" + " ".repeat(300_000), "Me")
+
+        assertEquals(listOf("p1"), parsed.profiles.map { it.id })
+        assertTrue(parsed.repaired)
+    }
+
+    @Test
     fun nextIdSkipsExistingNumbers() {
         assertEquals("p3", ProfileCatalog.nextId(listOf(me, guest)))
         assertEquals("p1", ProfileCatalog.nextId(emptyList()))
@@ -169,6 +186,15 @@ class ProfilesTest {
             guest.copy(emoji = ProfileCatalog.EMOJIS[1]),
         )
         assertEquals(2, ProfileCatalog.avatarStartIndex(profiles, "p3"))
+    }
+
+    @Test
+    fun avatarStartIndexStaysInRangeWhenEveryPictureIsTaken() {
+        val all = ProfileCatalog.EMOJIS.mapIndexed { index, emoji ->
+            Profile(id = "p$index", name = "P$index", emoji = emoji, color = 0)
+        }
+        assertTrue(ProfileCatalog.freeEmojis(all).isEmpty())
+        assertEquals(0, ProfileCatalog.avatarStartIndex(all, "new"))
     }
 
     @Test

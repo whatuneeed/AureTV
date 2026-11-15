@@ -1,6 +1,5 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
-import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
@@ -297,6 +296,7 @@ internal fun StatusCapsule(
     network: NetworkKind,
     focusRequester: FocusRequester,
     onActivate: () -> Unit,
+    reduceMotion: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val russian = LocalConfiguration.current.locales[0]?.language == "ru"
@@ -308,17 +308,17 @@ internal fun StatusCapsule(
         } else {
             CC_CAPSULE_EN_WIDTH
         },
-        animationSpec = tween(CC_PROMOTE_MS, easing = SurfaceEasing),
+        animationSpec = tween(motionDuration(CC_PROMOTE_MS, reduceMotion), easing = SurfaceEasing),
         label = "capsuleWidth",
     )
     val grow by animateFloatAsState(
         targetValue = if (focused && !promoted) CC_FOCUS_SCALE else 1f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "capsuleFocus",
     )
     val ring by animateFloatAsState(
         targetValue = if (focused && !promoted) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "capsuleRing",
     )
     val shape = RoundedCornerShape(scale.dp(CC_CAPSULE_HEIGHT / 2f))
@@ -409,6 +409,9 @@ private class CcCircle(
     val id: String,
     val label: String,
     val glyph: ImageVector,
+    // Search is a launcher-owned surface, not another Activity: closing it has
+    // to put the remote back where the panel was opened, not on a grid tile.
+    val returnFocus: Boolean = false,
     val action: () -> Unit,
 )
 
@@ -460,20 +463,21 @@ internal fun ControlCenter(
     val scope = rememberCoroutineScope()
     val network = rememberNetworkKind()
     val networkStatus = networkStatusLabel(network)
-    var locationGranted by remember { mutableStateOf(DeviceFactsReader.hasLocation(context)) }
-    val wifiName = if (network == NetworkKind.WIFI && locationGranted) {
+    var wifiGranted by remember { mutableStateOf(DeviceFactsReader.hasWifiNamePermission(context)) }
+    val wifiName = if (network == NetworkKind.WIFI && wifiGranted) {
         DeviceFactsReader.wifiSsid(context)
     } else {
         null
     }
     val volume = remember { volumePercent(context) }
     var timerLeft by remember { mutableStateOf(SleepControls.timerLeft(context)) }
-    // The name needs location on Android 9+; the grant is asked for from the
-    // tile, and the panel stays open so the name appears as soon as it lands.
+    // The name needs the narrowest Wi-Fi grant each API offers; it is asked
+    // for from the tile, and the panel stays open so the name appears as soon
+    // as it lands.
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
-        locationGranted = DeviceFactsReader.hasLocation(context)
+        wifiGranted = DeviceFactsReader.hasWifiNamePermission(context)
     }
     val screen = remember {
         val metrics = context.resources.displayMetrics
@@ -532,6 +536,18 @@ internal fun ControlCenter(
         action()
     }
 
+    fun activateCircle(circle: CcCircle) {
+        if (closing) return
+        // A launcher-owned search surface hands the remote back to the capsule;
+        // Settings and other external screens keep the old no-return rule.
+        if (circle.returnFocus) {
+            onClose(true)
+            circle.action()
+        } else {
+            activate(circle.action)
+        }
+    }
+
     // One activation path for the remote and for TalkBack: a tile that only
     // changes its own state keeps the panel open, exactly as [activateFocus]
     // already did for the remote (AQ-26).
@@ -562,17 +578,12 @@ internal fun ControlCenter(
                 title = stringResource(R.string.settings_network_wifi),
                 status = wifiName ?: networkStatus,
                 glyph = SectionGlyph.wifi,
-                // As in the Java build: the name needs location, so the first
-                // press asks for it and the next opens Wi-Fi.
+                // The first press asks for the narrow Wi-Fi grant; the next
+                // opens Wi-Fi.
                 closes = false,
                 action = {
-                    if (network == NetworkKind.WIFI && !locationGranted) {
-                        locationLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                            ),
-                        )
+                    if (network == NetworkKind.WIFI && !wifiGranted) {
+                        locationLauncher.launch(DeviceFactsReader.wifiNamePermissions())
                     } else {
                         requestClose(false)
                         openSystem(Intent(Settings.ACTION_WIFI_SETTINGS))
@@ -645,6 +656,7 @@ internal fun ControlCenter(
                 id = "circle:${size}",
                 label = stringResource(R.string.cc_search),
                 glyph = SectionGlyph.search,
+                returnFocus = true,
                 action = onOpenSearch,
             ),
         )
@@ -717,7 +729,7 @@ internal fun ControlCenter(
             runTile(tile)
             return
         }
-        circles.firstOrNull { it.id == focusId }?.let { activate(it.action) }
+        circles.firstOrNull { it.id == focusId }?.let(::activateCircle)
     }
 
     LaunchedEffect(focusId) {
@@ -812,6 +824,7 @@ internal fun ControlCenter(
                 height = powerHeight,
                 radius = if (powerHeight > CC_TILE_HEIGHT) CC_TALL_RADIUS else CC_TILE_HEIGHT / 2f,
                 layout = if (powerHeight > CC_TILE_HEIGHT) CcLayout.TALL else CcLayout.ROW,
+                reduceMotion = reduceMotion,
                 focused = focusId == LEAD_ID,
                 focusRequester = requester(LEAD_ID),
                 onActivate = { runTile(power) },
@@ -828,6 +841,7 @@ internal fun ControlCenter(
                 height = CC_TILE_HEIGHT,
                 radius = CC_TILE_HEIGHT / 2f,
                 layout = CcLayout.ROW,
+                reduceMotion = reduceMotion,
                 focused = focusId == SOUND_ID,
                 focusRequester = requester(SOUND_ID),
                 onActivate = { runTile(sound) },
@@ -846,6 +860,7 @@ internal fun ControlCenter(
                     height = CC_TILE_HEIGHT,
                     radius = CC_TILE_HEIGHT / 2f,
                     layout = CcLayout.ROW,
+                    reduceMotion = reduceMotion,
                     focused = focusId == id,
                     focusRequester = requester(id),
                     onActivate = { runTile(tile) },
@@ -869,9 +884,10 @@ internal fun ControlCenter(
                     height = CC_CIRCLE,
                     radius = CC_CIRCLE / 2f,
                     layout = CcLayout.CIRCLE,
+                    reduceMotion = reduceMotion,
                     focused = focusId == id,
                     focusRequester = requester(id),
-                    onActivate = { activate(circle.action) },
+                    onActivate = { activateCircle(circle) },
                     modifier = Modifier.offset(x = scale.dp(x), y = scale.dp(circleY)),
                 )
             }
@@ -890,6 +906,7 @@ private fun CcTileView(
     height: Float,
     radius: Float,
     layout: CcLayout,
+    reduceMotion: Boolean,
     focused: Boolean,
     focusRequester: FocusRequester,
     onActivate: () -> Unit,
@@ -897,12 +914,12 @@ private fun CcTileView(
 ) {
     val fill by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "ccTileFill",
     )
     val grow by animateFloatAsState(
         targetValue = if (focused) CC_FOCUS_SCALE else 1f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "ccTileFocus",
     )
     val shape = RoundedCornerShape(scale.dp(radius))

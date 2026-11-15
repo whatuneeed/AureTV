@@ -42,6 +42,14 @@ class AppRepositoryTest {
     }
 
     @Test
+    fun a_successful_scan_is_reported_as_loaded() = runBlocking {
+        val result = AppRepository(context).loadResult(withArtwork = false)
+
+        assertTrue(result is AppLoadResult.Loaded)
+        assertTrue((result as AppLoadResult.Loaded).apps.isNotEmpty())
+    }
+
+    @Test
     fun every_tile_has_a_label_and_a_unique_package() {
         val apps = load()
 

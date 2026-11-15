@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.data
 import android.content.Context
 import android.content.SharedPreferences
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -164,6 +165,11 @@ object ProfileCatalog {
 
 internal data class ParsedProfiles(val profiles: List<Profile>, val repaired: Boolean)
 
+// A prefs file is not a database. These caps keep a hand-edited or truncated
+// blob from allocating a list proportional to attacker-controlled text.
+private const val MAX_PROFILE_JSON_CHARS = 256 * 1024
+private const val MAX_PROFILES = 32
+
 /**
  * Reads the saved list and repairs what hand-editing or an older build can
  * break: a missing id, a duplicate emoji, an out-of-range colour or a blank
@@ -171,6 +177,9 @@ internal data class ParsedProfiles(val profiles: List<Profile>, val repaired: Bo
  */
 internal fun parseProfiles(raw: String?, defaultName: String): ParsedProfiles {
     if (raw.isNullOrBlank()) return ParsedProfiles(defaultProfiles(defaultName), true)
+    if (raw.length > MAX_PROFILE_JSON_CHARS) {
+        return ParsedProfiles(defaultProfiles(defaultName), true)
+    }
     val entries = try {
         JSONArray(raw)
     } catch (_: Exception) {
@@ -178,10 +187,11 @@ internal fun parseProfiles(raw: String?, defaultName: String): ParsedProfiles {
     }
     if (entries.length() == 0) return ParsedProfiles(defaultProfiles(defaultName), true)
 
-    var repaired = false
+    var repaired = entries.length() > MAX_PROFILES
     val ids = HashSet<String>()
-    val parsed = ArrayList<Profile>(entries.length())
-    for (index in 0 until entries.length()) {
+    val count = minOf(entries.length(), MAX_PROFILES)
+    val parsed = ArrayList<Profile>(count)
+    for (index in 0 until count) {
         val entry = entries.optJSONObject(index)
         if (entry == null) {
             repaired = true
@@ -270,15 +280,22 @@ class ProfileStore(context: Context) {
         appContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun list(): List<Profile> {
-        val raw = prefs.getString(KEY_LIST, null)
+        val raw = SafePreferences.string(prefs, KEY_LIST, null)
         val parsed = parseProfiles(raw, appContext.getString(R.string.profile_default_name))
-        if (parsed.repaired) prefs.edit().putString(KEY_LIST, serializeProfiles(parsed.profiles)).apply()
+        if (parsed.repaired) {
+            val editor = prefs.edit()
+            // Keep the last raw value that needed repair. The backup is one
+            // key, never a growing log, and is overwritten only by the next
+            // corrupt read; normal repairs remain diagnosable after restart.
+            if (!raw.isNullOrBlank()) editor.putString(KEY_QUARANTINE, raw)
+            editor.putString(KEY_LIST, serializeProfiles(parsed.profiles)).apply()
+        }
         return parsed.profiles
     }
 
     fun current(): Profile {
         val profiles = list()
-        val id = prefs.getString(KEY_CURRENT, null)
+        val id = SafePreferences.string(prefs, KEY_CURRENT, null)
         val found = profiles.firstOrNull { it.id == id }
         if (found == null && id != null) {
             prefs.edit().putString(KEY_CURRENT, profiles.first().id).apply()
@@ -323,34 +340,51 @@ class ProfileStore(context: Context) {
     /** Removes the profile with its layout; the last profile stays. */
     fun delete(id: String): Boolean {
         val profiles = list()
-        if (profiles.size <= 1) return false
         val keep = profiles.filterNot { it.id == id }
-        if (keep.size == profiles.size) return false
-        val wasCurrent = prefs.getString(KEY_CURRENT, ProfileCatalog.DEFAULT_ID) == id
+        if (keep.size == profiles.size) {
+            // A crash between deleting the profile and removing its layout/PIN
+            // leaves orphan keys. A repeated delete must finish that cleanup,
+            // not report success without doing anything. This also has to run
+            // when the profile list has already shrunk to the last profile.
+            clearProfileData(id)
+            return false
+        }
+        if (profiles.size <= 1) return false
+        val wasCurrent = SafePreferences.string(
+            prefs,
+            KEY_CURRENT,
+            ProfileCatalog.DEFAULT_ID,
+        ) == id
         // Bump the identity floor before the list write: if the process dies
         // between the two, a later add still cannot reuse this id and inherit
         // its layout/PIN/allowlist (AQ-10).
         bumpNextId(id.removePrefix("p").toIntOrNull()?.plus(1) ?: 0)
         prefs.edit().putString(KEY_LIST, serializeProfiles(keep)).apply()
-        HomeOrderStore(appContext, homePrefsName(id)).clearLayout()
-        // A reused id must not inherit the deleted profile's PIN or allowlist.
-        KidsStore(appContext).clearProfile(id)
+        clearProfileData(id)
         if (wasCurrent) prefs.edit().putString(KEY_CURRENT, keep.first().id).apply()
         return true
     }
 
-    private fun nextIdFloor(): Int = prefs.getInt(KEY_NEXT_ID, 0)
+    private fun clearProfileData(id: String) {
+        HomeOrderStore(appContext, homePrefsName(id)).clearLayout()
+        // A reused id must not inherit the deleted profile's discovery signals.
+        DiscoveryStore(appContext, homePrefsName(id)).clearAll()
+        // A reused id must not inherit the deleted profile's PIN or allowlist.
+        KidsStore(appContext).clearProfile(id)
+    }
+
+    internal fun nextIdFloor(): Int = SafePreferences.int(prefs, KEY_NEXT_ID, 0)
 
     private fun bumpNextId(value: Int) {
         if (value > nextIdFloor()) prefs.edit().putInt(KEY_NEXT_ID, value).apply()
     }
 
-    fun askOnBoot(): Boolean = prefs.getBoolean(KEY_ASK_ON_BOOT, true)
+    fun askOnBoot(): Boolean = SafePreferences.boolean(prefs, KEY_ASK_ON_BOOT, true)
     fun setAskOnBoot(on: Boolean) {
         prefs.edit().putBoolean(KEY_ASK_ON_BOOT, on).apply()
     }
 
-    fun askOnWake(): Boolean = prefs.getBoolean(KEY_ASK_ON_WAKE, true)
+    fun askOnWake(): Boolean = SafePreferences.boolean(prefs, KEY_ASK_ON_WAKE, true)
 
     fun setAskOnWake(on: Boolean) {
         prefs.edit().putBoolean(KEY_ASK_ON_WAKE, on).apply()
@@ -358,11 +392,12 @@ class ProfileStore(context: Context) {
 
     companion object {
         const val FILE = "profiles"
-        private const val KEY_LIST = "list"
-        private const val KEY_CURRENT = "current"
-        private const val KEY_NEXT_ID = "next_id"
-        private const val KEY_ASK_ON_BOOT = "ask_on_boot"
-        private const val KEY_ASK_ON_WAKE = "ask_on_wake"
+        internal const val KEY_LIST = "list"
+        internal const val KEY_CURRENT = "current"
+        internal const val KEY_QUARANTINE = "list_quarantine"
+        internal const val KEY_NEXT_ID = "next_id"
+        internal const val KEY_ASK_ON_BOOT = "ask_on_boot"
+        internal const val KEY_ASK_ON_WAKE = "ask_on_wake"
 
         /**
          * p1 keeps the original file that also holds language, saver and content

@@ -41,8 +41,17 @@ internal object AerialPosterStore {
         memory.get(clipId)?.let { return it }
         val file = file(context, clipId)
         if (!file.isFile) return null
-        val bitmap = runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull()
-            ?: return null
+        val bitmap = try {
+            BitmapFactory.decodeFile(file.absolutePath)
+        } catch (_: Exception) {
+            null
+        }
+        if (bitmap == null) {
+            // A corrupt JPEG would otherwise be decoded and rejected on every
+            // saver entrance; it cannot be repaired, so remove that one file.
+            file.delete()
+            return null
+        }
         // Older builds saved the black lead-in; drop such entries so the
         // preview still can take over instead of a black entrance.
         if (isBlack(bitmap)) {

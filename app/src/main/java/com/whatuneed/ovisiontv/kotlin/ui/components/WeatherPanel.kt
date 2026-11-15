@@ -134,17 +134,20 @@ internal fun WeatherPanel(
             .fillMaxSize()
             .focusRequester(requester)
             .onKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || closing) return@onKeyEvent true
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (closing) return@onKeyEvent true
                 // The panel is read-only, but it owns the focus: OK must do
                 // something rather than swallow the press. It closes the
-                // forecast, the same way Back does.
+                // forecast, the same way Back does. Other keys (volume,
+                // media, vendor buttons) must reach the system.
                 when (event.key) {
-                    Key.Back, Key.DirectionCenter, Key.Enter, Key.NumPadEnter ->
+                    Key.Back, Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         requestClose()
+                        true
+                    }
 
-                    else -> Unit
+                    else -> false
                 }
-                true
             }
             .focusable(),
     ) {

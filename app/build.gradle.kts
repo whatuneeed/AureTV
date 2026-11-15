@@ -58,6 +58,14 @@ android {
         warningsAsErrors = false
     }
 
+    testOptions {
+        // Activity-level tests drive real Windows/dispatchers, so the device
+        // must not add its own transition animations on top of Compose's clock.
+        // Compose-only tests keep using the test clock; this removes a known
+        // source of emulator-only timing differences.
+        animationsDisabled = true
+    }
+
     buildTypes {
         release {
             // The project has no reflection or name-based resource lookup; the

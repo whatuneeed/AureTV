@@ -1,9 +1,20 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import android.animation.ValueAnimator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+
+/**
+ * The system Reduce Motion switch, available to every component that animates
+ * focus. Surfaces that receive the flag explicitly still use motionDuration;
+ * leaf controls read this so a new card cannot silently ignore the setting.
+ */
+val LocalReduceMotion = compositionLocalOf { false }
 
 object LauncherColors {
     val backgroundTop = Color(0xFF101014)
@@ -23,15 +34,18 @@ object LauncherColors {
 
 @Composable
 fun OVisionTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color.White,
-            onPrimary = Color.Black,
-            background = LauncherColors.backgroundBottom,
-            onBackground = Color.White,
-            surface = LauncherColors.backgroundTop,
-            onSurface = Color.White,
-        ),
-        content = content,
-    )
+    val reduceMotion = remember { !ValueAnimator.areAnimatorsEnabled() }
+    CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
+        MaterialTheme(
+            colorScheme = darkColorScheme(
+                primary = Color.White,
+                onPrimary = Color.Black,
+                background = LauncherColors.backgroundBottom,
+                onBackground = Color.White,
+                surface = LauncherColors.backgroundTop,
+                onSurface = Color.White,
+            ),
+            content = content,
+        )
+    }
 }

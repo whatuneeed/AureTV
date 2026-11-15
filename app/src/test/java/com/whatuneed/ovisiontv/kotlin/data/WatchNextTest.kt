@@ -104,6 +104,15 @@ class WatchNextTest {
     }
 
     @Test
+    fun providerTextIsTruncatedAndOverlongLinksAreDropped() {
+        assertEquals("abc", boundedWatchText("abcdef", 3))
+        assertEquals(null, boundedWatchText("   ", 3))
+        assertEquals("intent://ok", boundedWatchUri("intent://ok", 32))
+        assertEquals(null, boundedWatchUri("intent://too-long", 8))
+        assertEquals(null, boundedWatchUri("   ", 32))
+    }
+
+    @Test
     fun continueRowsCanBeHiddenWithoutHidingNewOnes() {
         val rows = listOf(
             row(title = "Continue", continueRow = true),

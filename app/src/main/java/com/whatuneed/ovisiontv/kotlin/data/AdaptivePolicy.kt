@@ -18,10 +18,22 @@ data class AdaptiveBudgets(
     val previewBytes: Int,
     val previewThumbBytes: Int,
     val appArtKb: Int,
-    val shelfArtEntries: Int,
-    val shelfArtMaxPx: Int,
+    val discoveryArtEntries: Int,
+    val discoveryArtBytes: Int,
+    val discoveryCardPx: Int,
+    val discoveryHeroPx: Int,
     val shadowSteps: Int,
 )
+
+/**
+ * Conservative decoded size of an ARGB_8888 bitmap. Compose does not expose
+ * allocationByteCount, and a hardware bitmap still has to be estimated against
+ * the process heap; four bytes per pixel is the worst case, never an undercount.
+ */
+internal fun estimatedArtBytes(width: Int, height: Int): Int =
+    (width.coerceAtLeast(1).toLong() * height.coerceAtLeast(1) * 4L)
+        .coerceAtMost(Int.MAX_VALUE.toLong())
+        .toInt()
 
 /**
  * One place that turns device facts into performance budgets. The launcher has
@@ -64,10 +76,13 @@ object AdaptivePolicy {
             previewBytes = 6 * 1024 * 1024,
             previewThumbBytes = 16 * 1024 * 1024,
             appArtKb = 12 * 1024,
-            // Twelve is the number of posters the carousel keeps on screen; a
-            // smaller cache re-decodes art that is still being drawn.
-            shelfArtEntries = 12,
-            shelfArtMaxPx = 1280,
+            // The rail keeps eight cards plus the hero, and a trim should not
+            // evict art that is still being drawn.
+            discoveryArtEntries = 16,
+            // Two heroes and a full rail of cards at the HIGH decode sizes.
+            discoveryArtBytes = 48 * 1024 * 1024,
+            discoveryCardPx = 720,
+            discoveryHeroPx = 2560,
             shadowSteps = 12,
         )
         PerformanceProfile.BALANCED -> AdaptiveBudgets(
@@ -77,8 +92,10 @@ object AdaptivePolicy {
             appArtKb = 12 * 1024,
             // The grid and the shelf are what the owner looks at every day, so
             // their budgets stay whole until the device is genuinely small.
-            shelfArtEntries = 12,
-            shelfArtMaxPx = 1280,
+            discoveryArtEntries = 14,
+            discoveryArtBytes = 32 * 1024 * 1024,
+            discoveryCardPx = 640,
+            discoveryHeroPx = 1920,
             shadowSteps = 10,
         )
         PerformanceProfile.LOW -> AdaptiveBudgets(
@@ -86,8 +103,10 @@ object AdaptivePolicy {
             previewBytes = 3 * 1024 * 1024,
             previewThumbBytes = 8 * 1024 * 1024,
             appArtKb = 8 * 1024,
-            shelfArtEntries = 10,
-            shelfArtMaxPx = 960,
+            discoveryArtEntries = 12,
+            discoveryArtBytes = 16 * 1024 * 1024,
+            discoveryCardPx = 480,
+            discoveryHeroPx = 1280,
             shadowSteps = 8,
         )
     }

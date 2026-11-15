@@ -68,6 +68,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SaverTheme
 import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
+import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import com.whatuneed.ovisiontv.kotlin.ui.components.SAVER_PREVIEW_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -96,6 +97,7 @@ class SettingsScreenTest {
     private lateinit var savedPrefs: Map<String, Any?>
     private lateinit var savedStartup: Map<String, Any?>
     private lateinit var savedProfiles: Map<String, Any?>
+    private lateinit var savedWeather: Map<String, Any?>
 
     /** Four clips with locale-independent names: one per theme. */
     private val testClips = listOf(
@@ -122,6 +124,11 @@ class SettingsScreenTest {
             .edit()
             .clear()
             .commit()
+        savedWeather = PrefsSnapshot.captureWeather(context)
+        context.getSharedPreferences(WeatherPreferences.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
     }
 
     @After
@@ -129,6 +136,7 @@ class SettingsScreenTest {
         PrefsSnapshot.restore(context, savedPrefs)
         PrefsSnapshot.restoreStartup(context, savedStartup)
         PrefsSnapshot.restoreProfiles(context, savedProfiles)
+        PrefsSnapshot.restoreWeather(context, savedWeather)
     }
 
     private fun setSettings(
@@ -221,6 +229,11 @@ class SettingsScreenTest {
         openHome()
         waitForRow(string(R.string.settings_hidden_apps))
         clickRow(string(R.string.settings_hidden_apps))
+    }
+
+    private fun openWeather() {
+        waitForRow(string(R.string.weather_title))
+        clickRow(string(R.string.weather_title))
     }
 
     private fun openSaver() {
@@ -329,6 +342,42 @@ class SettingsScreenTest {
             .assertExists()
         rule.onNodeWithContentDescription(string(R.string.settings_device), substring = true)
             .assertExists()
+    }
+
+    @Test
+    fun weather_clear_requires_confirmation_and_removes_saved_data() {
+        context.getSharedPreferences(WeatherPreferences.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(WeatherPreferences.K_ENABLED, true)
+            .putBoolean(WeatherPreferences.K_MANUAL, true)
+            .putString(WeatherPreferences.K_PLACE, "Moscow")
+            .putString(WeatherPreferences.K_CACHE, "{\"temp\":1}")
+            .putLong(WeatherPreferences.K_CACHE_AT, 123L)
+            .commit()
+        setSettings()
+
+        openWeather()
+        waitForRow(string(R.string.weather_clear_data))
+        clickRow(string(R.string.weather_clear_data))
+        waitForRow(string(R.string.weather_clear_confirm))
+        // Opening the confirmation must not delete anything yet.
+        assertTrue(WeatherPreferences.enabled(context))
+        assertTrue(WeatherPreferences.place(context).isNotEmpty())
+
+        // Cancel is focused by default; Back leaves without a write.
+        press(Key.Back)
+        waitForRow(string(R.string.weather_clear_data))
+        assertTrue(WeatherPreferences.enabled(context))
+
+        clickRow(string(R.string.weather_clear_data))
+        waitForRow(string(R.string.weather_clear_confirm))
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+
+        assertFalse(WeatherPreferences.enabled(context))
+        assertEquals("", WeatherPreferences.place(context))
+        assertNull(WeatherPreferences.cachedJson(context))
+        waitForRow(string(R.string.weather_clear_data))
     }
 
     @Test
@@ -809,6 +858,24 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun back_from_the_category_rail_returns_to_the_grid_before_the_page() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_choose), string(R.string.saver_aerials)))
+
+        // Up enters the category rail; BACK is a layer inside the page, not a
+        // request to leave the whole chooser.
+        press(Key.DirectionUp)
+        waitForFocus(string(R.string.saver_filter_all))
+        press(Key.Back)
+        rule.waitForIdle()
+
+        rule.onNodeWithContentDescription(string(R.string.saver_filter_all), substring = true)
+            .assertIsDisplayed()
+        rule.onNodeWithContentDescription("Aerial 1").assertIsDisplayed()
+    }
+
+    @Test
     fun a_whole_category_cannot_leave_the_saver_without_clips() {
         // Only one theme is enabled, so hiding it would hide every aerial.
         SaverPreferences.toggleTheme(context, SaverTheme.CITIES)
@@ -1241,9 +1308,9 @@ class SettingsScreenTest {
         setSettings()
 
         openHome()
-        // Move to "Reset layout": the last row after the content toggles
-        // (recommendations, continue watching, phone-only apps, access, hidden).
-        repeat(5) { press(Key.DirectionDown) }
+        // Move to "Reset layout": the last row after the Recommendations entry
+        // and phone-only apps, listings access and hidden apps.
+        repeat(4) { press(Key.DirectionDown) }
         waitForFocus(string(R.string.settings_reset_layout))
         press(Key.Back)
         rule.waitForIdle()
@@ -1399,7 +1466,7 @@ class SettingsScreenTest {
             powerSupported = SleepControls.adminSupported(context),
             defaultHome = DeviceFactsReader.isDefaultHome(context),
             homeOverride = StartupPreferences.homeOverride(context),
-            locationGranted = DeviceFactsReader.hasLocation(context),
+            locationGranted = DeviceFactsReader.hasWifiNamePermission(context),
         )
         val summary = if (missing == 0) {
             string(R.string.settings_perms_all_allowed)
@@ -1478,7 +1545,7 @@ class SettingsScreenTest {
             row(
                 string(R.string.settings_perms_wifi),
                 string(
-                    if (DeviceFactsReader.hasLocation(context)) {
+                    if (DeviceFactsReader.hasWifiNamePermission(context)) {
                         R.string.settings_perms_allowed
                     } else {
                         R.string.settings_perms_allow

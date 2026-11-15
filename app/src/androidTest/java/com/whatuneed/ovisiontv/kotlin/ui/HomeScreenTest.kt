@@ -686,8 +686,13 @@ class HomeScreenTest {
         rule.onNodeWithContentDescription(context.getString(R.string.menu_delete_folder))
             .assertIsDisplayed()
 
-        // Open, Move, Delete Folder.
+        // Open, Move, Delete Folder — the destructive action now asks once more.
         repeat(2) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription(context.getString(R.string.menu_delete_folder))
+            .assertIsDisplayed()
         press(Key.DirectionCenter)
         rule.waitForIdle()
 
@@ -1154,11 +1159,11 @@ class HomeScreenTest {
         assertEquals("test.4", launched)
     }
 
-    // A folder page holds nine cells in three rows. RIGHT at the page end flips
-    // the page; DOWN at the page edge does not jump to the next page, and the
-    // off-page cards stay out of the semantics tree.
+    // A folder page holds nine cells in three rows. Both RIGHT and DOWN at the
+    // page edge flip it; DOWN keeps the column so the grid does not jump to a
+    // random cell, and the off-page cards stay out of the semantics tree.
     @Test
-    fun folder_rows_flip_pages_only_at_the_page_end() {
+    fun folder_down_at_the_page_end_opens_the_next_page() {
         var launched: String? = null
         val big = (1..10).map { tvApp("test.big.$it", "Большая $it") }
         setHome(
@@ -1181,15 +1186,10 @@ class HomeScreenTest {
             press(Key.DirectionDown)
             rule.waitForIdle()
         }
-        rule.onNodeWithContentDescription("Большая 10").assertDoesNotExist()
 
-        // DOWN on the last row has no row below.
+        // DOWN on the last row opens the next page at the same column.
         press(Key.DirectionDown)
-        rule.waitForIdle()
-        rule.onNodeWithContentDescription("Большая 10").assertDoesNotExist()
-
-        // RIGHT at the page end flips to the second page.
-        press(Key.DirectionRight)
+        rule.mainClock.advanceTimeBy(400)
         rule.waitForIdle()
         rule.onNodeWithContentDescription("Большая 10").assertIsDisplayed()
         rule.onNodeWithContentDescription("Большая 1").assertDoesNotExist()

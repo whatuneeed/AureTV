@@ -293,6 +293,29 @@ class WeatherTest {
         )
     }
 
+    @Test
+    fun updateDelayBacksOffAfterRepeatedFailures() {
+        val now = 1_760_000_000_000L
+
+        assertEquals(60_000L, Weather.retryDelay(0))
+        assertEquals(120_000L, Weather.retryDelay(1))
+        assertEquals(240_000L, Weather.retryDelay(2))
+        assertEquals(480_000L, Weather.retryDelay(3))
+        assertEquals(900_000L, Weather.retryDelay(4))
+        assertEquals(900_000L, Weather.retryDelay(20))
+        assertEquals(
+            240_000L,
+            Weather.updateDelay(
+                now = now,
+                cachedAt = now,
+                refreshMinutes = 15,
+                stale = true,
+                nextHourStart = now + 40 * 60_000L,
+                failures = 2,
+            ),
+        )
+    }
+
     private fun utc(value: String): Long =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
             .apply { timeZone = TimeZone.getTimeZone("UTC") }

@@ -16,18 +16,18 @@ object ContentPreferences {
     // the public SDK stubs, so the manifest name is spelled out here.
     const val READ_TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
 
-    private fun prefs(context: Context) =
+    internal fun prefs(context: Context) =
         context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
 
     fun recommendations(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_RECOMMENDATIONS, true)
+        SafePreferences.boolean(prefs(context), KEY_RECOMMENDATIONS, true)
 
     fun setRecommendations(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_RECOMMENDATIONS, enabled).apply()
     }
 
     fun continueWatching(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_CONTINUE_WATCHING, true)
+        SafePreferences.boolean(prefs(context), KEY_CONTINUE_WATCHING, true)
 
     fun setContinueWatching(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_CONTINUE_WATCHING, enabled).apply()

@@ -2,6 +2,7 @@ package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -19,15 +20,23 @@ import java.util.LinkedHashMap
 import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /** The settings a forecast was requested for; a commit must match them. */
-internal data class WeatherRequest(val key: String, val language: String)
+internal data class WeatherRequest(
+    val key: String,
+    val language: String,
+    val generation: Int = 0,
+)
 
 internal fun weatherRequestIsCurrent(
     snapshot: WeatherRequest,
     currentKey: String,
     currentLanguage: String,
-): Boolean = snapshot.key == currentKey && snapshot.language == currentLanguage
+    currentGeneration: Int = snapshot.generation,
+): Boolean = snapshot.key == currentKey &&
+    snapshot.language == currentLanguage &&
+    snapshot.generation == currentGeneration
 
 /**
  * Current weather and a 5-day forecast from free services that need no key:
@@ -39,8 +48,10 @@ internal fun weatherRequestIsCurrent(
  */
 object Weather {
     private const val TAG = "Weather"
-    // A failed fetch leaves the cache due; the retry must not spin.
+    // A failed fetch leaves the cache due; each further failure doubles the
+    // wait up to a quarter of an hour, so an offline TV stops re-asking.
     private const val RETRY_MS = 60_000L
+    private const val MAX_RETRY_MS = 15 * 60_000L
     const val SRC_OPEN_METEO = "openmeteo"
     const val SRC_MET = "met"
     const val SRC_WTTR = "wttr"
@@ -50,9 +61,11 @@ object Weather {
     private const val CONNECT_MS = 8_000
     private const val READ_MS = 10_000
     private const val MAX_BYTES = 2 * 1024 * 1024
+    private const val MAX_GEO_BYTES = 512 * 1024
 
     private val busy = AtomicBoolean(false)
     private val pending = AtomicBoolean(false)
+    private val failures = AtomicInteger(0)
 
     // ---------------------------------------------------------------- data
 
@@ -203,6 +216,7 @@ object Weather {
             refreshMinutes = WeatherPreferences.refreshMinutes(context),
             stale = stale(context),
             nextHourStart = nextHourStart,
+            failures = failures.get(),
         )
     }
 
@@ -212,12 +226,18 @@ object Weather {
         refreshMinutes: Int,
         stale: Boolean,
         nextHourStart: Long,
+        failures: Int = 0,
     ): Long {
-        if (stale) return RETRY_MS
+        val retry = retryDelay(failures)
+        if (stale) return retry
         val due = refreshMinutes * 60_000L - (now - cachedAt)
         val nextHour = nextHourStart - now
-        return minOf(due.coerceAtLeast(RETRY_MS), nextHour.coerceAtLeast(1_000L))
+        return minOf(due.coerceAtLeast(retry), nextHour.coerceAtLeast(1_000L))
     }
+
+    /** One minute, then 2/4/8/15: bounded so recovery still happens. */
+    internal fun retryDelay(failures: Int): Long =
+        (RETRY_MS shl failures.coerceIn(0, 4)).coerceAtMost(MAX_RETRY_MS)
 
     /**
      * The cached forecast ready to show: hours from the current hour and days
@@ -247,7 +267,8 @@ object Weather {
         try {
             do {
                 pending.set(false)
-                withContext(Dispatchers.IO) { runFetch(app) }
+                val ok = withContext(Dispatchers.IO) { runFetch(app) }
+                if (ok) failures.set(0) else failures.incrementAndGet()
             } while (pending.get() && WeatherPreferences.enabled(app))
         } finally {
             busy.set(false)
@@ -255,13 +276,17 @@ object Weather {
         if (pending.get() && WeatherPreferences.enabled(app)) refresh(app, force = true)
     }
 
-    private suspend fun runFetch(context: Context) {
+    private suspend fun runFetch(context: Context): Boolean {
         try {
             val manual = WeatherPreferences.manual(context)
             val language = language(context)
             // The request is a snapshot: a city/unit/language change while the
             // network is busy must not be committed under the new key (AQ-09).
-            val request = WeatherRequest(WeatherPreferences.key(context), language)
+            val request = WeatherRequest(
+                WeatherPreferences.key(context),
+                language,
+                WeatherPreferences.generation(context),
+            )
             val lat: Double
             val lon: Double
             var place: String
@@ -283,13 +308,18 @@ object Weather {
             for (s in SOURCES) if (s !in order) order.add(s)
             var data: Data? = null
             for (s in order) {
-                data = runCatching {
+                data = try {
                     when (s) {
                         SRC_MET -> fetchMet(lat, lon, fahrenheit)
                         SRC_WTTR -> fetchWttr(lat, lon, fahrenheit)
                         else -> fetchOpenMeteo(lat, lon, fahrenheit)
                     }
-                }.onFailure { Log.w(TAG, "source $s failed", it) }.getOrNull()
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Log.w(TAG, "source $s failed", error)
+                    null
+                }
                 if (data != null) {
                     data.source = s
                     break
@@ -300,10 +330,11 @@ object Weather {
                         request,
                         WeatherPreferences.key(context),
                         language(context),
+                        WeatherPreferences.generation(context),
                     )
                 ) {
                     Log.d(TAG, "forecast dropped: settings changed during fetch")
-                    return
+                    return true
                 }
                 if (place.isNotEmpty() || data.place.isEmpty()) data.place = place
                 val fetchedAt = System.currentTimeMillis()
@@ -315,10 +346,15 @@ object Weather {
                     request.key,
                     data.place,
                 )
+                return true
             }
+            return false
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             // Keep showing the last forecast.
             Log.w(TAG, "forecast refresh failed", error)
+            return false
         }
     }
 
@@ -630,6 +666,8 @@ object Weather {
                 val lat = j.getString("latitude").toDouble()
                 val lon = j.getString("longitude").toDouble()
                 return Located(localize(lat, lon, j.optString("city", ""), language), lat, lon)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 last = error
             }
@@ -644,32 +682,57 @@ object Weather {
     private suspend fun localize(lat: Double, lon: Double, fallback: String, language: String): String {
         if (!foreignName(fallback, language == "en")) return fallback
         // Open-Meteo geocoding knows the name; take the result nearest the coordinates.
-        runCatching {
-            var best: CityPlace? = null
-            var bestDistance = Double.MAX_VALUE
-            for (place in CitySearch.search(fallback, language).orEmpty()) {
-                val distance = Math.hypot(place.lat - lat, (place.lon - lon) * Math.cos(Math.toRadians(lat)))
-                if (distance < bestDistance) {
-                    bestDistance = distance
-                    best = place
+        val places = try {
+            CitySearch.search(fallback, language)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+        var best: CityPlace? = null
+        var bestDistance = Double.MAX_VALUE
+        for (place in places.orEmpty()) {
+            val distance = Math.hypot(place.lat - lat, (place.lon - lon) * Math.cos(Math.toRadians(lat)))
+            if (distance < bestDistance) {
+                bestDistance = distance
+                best = place
+            }
+        }
+        if (best != null && bestDistance < 2) return best.name
+
+        return try {
+            reverseGeocode(lat, lon, language)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        } ?: fallback
+    }
+
+    /** Nominatim fallback with a bounded body and cancellation checks. */
+    private suspend fun reverseGeocode(lat: Double, lon: Double, language: String): String? {
+        currentCoroutineContext().ensureActive()
+        val connection = URL(
+            "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=$language" +
+                "&lat=$lat&lon=$lon",
+        ).openConnection() as HttpURLConnection
+        connection.connectTimeout = 5_000
+        connection.readTimeout = 5_000
+        connection.setRequestProperty("User-Agent", UA)
+        try {
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val out = ByteArrayOutputStream()
+            connection.inputStream.use { input ->
+                val buffer = ByteArray(8 * 1024)
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    out.write(buffer, 0, read)
+                    if (out.size() > MAX_GEO_BYTES) return null
                 }
             }
-            if (best != null && bestDistance < 2) return best.name
-        }
-        runCatching {
-            val connection = URL(
-                "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=$language" +
-                    "&lat=$lat&lon=$lon",
-            ).openConnection() as HttpURLConnection
-            connection.connectTimeout = 5_000
-            connection.readTimeout = 5_000
-            connection.setRequestProperty("User-Agent", UA)
-            val body = try {
-                connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-            } finally {
-                connection.disconnect()
-            }
-            val j = JSONObject(body)
+            val j = JSONObject(out.toString("UTF-8"))
             val address = j.optJSONObject("address")
             if (address != null) {
                 for (key in listOf("city", "town", "village", "municipality")) {
@@ -677,10 +740,10 @@ object Weather {
                     if (value.isNotEmpty()) return value
                 }
             }
-            val name = j.optString("name", "")
-            if (name.isNotEmpty()) return name
+            return j.optString("name", "").takeIf { it.isNotEmpty() }
+        } finally {
+            connection.disconnect()
         }
-        return fallback
     }
 
     /** The interface language as a two-letter tag, for geocoding and descriptions. */
@@ -693,6 +756,7 @@ object Weather {
     // ---------------------------------------------------------------- http
 
     internal suspend fun get(url: String): String {
+        currentCoroutineContext().ensureActive()
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_MS
         connection.readTimeout = READ_MS

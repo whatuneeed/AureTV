@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import org.json.JSONArray
@@ -82,7 +83,19 @@ object CitySearch {
             .getOrNull()
     }
 
-    private suspend fun download(url: String): String? = runCatching {
+    private suspend fun download(url: String): String? {
+        return try {
+            downloadOnce(url)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "city search failed", error)
+            null
+        }
+    }
+
+    private suspend fun downloadOnce(url: String): String? {
+        currentCoroutineContext().ensureActive()
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
@@ -103,9 +116,10 @@ object CitySearch {
                     if (out.size() > MAX_BYTES) return null
                 }
             }
-            out.toString("UTF-8")
+            return out.toString("UTF-8")
         } finally {
             connection.disconnect()
         }
-    }.onFailure { error -> Log.w(TAG, "city search failed", error) }.getOrNull()
+    }
+
 }

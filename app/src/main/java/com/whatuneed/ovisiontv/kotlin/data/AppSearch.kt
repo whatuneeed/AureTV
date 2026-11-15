@@ -27,6 +27,7 @@ fun searchApps(apps: List<TvApp>, query: String): List<TvApp> {
     if (needle.isEmpty()) return emptyList()
     val tokens = needle.split(' ')
     return apps.asSequence()
+        .filter { it.available }
         .mapNotNull { app ->
             val name = fold(app.label)
             val words = name.split(' ')

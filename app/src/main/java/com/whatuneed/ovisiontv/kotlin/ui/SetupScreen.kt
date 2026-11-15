@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -327,8 +328,9 @@ fun SetupScreen(
     var listingsGranted by remember(resumeTick) {
         mutableStateOf(ContentPreferences.canReadListings(context))
     }
-    var defaultHome by remember(resumeTick) {
-        mutableStateOf(DeviceFactsReader.isDefaultHome(context))
+    var defaultHome by remember(resumeTick) { mutableStateOf(false) }
+    LaunchedEffect(resumeTick) {
+        defaultHome = withContext(Dispatchers.IO) { DeviceFactsReader.isDefaultHome(context) }
     }
     var accessibility by remember(resumeTick) {
         mutableStateOf(AccessibilityStatus.state(context))
@@ -736,16 +738,17 @@ fun SetupScreen(
         // owns the focus through its own keys; the rows behind are not reached.
         if (citySearchOpen || profileNameOpen || profileAvatarOpen) return@LaunchedEffect
         when {
-            current.pressAnywhere -> rootRequester.requestFocus()
+            current.pressAnywhere -> rootRequester.requestWhenAttached()
 
             inButtons || rowCount == 0 -> {
                 if (showBack && buttonIndex == 0) {
-                    backRequester.requestFocus()
+                    backRequester.requestWhenAttached()
                 } else {
-                    primaryRequester.requestFocus()
+                    primaryRequester.requestWhenAttached()
                 }
             }
-            else -> rowRequesters[focus]?.requestFocus() ?: rootRequester.requestFocus()
+            else -> rowRequesters[focus]?.requestWhenAttached()
+                ?: rootRequester.requestWhenAttached()
         }
     }
 
@@ -1245,10 +1248,10 @@ internal fun WeatherCitySearch(
     // so TalkBack reads the highlighted city instead of silence.
     val rowRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     LaunchedEffect(zone, resultIndex, places) {
-        if (zone == CityZone.RESULTS) rowRequesters[resultIndex]?.requestFocus()
+        if (zone == CityZone.RESULTS) rowRequesters[resultIndex]?.requestWhenAttached()
     }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { focusRequester.requestWhenAttached() }
 
     // The chosen city keeps its check while the list is open, as the Java
     // wizard marked the current row with a tick.
@@ -1569,9 +1572,10 @@ private fun SetupRowCard(
     scale: TvScale,
     focusRequester: FocusRequester,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "setupRowFocus",
     )
     val shape = RoundedCornerShape(scale.dp(ROW_RADIUS))
@@ -1702,9 +1706,10 @@ private fun SwitchMark(on: Boolean, focused: Boolean, scale: TvScale) {
         focused -> TvInk.focusInk.copy(alpha = 0.25f)
         else -> Color.White.copy(alpha = 0.25f)
     }
+    val reduceMotion = LocalReduceMotion.current
     val knobOffset by animateFloatAsState(
         targetValue = if (on) 28f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "setupSwitch",
     )
     Box(
@@ -1763,9 +1768,10 @@ private fun SetupButton(
 ) {
     val idle = if (primary) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.14f)
     // Java grows a focused button by 8% (its medium focus scale), more than a row.
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "setupButtonFocus",
     )
     Box(
@@ -1802,4 +1808,15 @@ private fun SetupButton(
             textAlign = TextAlign.Center,
         )
     }
+}
+
+// The wizard changes pages by swapping the whole row set. The requester is
+// attached in the next layout pass, so retry on the frame clock instead of
+// leaving the root focused after a cold start or a page transition.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

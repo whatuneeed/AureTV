@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,9 +106,12 @@ fun FolderOverlay(
     scale: TvScale,
     launching: Boolean,
     // The grid remembers where the panel was left, so a reopened folder lands
-    // on the same cell instead of the first app (UX-09).
+    // on the same app instead of the first cell (UX-09). The package key is
+    // stable when an earlier app is uninstalled; the index is the fallback.
+    initialFocusKey: String? = null,
     initialFocusIndex: Int = 0,
     onFocusIndexChanged: (Int) -> Unit = {},
+    onFocusKeyChanged: (String?) -> Unit = {},
     onLaunch: (TvApp, Offset) -> Unit,
     onClosing: () -> Unit,
     onClose: () -> Unit,
@@ -124,7 +128,11 @@ fun FolderOverlay(
     val progress = remember(folder.id) { Animatable(0f) }
     var closing by remember(folder.id) { mutableStateOf(false) }
     var focusIndex by remember(folder.id) {
-        mutableIntStateOf(initialFocusIndex.coerceIn(0, (folder.apps.size - 1).coerceAtLeast(0)))
+        val restored = initialFocusKey
+            ?.let { key -> folder.apps.indexOfFirst { it.packageName == key } }
+            ?.takeIf { it >= 0 }
+            ?: initialFocusIndex
+        mutableIntStateOf(restored.coerceIn(0, (folder.apps.size - 1).coerceAtLeast(0)))
     }
     val focusRequester = remember { FocusRequester() }
 
@@ -215,11 +223,15 @@ fun FolderOverlay(
     }
 
     // Mirrored outward on every move: the grid's map is what survives the
-    // close animation, so it must follow the cursor, not the close.
-    LaunchedEffect(focusIndex) { onFocusIndexChanged(focusIndex) }
+    // close animation, so it must follow the cursor, not the close. The
+    // package key survives a list change that shifts the index.
+    LaunchedEffect(focusIndex, folder.apps) {
+        onFocusIndexChanged(focusIndex)
+        onFocusKeyChanged(folder.apps.getOrNull(focusIndex)?.packageName)
+    }
 
     LaunchedEffect(folder.id) {
-        focusRequester.requestFocus()
+        focusRequester.requestWhenAttached()
         progress.animateTo(
             1f,
             tween(motionDuration(OPEN_MS, reduceMotion), easing = TravelEasing),
@@ -245,13 +257,13 @@ fun FolderOverlay(
         // The rename keyboard and the menu are modal: their own requesters own
         // the focus until they close, and this effect then runs again.
         if (renameOpen || menuApp != null || launching) return@LaunchedEffect
-        delay(60)
         when {
             // The proxy is the tile under the cursor while it is being moved;
             // neighbouring tiles stay silent.
-            pickupActive -> pickupRequester.requestFocus()
-            titleFocused -> titleRequester.requestFocus()
-            else -> tileRequesters[focusIndex]?.requestFocus() ?: focusRequester.requestFocus()
+            pickupActive -> pickupRequester.requestWhenAttached()
+            titleFocused -> titleRequester.requestWhenAttached()
+            else -> tileRequesters[focusIndex]?.requestWhenAttached()
+                ?: focusRequester.requestWhenAttached()
         }
     }
 
@@ -296,7 +308,21 @@ fun FolderOverlay(
             }
 
             dy < 0 -> (focusIndex - COLUMNS).takeIf { row > 0 } ?: focusIndex
-            dy > 0 -> (focusIndex + COLUMNS).takeIf { focusIndex + COLUMNS <= pageEnd } ?: focusIndex
+            // Down follows the column. On the last row of a page it opens the
+            // next page at the same column; the final page simply stops. This
+            // matches Left/Right, which already cross page boundaries.
+            dy > 0 -> {
+                val below = focusIndex + COLUMNS
+                when {
+                    below <= pageEnd -> below
+                    focusIndex + 1 < count -> {
+                        val nextStart = pageStart + PAGE_SIZE
+                        val nextEnd = min(nextStart + PAGE_SIZE, count) - 1
+                        (nextStart + column).coerceAtMost(nextEnd)
+                    }
+                    else -> focusIndex
+                }
+            }
             else -> focusIndex
         }
     }
@@ -353,7 +379,8 @@ fun FolderOverlay(
             togglePickup()
             return
         }
-        folder.apps.getOrNull(index)?.let { onLaunch(it, cellCenter(index)) }
+        folder.apps.getOrNull(index)?.takeIf { it.available }
+            ?.let { onLaunch(it, cellCenter(index)) }
     }
 
     Box(
@@ -474,7 +501,7 @@ fun FolderOverlay(
                             holdJob = null
                             if (!editing && !titleFocused && okDown && !longPressHandled) {
                                 val app = folder.apps.getOrNull(focusIndex)
-                                if (app != null) onLaunch(app, cellCenter(focusIndex))
+                                if (app?.available == true) onLaunch(app, cellCenter(focusIndex))
                             }
                             okDown = false
                             longPressHandled = false
@@ -533,12 +560,12 @@ fun FolderOverlay(
             ) {
                 val titleScale by animateFloatAsState(
                     targetValue = if (titleFocused) 1.03f else 1f,
-                    animationSpec = tween(TvOs.FOCUS_MS),
+                    animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
                     label = "folderTitle",
                 )
                 val titleFocusAmount by animateFloatAsState(
                     targetValue = if (titleFocused) 1f else 0f,
-                    animationSpec = tween(TvOs.FOCUS_MS),
+                    animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
                     label = "folderTitleFill",
                 )
                 val titleShape = RoundedCornerShape(scale.dp(TvRadius.field))
@@ -719,11 +746,13 @@ fun FolderOverlay(
             TvMenu(
                 title = app.label,
                 entries = buildList {
-                    add(
-                        TvMenuEntry(stringResource(R.string.menu_open)) {
-                            if (index >= 0) onLaunch(app, cellCenter(index))
-                        },
-                    )
+                    if (app.available) {
+                        add(
+                            TvMenuEntry(stringResource(R.string.menu_open)) {
+                                if (index >= 0) onLaunch(app, cellCenter(index))
+                            },
+                        )
+                    }
                     add(
                         TvMenuEntry(stringResource(R.string.menu_move)) {
                             if (index >= 0) {
@@ -740,12 +769,14 @@ fun FolderOverlay(
                             close()
                         },
                     )
-                    add(
-                        TvMenuEntry(stringResource(R.string.menu_app_info)) {
-                            onAppInfo(app)
-                        },
-                    )
-                    if (!own && !app.system) {
+                    if (app.available) {
+                        add(
+                            TvMenuEntry(stringResource(R.string.menu_app_info)) {
+                                onAppInfo(app)
+                            },
+                        )
+                    }
+                    if (app.available && !own && !app.system) {
                         add(
                             TvMenuEntry(
                                 label = stringResource(R.string.menu_uninstall),
@@ -797,4 +828,14 @@ private fun PageDots(
             )
         }
     }
+}
+
+// The panel's tiles enter with a frame-delayed layout; retry against the
+// composition clock instead of guessing a delay in milliseconds.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

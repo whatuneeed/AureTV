@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -180,6 +181,7 @@ internal fun PinPadOverlay(
     var dismissed by remember { mutableStateOf(false) }
     val requesters = remember { mutableMapOf<Pair<Int, Int>, FocusRequester>() }
     fun requester(r: Int, c: Int): FocusRequester = requesters.getOrPut(r to c) { FocusRequester() }
+    val forgotRequester = remember { FocusRequester() }
     val keyRepeat = rememberTvKeyRepeat()
     val scope = rememberCoroutineScope()
 
@@ -199,6 +201,7 @@ internal fun PinPadOverlay(
     val need4 = stringResource(R.string.kids_pin_need4)
     val wrong = stringResource(R.string.kids_pin_wrong)
     val saved = stringResource(R.string.kids_pin_saved)
+    val damaged = stringResource(R.string.kids_pin_damaged)
     val lockTemplate = stringResource(R.string.kids_lock_wait)
     val forgot = stringResource(R.string.kids_forgot)
 
@@ -241,6 +244,11 @@ internal fun PinPadOverlay(
         if (mode == PinPadMode.VERIFY && KidsMode.lockRemaining(context, profileId) > 0) {
             digits = PinDigits()
             refreshLock()
+            return
+        }
+        if (mode == PinPadMode.VERIFY && store.pinDamaged(profileId)) {
+            digits = PinDigits()
+            showNote(damaged, true)
             return
         }
         busy = true
@@ -295,13 +303,22 @@ internal fun PinPadOverlay(
 
     // Cold starts (task restore, adb) compose the pad BEFORE the window gains
     // input focus, and a requestFocus made that early is silently lost — the
-    // pad would render but swallow every key except Back. HomeScreen retries
-    // its request the same way after the window settles; the repeat is free
-    // when the key already holds the focus.
+    // pad would render but swallow every key except Back. Retry on the next
+    // frames instead of waiting a blind 400 ms.
     LaunchedEffect(Unit) {
-        requesters[0 to 0]?.requestFocus()
-        kotlinx.coroutines.delay(400)
-        requesters[0 to 0]?.requestFocus()
+        requesters[0 to 0]?.requestWhenAttached()
+    }
+
+    // The visible cursor is the source of truth; Android focus must follow every
+    // step so TalkBack reads the digit the user is actually on, and the forgot
+    // link is a real target too.
+    LaunchedEffect(row, column, forgotFocused, mode, onForgot) {
+        if (dismissed) return@LaunchedEffect
+        if (forgotFocused && mode == PinPadMode.VERIFY && onForgot != null) {
+            forgotRequester.requestWhenAttached()
+        } else {
+            requesters[row to column]?.requestWhenAttached()
+        }
     }
 
     BackHandler { dismiss(onCancel) }
@@ -540,6 +557,8 @@ internal fun PinPadOverlay(
                         fontSize = scale.sp(NOTE_FONT),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
+                            .focusRequester(forgotRequester)
+                            .focusable()
                             .clearAndSetSemantics {
                                 contentDescription = forgot
                                 role = Role.Button
@@ -642,7 +661,10 @@ private fun RecoveryFlow(
     }
 
     val hint = store.recoveryHint(profileId)
+    val recoveryDamaged = store.recoveryDamaged(profileId)
+    val damagedNote = stringResource(R.string.kids_pin_damaged)
     val note = when {
+        recoveryDamaged -> damagedNote
         lockSeconds > 0 -> String.format(java.util.Locale.ROOT, lockTemplate, lockSeconds)
         wrong && hint.isNotEmpty() -> "$hint\n$wrongAnswer"
         wrong -> wrongAnswer
@@ -662,6 +684,12 @@ private fun RecoveryFlow(
             placeholder = placeholder,
             onDone = { answer ->
                 if (busy || dismissed) return@RenameKeyboardOverlay
+                if (recoveryDamaged) {
+                    // A broken recovery hash can never pass; retyping the same
+                    // answer would only add lockout attempts.
+                    attempt++
+                    return@RenameKeyboardOverlay
+                }
                 if (KidsMode.lockRemaining(context, profileId) > 0) {
                     wrong = false
                     attempt++
@@ -685,4 +713,15 @@ private fun RecoveryFlow(
             onCancel = { cancel() },
         )
     }
+}
+
+// A requester created in this composition is attached in the next layout pass;
+// retrying on the following frames avoids a blind millisecond delay and keeps
+// the request safe after a data change removed the previous node.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

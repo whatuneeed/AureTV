@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.ui
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -26,9 +27,11 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -57,15 +60,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
-import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeEdit
+import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
-import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
+import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.Weather
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
-import com.whatuneed.ovisiontv.kotlin.data.WatchNextSource
 import com.whatuneed.ovisiontv.kotlin.data.hideApp
 import com.whatuneed.ovisiontv.kotlin.data.homeApps
 import com.whatuneed.ovisiontv.kotlin.data.homeFocusKey
@@ -93,9 +95,16 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_LEFT
 import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_TOP
 import com.whatuneed.ovisiontv.kotlin.ui.components.WeatherCapsule
 import com.whatuneed.ovisiontv.kotlin.ui.components.WeatherPanel
+import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryEngine
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySnapshot
+import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -106,6 +115,7 @@ import kotlin.math.min
 
 // tvOS does not expose the long-press delay; Android reports a hold as ~500 ms
 // with releases that can land near 430 ms, so 350 ms is a safe project value.
+private const val TAG = "OVisionHome"
 private const val MENU_HOLD_MS = 350L
 
 // Phase 08: only a resting cursor is remembered; a 400 ms pause reads as an
@@ -123,6 +133,9 @@ private const val FOLDER_ZOOM_MS = 500
 // 14_MOTION_DESIGN M18: the tvOS parade advances every 10 s. A manual step
 // restarts the clock, as the Java hero did.
 private const val SHELF_ADVANCE_MS = 10_000L
+// A hero must stay focused briefly before it counts as seen; otherwise a fast
+// pass through a rail writes prefs for every card that never really showed.
+private const val SHOWN_SETTLE_MS = 500L
 
 // 02_HOME_SCREEN §3: in the app library the first row starts near the safe area,
 // not at the dock band. Both values are project decisions; the RESEARCH gives
@@ -176,6 +189,9 @@ fun HomeScreen(
     // keep refreshing an invisible capsule (AQ-21).
     foreground: Boolean = true,
     prefsName: String = LauncherPrefs.NAME,
+    // The profile owns discovery signals; the name above already scopes them,
+    // and this id is stored in the snapshot so two profiles stay apart.
+    profileId: String = "p1",
     // A kids profile must not rearrange the parent's saved order: edit mode
     // and the per-tile menus stay closed while it is on.
     kidsMode: Boolean = false,
@@ -204,7 +220,7 @@ fun HomeScreen(
     // live key: a list replaced right after a press must not restore an older app.
     var lastFocusKey by remember { mutableStateOf<String?>(null) }
     var focusIndex by rememberSaveable(initialItems) {
-        val saved = lastFocusKey ?: prefs.getString(LauncherPrefs.KEY_FOCUS_PACKAGE, null)
+        val saved = lastFocusKey ?: SafePreferences.string(prefs, LauncherPrefs.KEY_FOCUS_PACKAGE, null)
         val restored = indexOfHomeFocus(initialItems, saved)
         mutableIntStateOf(
             if (restored >= 0) {
@@ -215,7 +231,7 @@ fun HomeScreen(
         )
     }
     var shelfIndex by rememberSaveable(initialItems) {
-        val saved = prefs.getString(LauncherPrefs.KEY_SHELF_PACKAGE, null)
+        val saved = SafePreferences.string(prefs, LauncherPrefs.KEY_SHELF_PACKAGE, null)
         val dockSize = minOf(columns, initialItems.size)
         val restored = initialItems.indexOfFirst {
             it is HomeItem.AppItem && it.app.packageName == saved
@@ -231,11 +247,53 @@ fun HomeScreen(
     // The shelf belongs to the app under the dock cursor; its cards come only
     // from rows that app published to the TV provider.
     val shelfApp = (items.getOrNull(shelfIndex) as? HomeItem.AppItem)?.app
-    var shelfCards by remember { mutableStateOf<List<ShelfCard>>(emptyList()) }
+    // Discovery is profile-scoped: a new profile creates a new engine, so two
+    // profiles never share usage, favorites or hidden cards.
+    val discovery = remember(context, prefsName, profileId) {
+        DiscoveryEngine(context.applicationContext, prefsName, profileId)
+    }
+    var discoverySnapshot by remember { mutableStateOf(DiscoverySnapshot.EMPTY) }
+    // The dock app's own rail is the tvOS default; every other rail is one Up
+    // away. The selected rail is a string so rememberSaveable survives a
+    // process restore without an enum serializer.
+    var discoverySection by rememberSaveable { mutableStateOf<String?>(null) }
+    var sectionFocused by remember { mutableStateOf(false) }
+    var discoveryRevision by remember { mutableIntStateOf(0) }
+    var shelfMenu by remember { mutableStateOf<DiscoveryItem?>(null) }
+    val sectionCardMemory = remember { mutableStateMapOf<String, Int>() }
+    var lastShelfPackage by remember { mutableStateOf<String?>(null) }
+    val rails = discoverySnapshot.rails
+    val currentSection = rails.firstOrNull { it.section.name == discoverySection }?.section
+        ?: defaultDiscoverySection(rails)
+    val currentRail = rails.firstOrNull { it.section == currentSection }
+    val shelfCards = currentRail?.items.orEmpty()
     var shelfFocus by remember { mutableIntStateOf(-1) }
+    // A resume, a closed menu or a closed search removes the node that held
+    // Android focus. TopShelf owns the card targets, so it gets a tick.
+    var shelfFocusTick by remember { mutableIntStateOf(0) }
     // Which recommendation fills the screen; focusedCard says whether the
-    // dots own the remote. They move together while the shelf has focus.
+    // rail owns the remote. They move together while the shelf has focus.
     var shelfSelected by remember { mutableIntStateOf(0) }
+
+    fun selectDiscoverySection(section: DiscoverySection) {
+        val previous = currentSection
+        if (previous != null) sectionCardMemory[previous.name] = shelfSelected
+        discoverySection = section.name
+        val rail = rails.firstOrNull { it.section == section } ?: return
+        shelfSelected = (sectionCardMemory[section.name] ?: 0)
+            .coerceIn(0, rail.items.lastIndex.coerceAtLeast(0))
+        if (shelfFocus >= 0) shelfFocus = shelfSelected
+    }
+
+    fun enterShelf() {
+        if (rails.isEmpty()) return
+        val target = currentSection ?: defaultDiscoverySection(rails) ?: return
+        discoverySection = target.name
+        sectionFocused = false
+        val rail = rails.firstOrNull { it.section == target } ?: return
+        shelfSelected = shelfSelected.coerceIn(0, rail.items.lastIndex.coerceAtLeast(0))
+        shelfFocus = shelfSelected
+    }
     var pickupActive by remember { mutableStateOf(false) }
     var pickupOrigin by remember { mutableStateOf<Int?>(null) }
     // Order before the drag: BACK during a pickup puts every tile back, since
@@ -249,12 +307,27 @@ fun HomeScreen(
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var longPressHandled by remember { mutableStateOf(false) }
     var openFolder by remember { mutableStateOf<OpenFolder?>(null) }
-    // A folder remembers the cell it was left on; reopening it must not jump
-    // back to the first app (UX-09). The map outlives the overlay on purpose.
-    val folderFocus = remember { mutableMapOf<String, Int>() }
+    // A folder remembers the app it was left on; reopening it must not jump
+    // back to the first cell (UX-09). A package key survives an earlier app
+    // being uninstalled, which an index does not, and the map survives a
+    // process restore.
+    val folderFocus = rememberSaveable(
+        saver = mapSaver(
+            save = { it.toMap() },
+            restore = { saved ->
+                mutableStateMapOf<String, String>().apply {
+                    saved.forEach { (key, value) -> if (value is String) put(key, value) }
+                }
+            },
+        ),
+    ) { mutableStateMapOf<String, String>() }
     var folderClosing by remember { mutableStateOf(false) }
     var launching by remember { mutableStateOf<Launching?>(null) }
     var menuFolderId by remember { mutableStateOf<String?>(null) }
+    // Deleting a folder is destructive to the layout even though its apps are
+    // preserved, so the menu asks once more. Keeping the pending id in state
+    // also keeps the grid from taking the remote while the confirmation is up.
+    var folderDeleteId by remember { mutableStateOf<String?>(null) }
     var menuApp by remember { mutableStateOf<TvApp?>(null) }
     // A hold opens the menu while OK is still down; its auto-repeat would pick
     // the first row the moment the panel takes focus. The menu waits for the
@@ -330,6 +403,7 @@ fun HomeScreen(
     // opening the Control Center does not slide the whole grid up behind it.
     val shelfHeld = (
         shelfFocus >= 0 ||
+            sectionFocused ||
             (capsuleFocused && capsuleFromShelf) ||
             (weatherFocused && weatherFromShelf)
         ) && !libraryMode
@@ -396,23 +470,72 @@ fun HomeScreen(
         weatherStale = Weather.stale(context)
     }
 
-    // Changing the dock app cancels the previous load: a late answer must not
-    // put another app's posters under this one (PHASE 33).
-    LaunchedEffect(shelfApp?.packageName, resumeTick) {
-        shelfFocus = -1
-        shelfSelected = 0
-        val app = shelfApp
-        if (app == null || !ContentPreferences.recommendations(context)) {
-            shelfCards = emptyList()
+    // Refresh on resume, package change and after a hide/favorite. The dock
+    // app's own rail is selected when the cursor moved to another app, but a
+    // refresh never throws the viewer back to the first card (PHASE 33).
+    LaunchedEffect(
+        shelfApp?.packageName,
+        resumeTick,
+        items,
+        kidsMode,
+        discoveryRevision,
+    ) {
+        val hiddenPackages = items
+            .filterIsInstance<HomeItem.FolderItem>()
+            .filter(::isHiddenFolder)
+            .flatMap { it.apps }
+            .mapTo(HashSet()) { it.packageName }
+        val apps = homeApps(items).filterNot { it.packageName in hiddenPackages }
+        // A refresh must keep the card, not the index: a provider row can move
+        // when another app publishes something newer.
+        val selectedId = shelfCards.getOrNull(shelfSelected)?.id
+        val snapshot = discovery.refresh(
+            currentPackage = shelfApp?.packageName,
+            apps = apps,
+            visiblePackages = apps.mapTo(HashSet()) { it.packageName },
+            kidsMode = kidsMode,
+        )
+        discoverySnapshot = snapshot
+        val previous = lastShelfPackage
+        lastShelfPackage = shelfApp?.packageName
+        val appRail = snapshot.rails.firstOrNull { it.section == DiscoverySection.FROM_APP }
+        val wanted = when {
+            appRail != null && (previous != shelfApp?.packageName || discoverySection == null) ->
+                DiscoverySection.FROM_APP
+            else -> snapshot.rails.firstOrNull { it.section.name == discoverySection }?.section
+                ?: defaultDiscoverySection(snapshot.rails)
+        }
+        if (wanted == null) {
+            discoverySection = null
+            shelfSelected = 0
+            shelfFocus = -1
+            sectionFocused = false
             return@LaunchedEffect
         }
-        shelfCards = WatchNextSource.load(
-            context = context,
-            packageName = app.packageName,
-            includeContinue = ContentPreferences.continueWatching(context),
-        )
-        if (shelfFocus > shelfCards.lastIndex) shelfFocus = shelfCards.lastIndex
-        if (shelfSelected > shelfCards.lastIndex) shelfSelected = 0
+        discoverySection = wanted.name
+        val rail = snapshot.rails.firstOrNull { it.section == wanted }
+        val last = rail?.items?.lastIndex?.coerceAtLeast(0) ?: 0
+        if (previous != shelfApp?.packageName) {
+            shelfSelected = 0
+            if (shelfFocus >= 0) shelfFocus = 0
+            sectionCardMemory.clear()
+        } else {
+            val restored = rail?.items?.indexOfFirst { it.id == selectedId } ?: -1
+            shelfSelected = if (restored >= 0) {
+                restored
+            } else {
+                shelfSelected.coerceIn(0, last)
+            }
+            if (shelfFocus >= 0) shelfFocus = shelfSelected
+        }
+    }
+
+    // Remember only the hero the viewer actually saw. Marking a whole rail
+    // would demote cards that never entered the viewport.
+    LaunchedEffect(currentSection, shelfCards, shelfSelected, discoveryRevision) {
+        val section = currentSection ?: return@LaunchedEffect
+        delay(SHOWN_SETTLE_MS)
+        shelfCards.getOrNull(shelfSelected)?.let { discovery.markShown(section, it) }
     }
 
     LaunchedEffect(
@@ -420,6 +543,7 @@ fun HomeScreen(
         openFolder,
         launching,
         menuFolderId,
+        folderDeleteId,
         menuApp,
         moveToFolderApp,
         newFolderApp,
@@ -428,10 +552,12 @@ fun HomeScreen(
         weatherPanelOpen,
     ) {
         if (editing || openFolder != null || launching != null ||
-            menuFolderId != null || menuApp != null || moveToFolderApp != null ||
-            newFolderApp != null || searchOpen || controlCenterOpen || weatherPanelOpen
+            menuFolderId != null || folderDeleteId != null || menuApp != null ||
+            moveToFolderApp != null || newFolderApp != null || searchOpen ||
+            controlCenterOpen || weatherPanelOpen
         ) {
             shelfFocus = -1
+            sectionFocused = false
         }
     }
 
@@ -441,9 +567,12 @@ fun HomeScreen(
     // would change what Down returns to.
     LaunchedEffect(
         shelfApp?.packageName,
-        shelfCards.size,
+        currentSection,
+        shelfCards,
         shelfSelected,
         shelfFocus,
+        sectionFocused,
+        shelfMenu,
         libraryMode,
         editing,
         openFolder,
@@ -458,10 +587,12 @@ fun HomeScreen(
         weatherFocused,
         weatherPanelOpen,
     ) {
-        if (shelfCards.size <= 1 || libraryMode || editing || openFolder != null ||
-            launching != null || menuFolderId != null || menuApp != null ||
-            moveToFolderApp != null || newFolderApp != null || searchOpen ||
-            controlCenterOpen || capsuleFocused || weatherFocused || weatherPanelOpen
+        if (shelfCards.size <= 1 || sectionFocused || shelfFocus >= 0 ||
+            shelfMenu != null || libraryMode || editing || openFolder != null ||
+            launching != null || menuFolderId != null || folderDeleteId != null ||
+            menuApp != null || moveToFolderApp != null || newFolderApp != null ||
+            searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
+            weatherPanelOpen
         ) {
             return@LaunchedEffect
         }
@@ -722,6 +853,10 @@ fun HomeScreen(
 
     fun startLaunch(app: TvApp, center: Offset) {
         if (launching != null) return
+        if (!app.available) {
+            Toast.makeText(context, R.string.app_unavailable, Toast.LENGTH_SHORT).show()
+            return
+        }
         holdJob?.cancel()
         holdJob = null
         longPressHandled = false
@@ -744,15 +879,39 @@ fun HomeScreen(
 
     // A provider deep link is opened only when it resolves back to the app that
     // published it; otherwise the app itself opens, never a foreign package.
-    fun activateShelfCard(card: ShelfCard) {
-        val app = shelfApp ?: return
-        val intent = WatchNextSource.contentIntent(context, card)
+    fun closeShelfMenu() {
+        shelfMenu = null
+        menuOpenedByHold = false
+        shelfFocus = shelfSelected
+        shelfFocusTick++
+    }
+
+    fun activateShelfCard(card: DiscoveryItem) {
+        // The rail is refreshed after a profile/allowlist change, but a press
+        // in that gap must not open an app the kids profile no longer allows.
+        if (kidsMode && !KidsMode.allowed(context, card.packageName)) {
+            Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = discovery.contentIntent(card)
         if (intent != null) {
-            runCatching { context.startActivity(intent) }.onFailure {
+            val opened = runCatching { context.startActivity(intent) }
+                .onFailure { Log.w(TAG, "deep link failed for ${card.packageName}", it) }
+                .isSuccess
+            if (opened) {
+                discovery.recordLaunch(card.packageName)
+            } else {
                 Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
             }
-        } else {
+            return
+        }
+        // A row whose deep link stopped resolving still opens its own app; it
+        // must never open a foreign package or show invented content.
+        val app = homeApps(items).firstOrNull { it.packageName == card.packageName }
+        if (app != null) {
             startLaunch(app, cellCenter(focusIndex))
+        } else {
+            Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -885,6 +1044,9 @@ fun HomeScreen(
         menuFolderId = menuFolderId?.takeIf { id ->
             items.any { it is HomeItem.FolderItem && it.id == id }
         }
+        folderDeleteId = folderDeleteId?.takeIf { id ->
+            items.any { it is HomeItem.FolderItem && it.id == id }
+        }
     }
 
     // 14_MOTION_DESIGN M8: the tile the drag pushed aside stays the folder
@@ -907,8 +1069,9 @@ fun HomeScreen(
     // column keeps the same app under the cursor on the way up.
     BackHandler(
         enabled = libraryMode && !editing && openFolder == null && launching == null &&
-            menuFolderId == null && menuApp == null && moveToFolderApp == null &&
-            newFolderApp == null && !searchOpen && !controlCenterOpen,
+            menuFolderId == null && folderDeleteId == null && menuApp == null &&
+            moveToFolderApp == null && newFolderApp == null && !searchOpen &&
+            !controlCenterOpen,
     ) {
         focusIndex = focusIndex % columns
     }
@@ -922,7 +1085,8 @@ fun HomeScreen(
     // needs its own target; focusing the grid root would make TalkBack read the
     // first tile instead of the one being moved.
     val pickupRequester = remember { FocusRequester() }
-    val menuOpen = menuFolderId != null || menuApp != null || moveToFolderApp != null
+    val menuOpen = menuFolderId != null || folderDeleteId != null ||
+        menuApp != null || moveToFolderApp != null
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
         openFolder == null && launching == null && !menuOpen && !searchOpen &&
@@ -943,8 +1107,13 @@ fun HomeScreen(
         editing,
         pickupActive,
         gridPlaced,
+        shelfFocus,
+        sectionFocused,
     ) {
         if (gridModal || !gridPlaced) return@LaunchedEffect
+        // TopShelf owns the real target while the carousel or its section bar
+        // has the cursor; the grid must not pull focus back underneath it.
+        if (shelfFocus >= 0 || sectionFocused) return@LaunchedEffect
         // The pill sits outside the grid; while it owns the cursor the grid must
         // not take the focus back (the panel requests its own tile).
         if (capsuleFocused) {
@@ -1019,14 +1188,14 @@ fun HomeScreen(
                 // The Control Center owns the remote while it is open; the
                 // focused tile already consumed its own keys.
                 if (controlCenterOpen) return@onKeyEvent true
+                // A shelf card menu is its own focus surface.
+                if (shelfMenu != null) return@onKeyEvent true
                 // The forecast panel has its own focus and Back handler.
                 if (weatherPanelOpen) return@onKeyEvent true
                 // A context menu owns the remote. A hold that opened it keeps
                 // sending repeats, and some remotes deliver each repeat as its
                 // own press and release; those pairs must not reach the grid.
-                if (menuApp != null || menuFolderId != null ||
-                    moveToFolderApp != null || newFolderApp != null
-                ) {
+                if (menuOpen || newFolderApp != null) {
                     return@onKeyEvent true
                 }
                 when (event.type) {
@@ -1040,13 +1209,14 @@ fun HomeScreen(
                         // forecast, Right crosses to the status pill, Down/Back
                         // drop into the carousel or the grid, Up/Left stay put.
                         if (weatherFocused) {
-                            when (event.key) {
+                            val handled = when (event.key) {
                                 Key.DirectionRight -> {
                                     val fromShelf = weatherFromShelf
                                     weatherFocused = false
                                     weatherFromShelf = false
                                     capsuleFromShelf = fromShelf
                                     capsuleFocused = true
+                                    true
                                 }
 
                                 Key.DirectionDown, Key.Back -> {
@@ -1056,22 +1226,31 @@ fun HomeScreen(
                                     if (fromShelf && shelfCards.isNotEmpty() && !editing) {
                                         shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
                                     }
+                                    true
                                 }
 
                                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                                     okDown = false
                                     weatherPanelOpen = true
+                                    true
                                 }
 
-                                else -> Unit
+                                // Up/Left have nowhere to go from the left pill.
+                                // Menu/Search are not grid actions here either;
+                                // system media and volume keys still fall through.
+                                Key.DirectionUp, Key.DirectionLeft,
+                                Key.Menu, Key.Search, Key.Assist,
+                                -> true
+
+                                else -> false
                             }
-                            return@onKeyEvent true
+                            if (handled) return@onKeyEvent true
                         }
                         // The pill is the top of the screen: Ok opens the panel,
                         // Down/Back drop back in, Left reaches the weather card
                         // when one is shown, Right/Up have nowhere to go.
                         if (capsuleFocused) {
-                            when (event.key) {
+                            val handled = when (event.key) {
                                 Key.DirectionDown, Key.Back -> {
                                     val fromShelf = capsuleFromShelf
                                     capsuleFocused = false
@@ -1079,6 +1258,7 @@ fun HomeScreen(
                                     if (fromShelf && shelfCards.isNotEmpty() && !editing) {
                                         shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
                                     }
+                                    true
                                 }
 
                                 Key.DirectionLeft -> {
@@ -1088,21 +1268,80 @@ fun HomeScreen(
                                         capsuleFromShelf = false
                                         weatherFromShelf = fromShelf
                                         weatherFocused = true
+                                        true
+                                    } else {
+                                        false
                                     }
                                 }
 
                                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                                     okDown = false
                                     controlCenterOpen = true
+                                    true
                                 }
 
-                                else -> Unit
+                                // The pill is the top-right corner: Right/Up stay
+                                // put, and Menu/Search are not dock actions.
+                                Key.DirectionRight, Key.DirectionUp,
+                                Key.Menu, Key.Search, Key.Assist,
+                                -> true
+
+                                else -> false
                             }
-                            return@onKeyEvent true
+                            if (handled) return@onKeyEvent true
                         }
-                        // The shelf row owns the remote while it is focused so
+                        // The section bar sits above the rail: Left/Right
+                        // switch the rail, Down/Back return to the cards.
+                        if (sectionFocused && rails.size > 1 && !editing) {
+                            val index = rails.indexOfFirst { it.section == currentSection }
+                            val handled = when (event.key) {
+                                Key.DirectionLeft -> {
+                                    if (rails.isNotEmpty()) {
+                                        val next = (index - 1 + rails.size) % rails.size
+                                        selectDiscoverySection(rails[next].section)
+                                    }
+                                    true
+                                }
+
+                                Key.DirectionRight -> {
+                                    if (rails.isNotEmpty()) {
+                                        val next = (index + 1) % rails.size
+                                        selectDiscoverySection(rails[next].section)
+                                    }
+                                    true
+                                }
+
+                                Key.DirectionDown, Key.Back,
+                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
+                                -> {
+                                    sectionFocused = false
+                                    shelfFocus = shelfSelected.coerceIn(
+                                        0,
+                                        shelfCards.lastIndex.coerceAtLeast(0),
+                                    )
+                                    true
+                                }
+
+                                Key.DirectionUp -> {
+                                    sectionFocused = false
+                                    focusCapsule(fromShelf = true)
+                                    true
+                                }
+
+                                // Do not leak these into the dock branch below:
+                                // the bar is not the app grid. SEARCH stays a
+                                // grid/capsule action for now; MENU has no
+                                // section-specific items.
+                                Key.Menu, Key.Search, Key.Assist -> true
+
+                                else -> false
+                            }
+                            if (handled) return@onKeyEvent true
+                        }
+                        // The rail owns the remote while a card is focused so
                         // the grid cursor underneath cannot move.
                         if (shelfFocus >= 0 && shelfCards.isNotEmpty() && !editing) {
+                            val held = shelfCards.getOrNull(shelfFocus)
                             val handled = when (event.key) {
                                 Key.DirectionLeft -> {
                                     if (shelfFocus > 0) {
@@ -1122,19 +1361,46 @@ fun HomeScreen(
 
                                 Key.DirectionDown, Key.Back -> {
                                     shelfFocus = -1
+                                    sectionFocused = false
                                     true
                                 }
 
                                 Key.DirectionUp -> {
-                                    // The pill is the row above the carousel.
+                                    // Up reaches the section bar when there is
+                                    // one; otherwise it is the status pill.
                                     shelfFocus = -1
-                                    focusCapsule(fromShelf = true)
+                                    if (rails.size > 1) {
+                                        sectionFocused = true
+                                    } else {
+                                        focusCapsule(fromShelf = true)
+                                    }
                                     true
                                 }
 
+                                // A long OK opens the card menu, as on a grid
+                                // tile. A short OK is handled on KeyUp so the
+                                // hold cannot activate the card as well.
                                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                                    okDown = true
+                                    longPressHandled = false
+                                    holdJob?.cancel()
+                                    holdJob = scope.launch {
+                                        delay(MENU_HOLD_MS)
+                                        longPressHandled = true
+                                        okDown = false
+                                        menuOpenedByHold = true
+                                        shelfMenu = held
+                                    }
+                                    true
+                                }
+
+                                Key.Menu -> {
+                                    holdJob?.cancel()
+                                    holdJob = null
                                     okDown = false
-                                    shelfCards.getOrNull(shelfFocus)?.let(::activateShelfCard)
+                                    longPressHandled = true
+                                    menuOpenedByHold = false
+                                    shelfMenu = held
                                     true
                                 }
 
@@ -1157,9 +1423,8 @@ fun HomeScreen(
 
                             Key.DirectionUp -> {
                                 if (focusIndex < columns && !editing && !pickupActive) {
-                                    if (shelfCards.isNotEmpty()) {
-                                        shelfFocus =
-                                            shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                                    if (rails.isNotEmpty()) {
+                                        enterShelf()
                                     } else {
                                         // No recommendations: the row above the
                                         // dock is the status pill (Java focusTop).
@@ -1296,6 +1561,9 @@ fun HomeScreen(
                             // A remote delivers BACK to the focus node before the
                             // Activity dispatcher (see FolderOverlay), so the grid
                             // claims it here; panels own their own BACK.
+                            // At the root there is nothing above Home: BACK is a
+                            // deliberate no-op (the launcher is the HOME surface),
+                            // matching MainActivity's OnBackPressedCallback.
                             Key.Back -> {
                                 when {
                                     openFolder != null || menuOpen -> Unit
@@ -1323,7 +1591,9 @@ fun HomeScreen(
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                             holdJob?.cancel()
                             holdJob = null
-                            if (editing && pickupActive) {
+                            if (!editing && shelfFocus >= 0 && okDown && !longPressHandled) {
+                                shelfCards.getOrNull(shelfFocus)?.let(::activateShelfCard)
+                            } else if (editing && pickupActive) {
                                 if (okDown && !longPressHandled) dropPickup()
                             } else if (!editing && okDown && !longPressHandled && shelfFocus < 0) {
                                 when (val item = items.getOrNull(focusIndex)) {
@@ -1355,7 +1625,7 @@ fun HomeScreen(
                 // offering the tiles it covers.
                 .then(
                     if (openFolder != null || launching != null || menuOpen || searchOpen ||
-                        controlCenterOpen || weatherPanelOpen
+                        controlCenterOpen || weatherPanelOpen || shelfMenu != null
                     ) {
                         Modifier.clearAndSetSemantics {}
                     } else {
@@ -1380,12 +1650,16 @@ fun HomeScreen(
                 if (shelfVisible) {
                     TopShelf(
                         app = shelfApp,
-                        cards = shelfCards,
+                        rails = rails,
+                        selectedSection = currentSection,
                         selectedCard = shelfSelected,
                         focusedCard = shelfFocus,
+                        sectionFocused = sectionFocused,
                         onCardActivate = ::activateShelfCard,
+                        onSectionActivate = ::selectDiscoverySection,
                         scale = scale,
                         reduceMotion = reduceMotion,
+                        focusTick = focusTick + shelfFocusTick,
                     )
                 }
             }
@@ -1394,6 +1668,7 @@ fun HomeScreen(
             // fading out, so the first row keeps its dock look at the top.
             DockBand(
                 scale = scale,
+                reduceMotion = reduceMotion,
                 scroll = scroll,
                 shift = { libraryShift.value - shelfHide },
                 focused = focusIndex < columns && shelfFocus < 0 && !capsuleFocused &&
@@ -1545,8 +1820,14 @@ fun HomeScreen(
                 tileCenter = Offset(open.tileX, open.tileY),
                 scale = scale,
                 launching = launching != null,
-                initialFocusIndex = folderFocus[open.folder.id] ?: 0,
-                onFocusIndexChanged = { folderFocus[open.folder.id] = it },
+                initialFocusKey = folderFocus[open.folder.id],
+                onFocusKeyChanged = { key ->
+                    if (key == null) {
+                        folderFocus.remove(open.folder.id)
+                    } else {
+                        folderFocus[open.folder.id] = key
+                    }
+                },
                 onLaunch = { app, center -> startLaunch(app, center) },
                 onClosing = { folderClosing = true },
                 onClose = {
@@ -1584,7 +1865,10 @@ fun HomeScreen(
                             label = context.getString(R.string.menu_delete_folder),
                             destructive = true,
                         ) {
-                            removeFolderById(folderId)
+                            // The menu already animated out; ask once more
+                            // before the layout loses the folder.
+                            menuFolderId = null
+                            folderDeleteId = folderId
                         },
                     ),
                     anchor = cellCenter(index),
@@ -1598,6 +1882,33 @@ fun HomeScreen(
             }
         }
 
+        // Destructive confirmation for a folder. It is a second menu, not a
+        // silent delete: the apps return home, but the user still chooses.
+        folderDeleteId?.let { folderId ->
+            val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
+            val folder = items.getOrNull(index) as? HomeItem.FolderItem
+            if (folder != null) {
+                TvMenu(
+                    title = folder.name,
+                    entries = listOf(
+                        TvMenuEntry(
+                            label = context.getString(R.string.menu_delete_folder),
+                            destructive = true,
+                        ) {
+                            removeFolderById(folderId)
+                            folderDeleteId = null
+                        },
+                        TvMenuEntry(context.getString(R.string.settings_cancel)) {
+                            folderDeleteId = null
+                        },
+                    ),
+                    anchor = cellCenter(index),
+                    scale = scale,
+                    onDismiss = { folderDeleteId = null },
+                )
+            }
+        }
+
         menuApp?.let { app ->
             val index = items.indexOfFirst {
                 it is HomeItem.AppItem && it.app.packageName == app.packageName
@@ -1607,11 +1918,16 @@ fun HomeScreen(
                 // uninstalling it would remove the way into Settings.
                 val own = app.packageName == context.packageName
                 val entries = buildList {
-                    add(
-                        TvMenuEntry(context.getString(R.string.menu_open)) {
-                            startLaunch(app, cellCenter(index))
-                        },
-                    )
+                    // A package that was restored but is not installed here has
+                    // no activity to open, inspect or uninstall. Moving and
+                    // hiding it are still meaningful.
+                    if (app.available) {
+                        add(
+                            TvMenuEntry(context.getString(R.string.menu_open)) {
+                                startLaunch(app, cellCenter(index))
+                            },
+                        )
+                    }
                     add(
                         TvMenuEntry(context.getString(R.string.menu_move)) {
                             focusIndex = index
@@ -1626,19 +1942,21 @@ fun HomeScreen(
                             moveToFolderApp = app
                         },
                     )
-                    if (!own) {
+                    if (app.available && !own) {
                         add(
                             TvMenuEntry(context.getString(R.string.menu_hide)) {
                                 hideAppFromHome(app)
                             },
                         )
                     }
-                    add(
-                        TvMenuEntry(context.getString(R.string.menu_app_info)) {
-                            onAppInfo(app)
-                        },
-                    )
-                    if (!own && !app.system) {
+                    if (app.available) {
+                        add(
+                            TvMenuEntry(context.getString(R.string.menu_app_info)) {
+                                onAppInfo(app)
+                            },
+                        )
+                    }
+                    if (app.available && !own && !app.system) {
                         add(
                             TvMenuEntry(
                                 label = context.getString(R.string.menu_uninstall),
@@ -1661,6 +1979,59 @@ fun HomeScreen(
                     },
                 )
             }
+        }
+
+        // A shelf card is a real content offer: open it, keep it, or hide it.
+        // The menu is the only place favorites are added, so a recommendation
+        // can never quietly become "personalized" without the viewer's action.
+        shelfMenu?.let { item ->
+            val favorite = discovery.isFavorite(item.id)
+            TvMenu(
+                title = item.title,
+                entries = buildList {
+                    add(
+                        TvMenuEntry(context.getString(R.string.menu_open)) {
+                            closeShelfMenu()
+                            activateShelfCard(item)
+                        },
+                    )
+                    add(
+                        TvMenuEntry(
+                            context.getString(
+                                if (favorite) {
+                                    R.string.menu_remove_favorite
+                                } else {
+                                    R.string.menu_add_favorite
+                                },
+                            ),
+                        ) {
+                            if (favorite) {
+                                discovery.removeFavorite(item.id)
+                            } else {
+                                discovery.addFavorite(
+                                    item.copy(reason = DiscoveryReason.FAVORITE),
+                                )
+                            }
+                            closeShelfMenu()
+                            discoveryRevision++
+                        },
+                    )
+                    add(
+                        TvMenuEntry(
+                            label = context.getString(R.string.menu_hide),
+                            destructive = true,
+                        ) {
+                            discovery.hide(item)
+                            closeShelfMenu()
+                            discoveryRevision++
+                        },
+                    )
+                },
+                anchor = shelfCardAnchor(),
+                scale = scale,
+                suppressOkUntilRelease = menuOpenedByHold,
+                onDismiss = ::closeShelfMenu,
+            )
         }
 
         // 05_FOLDERS: the app menu's "Move to Folder…" lists the user folders and
@@ -1714,7 +2085,10 @@ fun HomeScreen(
                 apps = searchableApps,
                 scale = scale,
                 reduceMotion = reduceMotion,
-                onClose = { searchOpen = false },
+                onClose = {
+                    searchOpen = false
+                    if (shelfFocus >= 0) shelfFocusTick++
+                },
                 // A failed start shows its own toast; the panel stays so the
                 // query and the chosen app are not lost.
                 onLaunch = { app -> if (onLaunch(app)) searchOpen = false },
@@ -1751,7 +2125,7 @@ fun HomeScreen(
                                 Intent(context, SettingsActivity::class.java)
                                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                             )
-                        }
+                        }.onFailure { Log.w(TAG, "cannot open SettingsActivity", it) }
                     }
                 },
                 onOpenSystem = onOpenSystem,
@@ -1802,6 +2176,7 @@ fun HomeScreen(
         ) {
             StatusCapsule(
                 scale = scale,
+                reduceMotion = reduceMotion,
                 focused = capsuleFocused,
                 promoted = controlCenterOpen,
                 clock = capsuleClock,
@@ -1881,6 +2256,7 @@ private fun LibraryBackdrop(alpha: () -> Float) {
 @Composable
 private fun DockBand(
     scale: TvScale,
+    reduceMotion: Boolean,
     scroll: Animatable<Float, AnimationVector1D>,
     shift: () -> Float,
     focused: Boolean,
@@ -1892,7 +2268,7 @@ private fun DockBand(
     // the shared focus duration so the band and the tile grow together.
     val grow by animateFloatAsState(
         targetValue = if (focused) TvOs.DOCK_FOCUS_GROWTH else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "dockFocusGrowth",
     )
     Box(
@@ -1928,6 +2304,10 @@ private fun DockBand(
 }
 
 fun launchApp(context: Context, app: TvApp): Boolean {
+    if (!app.available) {
+        Toast.makeText(context, R.string.app_unavailable, Toast.LENGTH_SHORT).show()
+        return false
+    }
     val intent = Intent(Intent.ACTION_MAIN).apply {
         component = ComponentName(app.packageName, app.activityName)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1935,7 +2315,10 @@ fun launchApp(context: Context, app: TvApp): Boolean {
     return try {
         context.startActivity(intent)
         true
-    } catch (_: Exception) {
+    } catch (error: Exception) {
+        // The toast is for the viewer; the log keeps the reason diagnosable
+        // without recording anything about the person (ST-22).
+        Log.w(TAG, "cannot launch ${app.packageName}", error)
         Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
         false
     }

@@ -82,6 +82,11 @@ class HomeOrderStoreTest {
 
         assertEquals(listOf("a.one", "a.two"), restored.map { it.key })
         assertTrue(restored.all { it is HomeItem.AppItem })
+        assertEquals(
+            "{not json",
+            context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
+                .getString("order_quarantine", null),
+        )
     }
 
     @Test

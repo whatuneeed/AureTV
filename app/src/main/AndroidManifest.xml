@@ -37,11 +37,22 @@
     <!-- The Control Center's Wi-Fi tile reads the adapter state; the network
          name itself is only requested when the tile is pressed. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <!-- Android 9+ treats the Wi-Fi name as location data. The grant is asked
-         for from the tile, never at first launch; without it the tile says
-         "Connected" instead of the name. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- The Wi-Fi name is a convenience, not a location feature. Android 13+
+         has a Wi-Fi-specific grant that can promise the system the name is not
+         used to derive physical location; older releases still require fine
+         location for the same SSID read. The grant is asked for from the tile,
+         never at first launch; without it the tile says "Connected". -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <!-- Android 12-12L only hand out fine location when coarse is requested
+         alongside it; both stop at API 32, so Android 13+ never sees them. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
 
     <queries>
         <intent>
@@ -68,6 +79,7 @@
     </queries>
 
     <application
+        android:name=".OVisionApp"
         android:allowBackup="false"
         android:banner="@drawable/tv_banner"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -105,6 +117,12 @@
              a leanback entry is listed in the system app row; kept non-exported
              it would show up there and fail to start with a SecurityException.
              The screen reads no intent data, so opening it from outside is safe. -->
+        <!-- Automatic local backup. Not exported: only the launcher's own
+             AlarmManager PendingIntent can deliver this action. -->
+        <receiver
+            android:name=".backup.BackupAlarmReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".SettingsActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
@@ -120,6 +138,16 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- A sub-screen of Settings. No intent filter and not exported: it
+             reads no intent data and only the launcher can open it. -->
+        <activity
+            android:name=".BackupActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true" />
 
         <!-- First run and "Run setup again" from Settings. No intent filter: it
              is not an app tile, and nothing outside the launcher may open it. -->

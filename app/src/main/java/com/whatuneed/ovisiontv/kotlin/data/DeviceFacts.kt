@@ -59,6 +59,30 @@ data class DeviceFacts(
     val airplayInstalled: Boolean,
 )
 
+/** The narrowest grant for reading the Wi-Fi name on a given API level. */
+@Suppress("InlinedApi") // A compile-time string constant, guarded by the API check below.
+internal fun wifiNamePermissionFor(sdk: Int): String =
+    if (sdk >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.NEARBY_WIFI_DEVICES
+    } else {
+        Manifest.permission.ACCESS_FINE_LOCATION
+    }
+
+/**
+ * Android 12-12L ignore a fine-location request unless coarse is sent with it.
+ * API 33+ uses the Wi-Fi-specific grant, so neither location permission is
+ * ever requested there.
+ */
+@Suppress("InlinedApi") // A compile-time string constant, guarded by the API check below.
+internal fun wifiNamePermissionsFor(sdk: Int): Array<String> = when {
+    sdk >= Build.VERSION_CODES.TIRAMISU -> arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES)
+    sdk >= Build.VERSION_CODES.S -> arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+    else -> arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+}
+
 object DeviceFactsReader {
     /** The GPL-3.0 receiver is a separate app; the launcher never links its code. */
     const val AIRPLAY_PACKAGE = "io.github.besliky.airplaytv"
@@ -112,26 +136,33 @@ object DeviceFactsReader {
 
     /**
      * Transport of the active network for the status capsule and Control
-     * Center. The name itself is read by [wifiSsid], which needs location.
+     * Center. The name itself is read by [wifiSsid], which needs the narrow
+     * Wi-Fi-name grant described below.
      */
     fun currentNetwork(context: Context): NetworkKind =
         runCatching { network(context).first }.getOrDefault(NetworkKind.NONE)
 
-    /** Android 12+ may grant only the approximate location; it is enough for the name. */
-    fun hasLocation(context: Context): Boolean =
-        context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED ||
-            context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
+    /**
+     * Android 13+ has a Wi-Fi-specific grant that can promise the system the
+     * name is not used to derive location. Older releases still gate the same
+     * SSID read behind fine location; this is the narrowest grant each API
+     * offers, not a general location request.
+     */
+    fun wifiNamePermission(): String = wifiNamePermissionFor(Build.VERSION.SDK_INT)
+
+    fun wifiNamePermissions(): Array<String> = wifiNamePermissionsFor(Build.VERSION.SDK_INT)
+
+    fun hasWifiNamePermission(context: Context): Boolean =
+        context.checkSelfPermission(wifiNamePermission()) == PackageManager.PERMISSION_GRANTED
 
     /**
-     * The Wi-Fi network name for the Control Center tile. Android 9+ hides it
-     * until the person grants location, so without the grant the tile says
-     * "Connected" — the same fallback as the Java build.
+     * The Wi-Fi network name for the Control Center tile. Without the narrow
+     * Wi-Fi grant (or legacy location grant) the tile says "Connected" — the
+     * same fallback as the Java build.
      */
     @SuppressLint("MissingPermission")
     fun wifiSsid(context: Context): String? {
-        if (!hasLocation(context)) return null
+        if (!hasWifiNamePermission(context)) return null
         val manager = context.getSystemService(WifiManager::class.java) ?: return null
         return visibleSsid(runCatching { manager.connectionInfo?.ssid }.getOrNull())
     }

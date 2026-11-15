@@ -204,6 +204,20 @@ class MainActivityInputTest {
         assertNotNull(resumedMain())
     }
 
+    // The launcher is the HOME surface. BACK at its root must not finish the
+    // activity or fall through to another home screen: a remote user pressing
+    // Back on the grid should stay exactly where they are.
+    @Test
+    fun back_at_the_root_keeps_home_resumed() {
+        waitForVisible(FOLDER_NAME)
+        waitForWindowFocus()
+
+        sendKey(KeyEvent.KEYCODE_BACK)
+
+        assertNotNull(resumedMain())
+        waitForVisible(FOLDER_NAME)
+    }
+
     // The search surface is a focus node of its own. Its arrows and OK, and the
     // unicode char of a hardware key, are only exercised by real events: the
     // synthetic tests tap the keys through their TalkBack action.

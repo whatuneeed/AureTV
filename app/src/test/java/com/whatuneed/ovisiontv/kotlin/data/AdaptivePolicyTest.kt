@@ -75,18 +75,37 @@ class AdaptivePolicyTest {
             assertTrue(small.previewBytes <= large.previewBytes)
             assertTrue(small.previewThumbBytes <= large.previewThumbBytes)
             assertTrue(small.appArtKb <= large.appArtKb)
-            assertTrue(small.shelfArtEntries <= large.shelfArtEntries)
-            assertTrue(small.shelfArtMaxPx <= large.shelfArtMaxPx)
+            assertTrue(small.discoveryArtEntries <= large.discoveryArtEntries)
+            assertTrue(small.discoveryArtBytes <= large.discoveryArtBytes)
+            assertTrue(small.discoveryCardPx <= large.discoveryCardPx)
+            assertTrue(small.discoveryHeroPx <= large.discoveryHeroPx)
             assertTrue(small.shadowSteps <= large.shadowSteps)
         }
     }
 
-    // Twelve posters are on screen at once; a profile that keeps fewer
+    // A rail is eight cards plus the hero; a profile that keeps fewer
     // re-decodes art that is still being drawn.
     @Test
-    fun every_profile_keeps_a_full_carousel_of_art() {
+    fun every_profile_keeps_a_full_rail_of_art() {
         for (profile in PerformanceProfile.entries) {
-            assertTrue(AdaptivePolicy.budgets(profile).shelfArtEntries >= 10)
+            assertTrue(AdaptivePolicy.budgets(profile).discoveryArtEntries >= 10)
+            assertTrue(AdaptivePolicy.budgets(profile).discoveryHeroPx >= 1280)
+            assertTrue(AdaptivePolicy.budgets(profile).discoveryCardPx >= 480)
+        }
+    }
+
+    // The shelf cache is capped in bytes, so the budget must hold the selected
+    // hero and the rail at the same time instead of trusting entry count.
+    @Test
+    fun every_profile_fits_the_hero_and_the_rail_in_its_byte_budget() {
+        for (profile in PerformanceProfile.entries) {
+            val budget = AdaptivePolicy.budgets(profile)
+            val hero = estimatedArtBytes(budget.discoveryHeroPx, budget.discoveryHeroPx * 9 / 16)
+            val card = estimatedArtBytes(budget.discoveryCardPx, budget.discoveryCardPx * 9 / 16)
+            assertTrue(
+                "$profile shelf budget must hold a hero and eight cards",
+                hero + card * 8 <= budget.discoveryArtBytes,
+            )
         }
     }
 }

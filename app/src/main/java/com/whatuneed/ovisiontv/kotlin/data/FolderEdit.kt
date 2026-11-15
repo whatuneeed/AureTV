@@ -58,6 +58,7 @@ internal fun hideApp(
     val index = items.indexOfFirst { it is HomeItem.AppItem && it.app.packageName == packageName }
     if (index < 0) return null
     val app = (items[index] as HomeItem.AppItem).app
+    if (!app.available) return null
     val list = items.toMutableList()
     list.removeAt(index)
     val hiddenIndex = list.indexOfFirst { isHiddenFolder(it) }

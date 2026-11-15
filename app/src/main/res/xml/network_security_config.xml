@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Russian networks block port 443 to Apple's aerial CDN while port 80 serves
-     the same files, so sylvan.apple.com is the one cleartext exception. Every
-     other host keeps TLS and the system trust store. -->
+<!-- Every host uses TLS. The screen saver's old cleartext path to Apple's CDN
+     was removed: media is HTTPS-first and has no silent HTTP fallback, so a
+     network that blocks 443 falls back to the stills-only saver instead of
+     serving untrusted bytes. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">sylvan.apple.com</domain>
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </domain-config>
 </network-security-config>

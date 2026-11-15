@@ -42,7 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
+import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import kotlin.math.PI
 import kotlin.math.sin
@@ -96,26 +98,27 @@ internal fun CardShell(
     onActivate: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val iconScale by animateFloatAsState(
         targetValue = if (focused) TvOs.FOCUS_SCALE else 1f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "iconFocusScale",
     )
     val confirmScale by animateFloatAsState(
         targetValue = if (confirming) FOLDER_CONFIRM_SCALE else 1f,
-        animationSpec = tween(FOLDER_CONFIRM_MS),
+        animationSpec = tween(motionDuration(FOLDER_CONFIRM_MS, reduceMotion)),
         label = "folderConfirmScale",
     )
     // The clock exists only in edit mode: an always-running transition would
     // invalidate every tile's layer at 60 fps while the grid is idle (R7).
     // It outlives edit mode by the settle window so the rotation can fade out.
-    val jiggleActive = editing && !pickedUp && !confirming
+    val jiggleActive = editing && !pickedUp && !confirming && !reduceMotion
     val jiggleAmount by animateFloatAsState(
         targetValue = if (jiggleActive) 1f else 0f,
         animationSpec = if (jiggleActive) snap() else tween(JIGGLE_SETTLE_MS),
         label = "jiggleAmount",
     )
-    val jigglePhase = if (editing || jiggleAmount > 0f) {
+    val jigglePhase = if (jiggleActive || jiggleAmount > 0f) {
         rememberInfiniteTransition(label = "jiggle").animateFloat(
             initialValue = 0f,
             targetValue = 1f,

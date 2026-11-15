@@ -26,8 +26,10 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
+import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 
 /**
@@ -53,9 +55,10 @@ internal fun TvKeyCap(
     active: Boolean = false,
     stateLabel: String? = null,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "keyCapFocus",
     )
     val grow = 1f + (focusScale - 1f) * focusAmount

@@ -24,6 +24,16 @@ class KidsModeTest {
     }
 
     @Test
+    fun aKidsProfileAllowsOwnAndAllowlistedPackagesOnly() {
+        val allowlist = setOf("tv.allowed")
+        assertTrue(allowedInKidsProfile("com.whatuneed.ovisiontv.kotlin", "com.whatuneed.ovisiontv.kotlin", allowlist))
+        assertTrue(allowedInKidsProfile("com.whatuneed.ovisiontv.kotlin", "tv.allowed", allowlist))
+        assertFalse(allowedInKidsProfile("com.whatuneed.ovisiontv.kotlin", "tv.blocked", allowlist))
+        assertFalse(allowedInKidsProfile("com.whatuneed.ovisiontv.kotlin", null, allowlist))
+        assertFalse(allowedInKidsProfile("com.whatuneed.ovisiontv.kotlin", "", allowlist))
+    }
+
+    @Test
     fun everyStoredPinGetsItsOwnSalt() {
         assertNotEquals(KidsCrypto.newSalt(), KidsCrypto.newSalt())
     }

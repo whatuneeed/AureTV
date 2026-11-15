@@ -33,7 +33,8 @@ object SetupProgress {
         return step.coerceIn(0, count - 1)
     }
 
-    fun done(context: Context): Boolean = prefs(context).getBoolean(KEY_DONE, false)
+    fun done(context: Context): Boolean =
+        SafePreferences.boolean(prefs(context), KEY_DONE, false)
 
     fun markDone(context: Context) {
         prefs(context).edit()
@@ -43,9 +44,10 @@ object SetupProgress {
             .apply()
     }
 
-    fun step(context: Context): Int = prefs(context).getInt(KEY_STEP, 0)
+    fun step(context: Context): Int = SafePreferences.int(prefs(context), KEY_STEP, 0)
 
-    fun stepVersion(context: Context): Int = prefs(context).getInt(KEY_STEP_VER, 0)
+    fun stepVersion(context: Context): Int =
+        SafePreferences.int(prefs(context), KEY_STEP_VER, 0)
 
     /** Saved on every page so a force-stop mid-wizard resumes where the user was. */
     fun saveStep(context: Context, step: Int) {

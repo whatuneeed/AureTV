@@ -76,7 +76,6 @@ import androidx.media3.ui.PlayerView
 import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
-import com.whatuneed.ovisiontv.kotlin.data.aerialFallbackUrl
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
@@ -148,6 +147,15 @@ private const val NO_PICTURE_TIMEOUT_MS = 15_000L
 private const val POSTER_DELAY_MS = 200L
 private const val MAX_CONSECUTIVE_FAILURES = 3
 private const val TAG = "SaverPlayer"
+
+/**
+ * After a full round of stills, retry the network only after a growing wait.
+ * Without it a one-clip offline saver re-asked Apple every 26 seconds forever.
+ */
+internal fun saverOfflineRetryDelay(rounds: Int): Long {
+    val shift = rounds.coerceIn(0, 3)
+    return (15_000L shl shift).coerceAtMost(120_000L)
+}
 
 // Measured in tvOS 27 (11_SCREENSAVER §2.2). The mesh distortion is not
 // reproducible here; the scale and alpha curves are.
@@ -412,9 +420,7 @@ internal fun SaverScreen(
         // network round trip and can outlast the start watchdog on slow
         // decoders, leaving the saver on the still.
         suspend fun startFromHead(slot: Int, clip: AerialClip): Long {
-            var url = clip.videoUrl
-            var fallbackTried = false
-            prepare(slot, url, play = true)
+            prepare(slot, clip.videoUrl, play = true)
             val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
             while (true) {
@@ -423,15 +429,8 @@ internal fun SaverScreen(
                     player.playbackState == Player.STATE_ENDED
                 val timedOut = SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS
                 if (failed || (timedOut && !renderedFirstFrame[slot])) {
-                    // Apple still serves the same files over cleartext; a
-                    // network that blocks 443 must not lose the saver.
-                    val alternate = if (!fallbackTried) aerialFallbackUrl(url) else null
-                    if (alternate != null) {
-                        fallbackTried = true
-                        url = alternate
-                        prepare(slot, url, play = true)
-                        continue
-                    }
+                    // Media is HTTPS-only; a blocked TLS port falls back to the
+                    // stills-only path rather than silently downgrading to HTTP.
                     Log.w(TAG, "saver clip failed to start", player.playerError)
                     return -1L
                 }
@@ -462,9 +461,7 @@ internal fun SaverScreen(
         // decoders, leaving the saver on the still. This is also how the Java
         // launcher plays its clips.
         suspend fun prefetch(slot: Int, clip: AerialClip): Boolean {
-            var url = clip.videoUrl
-            var fallbackTried = false
-            prepare(slot, url, play = false)
+            prepare(slot, clip.videoUrl, play = false)
             val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
             while (true) {
@@ -472,13 +469,6 @@ internal fun SaverScreen(
                 if (player.playerError != null ||
                     player.playbackState == Player.STATE_ENDED
                 ) {
-                    val alternate = if (!fallbackTried) aerialFallbackUrl(url) else null
-                    if (alternate != null) {
-                        fallbackTried = true
-                        url = alternate
-                        prepare(slot, url, play = false)
-                        continue
-                    }
                     Log.w(TAG, "saver prefetch failed", player.playerError)
                     return false
                 }
@@ -531,6 +521,7 @@ internal fun SaverScreen(
             var failures = 0
             var stillsOnly = false
             var stillSteps = 0
+            var offlineRounds = 0
             // The crossfade starts the next clip itself; restarting it at the
             // loop top would blank a visible slot and jump back to the head.
             var activeItem: AerialClip? = null
@@ -547,6 +538,8 @@ internal fun SaverScreen(
                         stillSteps = 0
                         failures = 0
                         stillsOnly = false
+                        delay(saverOfflineRetryDelay(offlineRounds))
+                        offlineRounds++
                     }
                     continue
                 }
@@ -577,6 +570,7 @@ internal fun SaverScreen(
                     continue
                 }
                 failures = 0
+                offlineRounds = 0
 
                 val next = nextIndex(index)
                 val nextClip = plan[next]

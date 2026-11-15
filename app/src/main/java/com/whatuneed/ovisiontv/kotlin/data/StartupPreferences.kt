@@ -47,23 +47,29 @@ object StartupPreferences {
     private var lastFired = 0L
 
     fun target(context: Context): String =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
-            .getString(KEY_TARGET, TARGET_HOME)
-            .orEmpty()
+        SafePreferences.string(
+            context.getSharedPreferences(NAME, Context.MODE_PRIVATE),
+            KEY_TARGET,
+            TARGET_HOME,
+        ).orEmpty()
 
     /** Empty target is the Home screen, named in the current launcher language. */
     fun label(context: Context): String {
         val target = target(context)
         if (target.isEmpty()) return context.getString(R.string.startup_home)
-        return context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
-            .getString(KEY_LABEL, target)
-            .orEmpty()
-            .ifBlank { target }
+        return SafePreferences.string(
+            context.getSharedPreferences(NAME, Context.MODE_PRIVATE),
+            KEY_LABEL,
+            target,
+        ).orEmpty().ifBlank { target }
     }
 
     fun onWake(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_ON_WAKE, false)
+        SafePreferences.boolean(
+            context.getSharedPreferences(NAME, Context.MODE_PRIVATE),
+            KEY_ON_WAKE,
+            false,
+        )
 
     fun set(context: Context, target: String, label: String) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
@@ -82,8 +88,11 @@ object StartupPreferences {
 
     /** Home button override; on by default, but only needed when not the Home app. */
     fun homeOverride(context: Context): Boolean =
-        context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_HOME_OVERRIDE, true)
+        SafePreferences.boolean(
+            context.getSharedPreferences(NAME, Context.MODE_PRIVATE),
+            KEY_HOME_OVERRIDE,
+            true,
+        )
 
     fun setHomeOverride(context: Context, on: Boolean) {
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)

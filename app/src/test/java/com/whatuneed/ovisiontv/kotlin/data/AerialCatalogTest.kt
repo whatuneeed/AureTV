@@ -25,20 +25,20 @@ class AerialCatalogTest {
         clips.forEach { clip ->
             assertTrue(clip.nameEn.isNotBlank())
             assertTrue(clip.nameRu.isNotBlank())
-            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("http://sylvan.apple.com/"))
+            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("https://sylvan.apple.com/"))
             assertTrue(clip.videoUrl, clip.videoUrl.endsWith(".mov"))
             assertTrue(clip.videoUrl, clip.videoUrl.contains("_AVC"))
-            assertTrue(clip.previewUrl, clip.previewUrl.startsWith("http://sylvan.apple.com/"))
+            assertTrue(clip.previewUrl, clip.previewUrl.startsWith("https://sylvan.apple.com/"))
         }
     }
 
     @Test
     fun a_stale_smaller_or_previewless_saved_catalogue_falls_back_to_bundled() {
-        val bundled = listOf(clip("a", "http://sylvan.apple.com/a.png"), clip("b", "http://sylvan.apple.com/b.png"))
+        val bundled = listOf(clip("a", "https://sylvan.apple.com/a.png"), clip("b", "https://sylvan.apple.com/b.png"))
         assertEquals(bundled, preferredCatalogue(emptyList(), bundled))
         assertEquals(bundled, preferredCatalogue(listOf(clip("a", "")), bundled))
-        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "http://x/a.png")), bundled))
-        val saved = bundled + clip("c", "http://sylvan.apple.com/c.png")
+        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "https://x/a.png")), bundled))
+        val saved = bundled + clip("c", "https://sylvan.apple.com/c.png")
         assertEquals(saved, preferredCatalogue(saved, bundled))
     }
 
@@ -47,35 +47,37 @@ class AerialCatalogTest {
         nameEn = id,
         nameRu = id,
         theme = SaverTheme.CITIES,
-        videoUrl = "http://sylvan.apple.com/$id.mov",
+        videoUrl = "https://sylvan.apple.com/$id.mov",
         previewUrl = preview,
         order = 0,
     )
 
     @Test
-    fun the_tls_fallback_exists_only_for_apple_hosts() {
+    fun an_old_apple_cleartext_url_is_upgraded_to_tls() {
         assertEquals(
             "https://sylvan.apple.com/Videos/a.mov",
-            aerialFallbackUrl("http://sylvan.apple.com/Videos/a.mov"),
+            aerialStreamUrl("http://sylvan.apple.com/Videos/a.mov"),
         )
-        assertEquals(null, aerialFallbackUrl("https://cdn.example/b.mov"))
-        assertEquals(null, aerialFallbackUrl("https://sylvan.apple.com/Videos/a.mov"))
+        assertEquals(
+            "https://cdn.example/b.mov",
+            aerialStreamUrl("https://cdn.example/b.mov"),
+        )
     }
 
     @Test
-    fun a_saved_tls_cdn_url_is_downgraded_to_the_known_good_cleartext_and_other_hosts_keep_their_scheme() {
+    fun a_saved_catalogue_upgrades_old_apple_cleartext_and_keeps_tls() {
         val json = """
             {"clips":[
               {"id":"apple","nameEn":"Apple","nameRu":"Эппл","theme":"cities",
-               "video":"https://sylvan.apple.com/Videos/a.mov",
-               "preview":"https://sylvan.apple.com/Videos/a.png","order":1},
+               "video":"http://sylvan.apple.com/Videos/a.mov",
+               "preview":"http://sylvan.apple.com/Videos/a.png","order":1},
               {"id":"other","nameEn":"Other","nameRu":"Другой","theme":"cities",
                "video":"https://cdn.example/b.mov","preview":"","order":2}
             ]}
         """.trimIndent()
         val parsed = AerialCatalog.parse(json).associateBy { it.id }
-        assertEquals("http://sylvan.apple.com/Videos/a.mov", parsed.getValue("apple").videoUrl)
-        assertEquals("http://sylvan.apple.com/Videos/a.png", parsed.getValue("apple").previewUrl)
+        assertEquals("https://sylvan.apple.com/Videos/a.mov", parsed.getValue("apple").videoUrl)
+        assertEquals("https://sylvan.apple.com/Videos/a.png", parsed.getValue("apple").previewUrl)
         assertEquals("https://cdn.example/b.mov", parsed.getValue("other").videoUrl)
     }
 
@@ -117,7 +119,7 @@ class AerialCatalogTest {
             ]}
         """.trimIndent()
         val parsed = AerialCatalog.parse(json)
-        assertEquals(listOf("ok", "http"), parsed.map { it.id })
+        assertEquals(listOf("ok"), parsed.map { it.id })
         assertEquals(SaverTheme.CITIES, parsed.first().theme)
     }
 }

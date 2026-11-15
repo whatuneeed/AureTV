@@ -14,10 +14,10 @@ object LocalePreference {
     const val RUSSIAN = "ru"
     const val ENGLISH = "en"
 
-    private const val KEY = "ui_language"
+    internal const val KEY = "ui_language"
 
     fun get(context: Context): String {
-        val value = prefs(context).getString(KEY, SYSTEM)
+        val value = SafePreferences.string(prefs(context), KEY, SYSTEM)
         return if (value == RUSSIAN || value == ENGLISH) value else SYSTEM
     }
 

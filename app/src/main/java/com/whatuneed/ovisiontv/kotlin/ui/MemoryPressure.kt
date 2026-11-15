@@ -53,7 +53,7 @@ internal object MemoryPressure {
         val budgets = Adaptive.budgets
         AerialPosterStore.shrinkTo(budgets.aerialPosterBytes)
         AerialPreviewStore.shrinkTo(budgets.previewBytes, budgets.previewThumbBytes)
-        trimShelfArtCacheTo(budgets.shelfArtEntries)
+        trimShelfArtCacheTo(budgets.discoveryArtBytes)
         AppArtCache.shrinkTo(budgets.appArtKb)
     }
 

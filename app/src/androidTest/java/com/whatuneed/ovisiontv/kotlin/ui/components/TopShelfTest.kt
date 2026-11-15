@@ -12,27 +12,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
@@ -40,26 +36,29 @@ import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
 import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.drawableToImage
-import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.atomic.AtomicReference
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryKind
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
+import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import java.util.Locale
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicReference
 
 /**
- * The shelf is a full-screen carousel: the selected recommendation fills the
- * display and the dots say which one is on screen (Java hero parity). The fade
- * is keyed by art URI, so a package broadcast — which rebuilds every TvApp with
- * fresh bitmaps — cannot replay it on the poster that stayed selected (T8).
+ * The shelf is one hero behind a rail: the section bar says which row is on
+ * screen, the focused card is the hero, and every card is reachable by TalkBack
+ * even though the remote is handled by HomeScreen.
  */
 @RunWith(AndroidJUnit4::class)
 class TopShelfTest {
@@ -114,218 +113,188 @@ class TopShelfTest {
         icon = null,
     )
 
-    private fun card(title: String, packageName: String = "test.one") = ShelfCard(
+    private fun card(title: String, packageName: String = "test.one") = DiscoveryItem(
+        id = "tv|$packageName|$title",
+        source = DiscoverySource.TV_PROVIDER,
+        kind = DiscoveryKind.VIDEO,
         packageName = packageName,
         title = title,
-        subtitle = null,
-        thumbnailUri = null,
-        posterUri = null,
-        intentUri = "",
-        progress = null,
-        engagement = 0L,
+        intentUri = "intent://$title#Intent;package=$packageName;end",
     )
 
+    private fun rails(vararg entries: Pair<DiscoverySection, List<DiscoveryItem>>) =
+        entries.map { (section, items) -> DiscoveryRail(section, items) }
+
     @Test
-    fun the_dots_name_the_recommendation_that_is_on_screen() {
-        var selected by mutableIntStateOf(0)
-        val cards = listOf(card("Первый кадр"), card("Второй кадр"))
-        val label = context.getString(R.string.shelf_continue)
-
-        rule.setContent {
-            OVisionTheme {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    TopShelf(
-                        app = app("test.one", "Кинопоиск"),
-                        cards = cards,
-                        selectedCard = selected,
-                        focusedCard = -1,
-                        onCardActivate = {},
-                        scale = TvScale(1f),
-                    )
-                }
-            }
-        }
-
-        rule.onAllNodesWithText("Первый кадр").assertCountEquals(1)
-        rule.onNodeWithContentDescription("$label: Первый кадр").assertExists()
-
-        selected = 1
-        rule.waitForIdle()
-
-        rule.onAllNodesWithText("Второй кадр").assertCountEquals(1)
-        rule.onAllNodesWithText("Первый кадр").assertCountEquals(0)
-        rule.onNodeWithContentDescription("$label: Второй кадр").assertExists()
-    }
-
-    // UX-11: the dots report the page but are not a remote target. The old
-    // clickable node could never be reached, so TalkBack promised a control
-    // the D-pad could not focus.
-    @Test
-    fun the_dots_report_the_page_without_being_a_control() {
-        val cards = listOf(card("Первый кадр"), card("Второй кадр"))
-        val label = context.getString(R.string.shelf_continue)
-
-        rule.setContent {
-            OVisionTheme {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    TopShelf(
-                        app = app("test.one", "Кинопоиск"),
-                        cards = cards,
-                        selectedCard = 0,
-                        focusedCard = -1,
-                        onCardActivate = {},
-                        scale = TvScale(1f),
-                    )
-                }
-            }
-        }
-
-        rule.onNodeWithContentDescription("$label: Первый кадр")
-            .assertExists()
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
-    }
-
-    // 06_TOP_SHELF §7: the page controls must say which poster is on screen.
-    // Opacity alone was unreadable over bright art, so the current dot widens
-    // into a capsule while the others stay round.
-    @Test
-    fun the_selected_page_grows_into_a_capsule() {
-        var selected by mutableIntStateOf(0)
-        val cards = listOf(card("Первый кадр"), card("Второй кадр"), card("Третий кадр"))
-
-        rule.setContent {
-            OVisionTheme {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    TopShelf(
-                        app = app("test.one", "Кинопоиск"),
-                        cards = cards,
-                        selectedCard = selected,
-                        focusedCard = selected,
-                        onCardActivate = {},
-                        scale = TvScale(1f),
-                    )
-                }
-            }
-        }
-
-        fun widths(): List<Float> =
-            rule.onAllNodesWithTag("shelfDot").fetchSemanticsNodes()
-                .map { it.boundsInRoot.width }
-
-        val first = widths()
-        assertTrue("Three dots expected, got $first", first.size == 3)
-        assertTrue("The first dot is not the widest: $first", first[0] > first[1] * 1.5f)
-        assertTrue("The first dot is not the widest: $first", first[0] > first[2] * 1.5f)
-
-        selected = 2
-        rule.waitForIdle()
-
-        val last = widths()
-        assertTrue("The last dot is not the widest: $last", last[2] > last[0] * 1.5f)
-        assertTrue("The last dot is not the widest: $last", last[2] > last[1] * 1.5f)
-    }
-
-    // 06_TOP_SHELF §7 / 14_MOTION_DESIGN M4: focusing the carousel makes the
-    // poster the screen, so the details and page controls drop to the bottom
-    // edge instead of staying on the dock line.
-    @Test
-    fun focusing_the_carousel_moves_details_and_page_controls_to_the_bottom() {
-        var focused by mutableIntStateOf(-1)
-        val cards = listOf(card("Первый кадр"), card("Второй кадр"))
-
-        rule.setContent {
-            OVisionTheme {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    TopShelf(
-                        app = app("test.one", "Кинопоиск"),
-                        cards = cards,
-                        selectedCard = 0,
-                        focusedCard = focused,
-                        onCardActivate = {},
-                        scale = TvScale(1f),
-                    )
-                }
-            }
-        }
-
-        fun dotBottom(): Float = rule.onAllNodesWithTag("shelfDot")
-            .fetchSemanticsNodes().first().boundsInRoot.bottom
-        fun titleBottom(): Float = rule.onNodeWithTag("shelfInfoTitle")
-            .fetchSemanticsNode().boundsInRoot.bottom
-
-        val restingDots = dotBottom()
-        val restingTitle = titleBottom()
-
-        focused = 0
-        rule.waitForIdle()
-
-        val droppedDots = dotBottom()
-        val droppedTitle = titleBottom()
-        assertTrue(
-            "The dots did not drop: $restingDots -> $droppedDots",
-            droppedDots - restingDots > 300f,
+    fun the_section_bar_names_the_selected_rail() {
+        val section = rails(
+            DiscoverySection.CONTINUE to listOf(card("Первый кадр")),
+            DiscoverySection.FOR_YOU to listOf(card("Второй кадр")),
         )
-        assertTrue(
-            "The details did not drop: $restingTitle -> $droppedTitle",
-            droppedTitle - restingTitle > 300f,
-        )
-    }
-
-    @Test
-    fun rebuilding_the_focused_app_keeps_its_poster() {
-        var shelf by mutableStateOf(app("test.one", "Кинопоиск"))
-        val cards = listOf(card("Первый кадр"), card("Второй кадр"))
-
         rule.setContent {
             OVisionTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     TopShelf(
-                        app = shelf,
-                        cards = cards,
+                        app = app("test.one", "Кинопоиск"),
+                        rails = section,
+                        selectedSection = DiscoverySection.CONTINUE,
                         selectedCard = 0,
                         focusedCard = -1,
+                        sectionFocused = false,
                         onCardActivate = {},
+                        onSectionActivate = {},
                         scale = TvScale(1f),
                     )
                 }
             }
         }
-        rule.onAllNodesWithText("Первый кадр").assertCountEquals(1)
 
-        // Same package, new object and bitmaps: nothing restarts.
-        shelf = app("test.one", "Кинопоиск", android.graphics.Color.GREEN)
-        rule.waitForIdle()
-
-        rule.onAllNodesWithText("Первый кадр").assertCountEquals(1)
-        rule.onAllNodesWithText("Второй кадр").assertCountEquals(0)
+        // The selected label is the page heading, the pill and the rail title;
+        // a rail that is not selected is named once, by its pill.
+        rule.onAllNodesWithText(context.getString(R.string.discovery_section_continue))
+            .assertCountEquals(3)
+        rule.onAllNodesWithText(context.getString(R.string.discovery_section_for_you))
+            .assertCountEquals(1)
+        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(1)
     }
 
     @Test
-    fun a_new_app_replaces_the_shelf_underlay() {
-        var shelf by mutableStateOf(app("test.one", "Первый"))
-
+    fun the_focused_card_is_the_real_android_focus_target() {
+        val section = rails(
+            DiscoverySection.CONTINUE to listOf(card("Первый кадр"), card("Второй кадр")),
+        )
         rule.setContent {
             OVisionTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     TopShelf(
-                        app = shelf,
-                        cards = emptyList(),
+                        app = app("test.one", "Кинопоиск"),
+                        rails = section,
+                        selectedSection = DiscoverySection.CONTINUE,
+                        selectedCard = 0,
+                        focusedCard = 0,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+        rule.mainClock.advanceTimeBy(100)
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription("Первый кадр").assertIsFocused()
+    }
+
+    @Test
+    fun the_selected_section_pill_is_the_real_android_focus_target() {
+        val section = rails(
+            DiscoverySection.CONTINUE to listOf(card("Первый кадр")),
+            DiscoverySection.FOR_YOU to listOf(card("Второй кадр")),
+        )
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = app("test.one", "Кинопоиск"),
+                        rails = section,
+                        selectedSection = DiscoverySection.CONTINUE,
                         selectedCard = 0,
                         focusedCard = -1,
+                        sectionFocused = true,
                         onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithContentDescription(
+            context.getString(R.string.discovery_section_continue),
+        ).assertIsFocused()
+    }
+
+    @Test
+    fun cards_are_named_for_talkback() {
+        val section = rails(
+            DiscoverySection.FOR_YOU to listOf(card("Первый кадр"), card("Второй кадр")),
+        )
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = null,
+                        rails = section,
+                        selectedSection = DiscoverySection.FOR_YOU,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithContentDescription("Первый кадр").assertExists()
+        rule.onNodeWithContentDescription("Второй кадр").assertExists()
+    }
+
+    @Test
+    fun a_shelf_without_rails_keeps_the_app_banner() {
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = app("test.one", "Первый"),
+                        rails = emptyList(),
+                        selectedSection = null,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
                         scale = TvScale(1f),
                     )
                 }
             }
         }
         rule.onAllNodesWithText("Первый").assertCountEquals(1)
+    }
 
-        shelf = app("test.two", "Второй", android.graphics.Color.BLUE)
+    @Test
+    fun rebuilding_the_focused_app_keeps_its_card() {
+        var shelf by mutableStateOf(app("test.one", "Кинопоиск"))
+        val section = rails(
+            DiscoverySection.FROM_APP to listOf(card("Первый кадр"), card("Второй кадр")),
+        )
+
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = shelf,
+                        rails = section,
+                        selectedSection = DiscoverySection.FROM_APP,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(1)
+
+        // Same package, new object and bitmaps: nothing restarts.
+        shelf = app("test.one", "Кинопоиск", android.graphics.Color.GREEN)
         rule.waitForIdle()
 
-        rule.onAllNodesWithText("Первый").assertCountEquals(0)
-        rule.onAllNodesWithText("Второй").assertCountEquals(1)
+        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(1)
+        rule.onAllNodesWithContentDescription("Второй кадр").assertCountEquals(1)
     }
 
     // The caption comes from the launcher's locale-wrapped context, so its
@@ -358,59 +327,22 @@ class TopShelfTest {
                         Box(Modifier.fillMaxSize().background(Color.Black)) {
                             TopShelf(
                                 app = app("test.one", "Первый"),
-                                cards = emptyList(),
+                                rails = emptyList(),
+                                selectedSection = null,
                                 selectedCard = 0,
                                 focusedCard = -1,
+                                sectionFocused = false,
                                 onCardActivate = {},
+                                onSectionActivate = {},
                                 scale = TvScale(1f),
                             )
                         }
                     }
                 }
             }
-
-            rule.onAllNodesWithText(expected).assertCountEquals(1)
+            rule.onNodeWithText(expected).assertExists()
         } finally {
             Locale.setDefault(previous)
         }
-    }
-
-    // 06_TOP_SHELF §9: an app without a banner and without published rows gets
-    // a bare backdrop — the launcher never substitutes an upscaled icon.
-    @Test
-    fun an_app_without_a_banner_leaves_the_shelf_empty() {
-        var shelf by mutableStateOf(app("test.one", "Первый"))
-        val bare = TvApp(
-            packageName = "test.two",
-            activityName = "test.two.MainActivity",
-            label = "Второй",
-            banner = null,
-            icon = com.whatuneed.ovisiontv.kotlin.ui.testArtKey(
-                "bare-icon",
-                Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888),
-            ),
-        )
-
-        rule.setContent {
-            OVisionTheme {
-                Box(Modifier.fillMaxSize().background(Color.Black)) {
-                    TopShelf(
-                        app = shelf,
-                        cards = emptyList(),
-                        selectedCard = 0,
-                        focusedCard = -1,
-                        onCardActivate = {},
-                        scale = TvScale(1f),
-                    )
-                }
-            }
-        }
-        rule.onAllNodesWithText("Первый").assertCountEquals(1)
-
-        shelf = bare
-        rule.waitForIdle()
-
-        rule.onAllNodesWithText("Второй").assertCountEquals(0)
-        rule.onAllNodesWithText("Первый").assertCountEquals(0)
     }
 }

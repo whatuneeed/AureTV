@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
-import com.whatuneed.ovisiontv.kotlin.data.aerialFallbackUrl
 import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
@@ -27,6 +26,9 @@ internal object AerialPreviewStore {
     // The picker keeps a thumbnail for every catalogue clip, so 120 covers the
     // whole 100-clip catalogue and still prunes a catalogue that grows.
     private const val KEEP_THUMBS = 120
+    // Count alone is not a budget: 120 full-size PNGs can occupy more disk
+    // than the whole app cache allowance. Thumbnails are the first to go.
+    private const val THUMB_MAX_BYTES = 32L * 1024 * 1024
     private const val TIMEOUT_MS = 10_000
     private const val MAX_BYTES = 8 * 1024 * 1024
     private const val COPY_CHUNK = 64 * 1024
@@ -44,7 +46,7 @@ internal object AerialPreviewStore {
 
     /** Grid tiles draw 450×290 stills; half sampling keeps 100 of them affordable. */
     fun loadThumbnail(context: Context, url: String): Bitmap? {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
+        if (!url.startsWith("https://")) return null
         thumbMemory.get(url)?.let { return it }
         val dir = File(context.applicationContext.cacheDir, THUMB_DIR)
         val fileName = name(url)
@@ -52,10 +54,7 @@ internal object AerialPreviewStore {
         val bytes = if (file.isFile) {
             runCatching { file.readBytes() }.getOrNull()
         } else {
-            download(url)?.also { save(dir, fileName, it, KEEP_THUMBS) }
-                ?: aerialFallbackUrl(url)?.let { alt ->
-                    download(alt)?.also { save(dir, fileName, it, KEEP_THUMBS) }
-                }
+            download(url)?.also { save(dir, fileName, it, KEEP_THUMBS, THUMB_MAX_BYTES) }
         } ?: return null
         val bitmap = decodeSampled(bytes, 2)
         if (bitmap == null) {
@@ -114,7 +113,7 @@ internal object AerialPreviewStore {
     }
 
     fun load(context: Context, url: String): Bitmap? {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
+        if (!url.startsWith("https://")) return null
         memory.get(url)?.let { return it }
 
         val dir = File(context.applicationContext.cacheDir, DIR)
@@ -124,9 +123,6 @@ internal object AerialPreviewStore {
             runCatching { file.readBytes() }.getOrNull()
         } else {
             download(url)?.also { save(dir, fileName, it, KEEP_FILES) }
-                ?: aerialFallbackUrl(url)?.let { alt ->
-                    download(alt)?.also { save(dir, fileName, it, KEEP_FILES) }
-                }
         } ?: return null
 
         val bitmap = decodeSampled(bytes, 1)
@@ -150,6 +146,7 @@ internal object AerialPreviewStore {
     }.getOrNull()
 
     private fun download(url: String): ByteArray? = runCatching {
+        if (!url.startsWith("https://")) return null
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
@@ -176,23 +173,26 @@ internal object AerialPreviewStore {
         }
     }.getOrNull()
 
-    private fun save(dir: File, name: String, bytes: ByteArray, keep: Int) {
+    private fun save(
+        dir: File,
+        name: String,
+        bytes: ByteArray,
+        keep: Int,
+        maxBytes: Long = Long.MAX_VALUE,
+    ) {
         runCatching {
             if (!dir.isDirectory && !dir.mkdirs()) return
             val target = File(dir, name)
             // A unique temp plus a checked replace keeps a half-written preview
             // from being decoded later and never deletes the old file first.
             if (!writeFileAtomically(target, bytes)) return
-            prune(dir, keep)
+            prune(dir, keep, maxBytes)
         }
     }
 
-    private fun prune(dir: File, keep: Int) {
+    private fun prune(dir: File, keep: Int, maxBytes: Long) {
         val files = dir.listFiles { file -> file.isFile && file.name.endsWith(".png") } ?: return
-        if (files.size <= keep) return
-        files.sortedBy { it.lastModified() }
-            .take(files.size - keep)
-            .forEach { it.delete() }
+        previewFilesToDelete(files.toList(), keep, maxBytes).forEach { it.delete() }
     }
 
     private fun name(url: String): String =
@@ -209,4 +209,24 @@ internal fun sampleFor(width: Int, height: Int, minSample: Int): Int {
     var sample = minSample.coerceAtLeast(1)
     while ((width / sample).toLong() * (height / sample) > MAX_PIXELS) sample *= 2
     return sample
+}
+
+
+/**
+ * Oldest files to delete until both the count and the byte budget fit. Kept as
+ * a pure function so the disk cap can be checked without a device cache.
+ */
+internal fun previewFilesToDelete(files: List<File>, keep: Int, maxBytes: Long): List<File> {
+    if (files.isEmpty()) return emptyList()
+    val ordered = files.sortedBy { it.lastModified() }
+    var count = ordered.size
+    var total = ordered.sumOf { it.length() }
+    val remove = ArrayList<File>()
+    for (file in ordered) {
+        if (count <= keep && total <= maxBytes) break
+        remove += file
+        total -= file.length()
+        count--
+    }
+    return remove
 }

@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -38,8 +40,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -58,9 +63,11 @@ import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClipCache
+import com.whatuneed.ovisiontv.kotlin.data.AppLoadResult
 import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefresh
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefreshResult
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
@@ -120,8 +127,16 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     val orderStore = remember(context, profile.id) {
         HomeOrderStore(context, ProfileStore.homePrefsName(profile.id))
     }
+    // Every successful launch from anywhere in the launcher (dock, folder,
+    // search, shelf deep link) is the only affinity signal the launcher owns.
+    val discoveryStore = remember(context, profile.id) {
+        DiscoveryStore(context.applicationContext, ProfileStore.homePrefsName(profile.id))
+    }
     var apps by remember(orderStore) { mutableStateOf<List<HomeItem>?>(null) }
     var savedOrder by remember(orderStore) { mutableStateOf<String?>(null) }
+    // A failed first scan must not look like an empty launcher. Once a working
+    // list exists, a later failure keeps it and never replaces it with null.
+    var loadFailed by remember(orderStore) { mutableStateOf(false) }
     var pickerVisible by remember { mutableStateOf(false) }
 
     // The kids gate lives above every surface: a pending PIN either opens
@@ -364,16 +379,42 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         val generation = ++reloadGeneration
         val store = orderStore
         reloadJob = scope.launch {
-            val loaded = repository.load()
-            // A cancelled load may still return from a blocking section; the
-            // generation keeps its result from landing on a newer profile.
-            if (generation != reloadGeneration) return@launch
-            apps = store.applyAndRememberOrder(loaded)
-            savedOrder = store.savedOrder()
+            when (val result = repository.loadResult()) {
+                is AppLoadResult.Loaded -> {
+                    // A cancelled load may still return from a blocking section;
+                    // the generation keeps its result from landing on a newer profile.
+                    if (generation != reloadGeneration) return@launch
+                    val ordered = runCatching {
+                        store.applyAndRememberOrder(result.apps)
+                    }.onFailure {
+                        android.util.Log.w("LauncherRoot", "app order could not be applied", it)
+                    }.getOrNull()
+                    if (ordered != null) {
+                        apps = ordered
+                        savedOrder = store.savedOrder()
+                        loadFailed = false
+                    } else if (apps == null) {
+                        loadFailed = true
+                    }
+                }
+
+                is AppLoadResult.Failed -> {
+                    if (generation != reloadGeneration) return@launch
+                    // Keep a working last-good list; only a failed first load
+                    // gets the explicit retry surface.
+                    if (apps == null) loadFailed = true
+                }
+            }
         }
     }
 
     LaunchedEffect(orderStore) {
+        // A new order store means a new profile: its previous list must not be
+        // shown while the new scan runs, and a failed scan must expose retry
+        // instead of leaking the other person's apps.
+        apps = null
+        savedOrder = orderStore.savedOrder()
+        loadFailed = false
         reload()
     }
 
@@ -517,6 +558,13 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 },
         ) {
             when {
+                visible == null && loadFailed -> HomeLoadError(
+                    onRetry = {
+                        loadFailed = false
+                        reload()
+                    },
+                )
+
                 visible == null -> Unit
                 visible.isEmpty() -> EmptyState()
                 else -> key(profile.id) {
@@ -526,6 +574,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                         reduceMotion = reduceMotion,
                         foreground = foreground,
                         prefsName = ProfileStore.homePrefsName(profile.id),
+                        profileId = profile.id,
                         kidsMode = kidsActive,
                         onLaunch = { app ->
                             // The launcher's own Settings tile reaches onLaunch
@@ -540,7 +589,9 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                                 // state captured before the filter applied.
                                 false
                             } else {
-                                launchApp(context, app)
+                                launchApp(context, app).also { launched ->
+                                    if (launched) discoveryStore.recordLaunch(app.packageName)
+                                }
                             }
                         },
                         onOrderChanged = {
@@ -754,6 +805,48 @@ internal fun reloadsHomeFor(action: String?, replacing: Boolean): Boolean = when
     -> true
 
     else -> false
+}
+
+/**
+ * The first catalogue scan failed. It is deliberately not the same surface as
+ * "no apps installed": the user needs a real retry instead of an unplugged TV
+ * look, and the retry goes through the same generation-guarded reload path.
+ */
+@Composable
+private fun HomeLoadError(onRetry: () -> Unit) {
+    val scale = rememberTvScale()
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        // The button is attached on a later frame on cold start; retry on the
+        // frame clock rather than hiding the problem behind a fixed delay.
+        repeat(3) {
+            if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
+            withFrameNanos { }
+        }
+    }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.home_load_failed),
+                color = Color.White,
+                fontSize = scale.sp(TvType.title),
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(scale.dp(TvSpace.lg)))
+            Button(
+                onClick = onRetry,
+                modifier = Modifier
+                    .width(scale.dp(220f))
+                    .focusRequester(requester),
+            ) {
+                Text(text = stringResource(R.string.home_load_retry), fontSize = scale.sp(TvType.body))
+            }
+        }
+    }
 }
 
 @Composable

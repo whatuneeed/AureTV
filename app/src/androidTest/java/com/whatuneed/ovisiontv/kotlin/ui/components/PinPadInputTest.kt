@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.ui.components
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -57,6 +58,26 @@ class PinPadInputTest {
             rule.onAllNodesWithTag("pin-pad-ready").fetchSemanticsNodes().isNotEmpty()
         }
         assertEquals("cancelled verification must not pass", 0, passed)
+    }
+
+    @Test
+    fun arrow_moves_the_real_focus_to_the_next_pin_key() {
+        runBlocking { store.setPin(id, "1111") }
+        rule.setContent {
+            OVisionTheme {
+                PinPadOverlay(PinPadMode.VERIFY, id, true, onPassed = {}, onCancel = {})
+            }
+        }
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithContentDescription("1").assertIsFocused()
+
+        rule.runOnIdle {
+            val now = android.os.SystemClock.uptimeMillis()
+            rule.activity.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
+            rule.activity.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
+        }
+        rule.mainClock.advanceTimeBy(100)
+        rule.onNodeWithContentDescription("2").assertIsFocused()
     }
 
     @Test

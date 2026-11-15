@@ -6,27 +6,28 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Russian networks block port 443 to Apple's aerial CDN while port 80 serves
- * the same files, so sylvan.apple.com is the one cleartext exception. A silent
- * change here only shows up as a blank saver on a TV, so it is pinned.
+ * No request may leave the device in the clear. The old Apple CDN exception
+ * was removed together with the silent HTTPS-to-HTTP media downgrade; keeping
+ * this test means a future compatibility workaround cannot reintroduce it
+ * unnoticed.
  */
 class NetworkSecurityConfigTest {
 
     private val config = File("src/main/res/xml/network_security_config.xml").readText()
 
     @Test
-    fun cleartext_stays_disabled_for_every_host_by_default() {
+    fun cleartext_is_disabled_for_every_host() {
         assertTrue(config.contains("<base-config cleartextTrafficPermitted=\"false\">"))
         assertTrue(config.contains("<certificates src=\"system\" />"))
+        assertEquals(
+            1,
+            Regex("cleartextTrafficPermitted=").findAll(config).count(),
+        )
     }
 
     @Test
-    fun the_cdn_host_is_the_only_cleartext_exception() {
-        assertTrue(config.contains("<domain-config cleartextTrafficPermitted=\"true\">"))
-        assertTrue(config.contains("<domain includeSubdomains=\"true\">sylvan.apple.com</domain>"))
-        assertEquals(
-            1,
-            Regex("cleartextTrafficPermitted=\"true\"").findAll(config).count(),
-        )
+    fun no_domain_is_granted_a_cleartext_exception() {
+        assertTrue(Regex("cleartextTrafficPermitted=\"true\"").findAll(config).count() == 0)
+        assertTrue(!config.contains("<domain-config"))
     }
 }

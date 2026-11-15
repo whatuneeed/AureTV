@@ -89,8 +89,11 @@ object SleepControls {
     }
 
     private fun sleepAt(context: Context): Long =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getLong(KEY_SLEEP_AT, 0L)
+        SafePreferences.long(
+            context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE),
+            KEY_SLEEP_AT,
+            0L,
+        )
 
     private fun pending(context: Context): PendingIntent = PendingIntent.getBroadcast(
         context.applicationContext,

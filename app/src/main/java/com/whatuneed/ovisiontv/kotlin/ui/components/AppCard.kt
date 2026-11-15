@@ -1,10 +1,13 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,7 +16,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import com.whatuneed.ovisiontv.kotlin.ui.TvType
@@ -44,6 +50,25 @@ fun AppCard(
         onActivate = onActivate,
     ) {
         AppArtwork(app = app, scale = scale)
+        if (!app.available) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
+            )
+            Text(
+                text = stringResource(R.string.app_unavailable),
+                color = Color.White.copy(alpha = 0.9f),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = scale.sp(TvType.caption),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = scale.dp(10f))
+                    .background(
+                        Color.Black.copy(alpha = 0.65f),
+                        RoundedCornerShape(scale.dp(8f)),
+                    )
+                    .padding(horizontal = scale.dp(10f), vertical = scale.dp(4f)),
+            )
+        }
     }
 }
 

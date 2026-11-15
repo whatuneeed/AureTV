@@ -32,10 +32,12 @@ object KidsMode {
     /** Whether [packageName] may appear and launch under the current profile. */
     fun allowed(context: Context, packageName: String?): Boolean {
         if (!isKids(context)) return true
-        if (packageName.isNullOrEmpty()) return false
-        if (packageName == context.packageName) return true
         val store = KidsStore(context)
-        return packageName in store.allowlist(ProfileStore(context).current().id)
+        return allowedInKidsProfile(
+            ownPackage = context.packageName,
+            packageName = packageName,
+            allowlist = store.allowlist(ProfileStore(context).current().id),
+        )
     }
 
     /** Milliseconds left in the current lockout, or 0. Survives restarts. */
@@ -51,29 +53,46 @@ object KidsMode {
     }
 }
 
+/** Pure predicate shared by the catalog filter and every launch path. */
+internal fun allowedInKidsProfile(
+    ownPackage: String,
+    packageName: String?,
+    allowlist: Set<String>,
+): Boolean {
+    if (packageName.isNullOrEmpty()) return false
+    return packageName == ownPackage || packageName in allowlist
+}
+
 /** Stored per profile: PIN hash, recovery word, allowlist and lockout. */
 class KidsStore(context: Context) {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun allowlist(profileId: String): Set<String> =
-        prefs.getStringSet(KEY_ALLOW + profileId, null)?.toHashSet() ?: HashSet()
+        SafePreferences.stringSet(prefs, KEY_ALLOW + profileId, null) ?: HashSet()
 
     fun setAllowlist(profileId: String, packages: Set<String>) {
         prefs.edit().putStringSet(KEY_ALLOW + profileId, HashSet(packages)).apply()
     }
 
-    fun hasPin(profileId: String): Boolean = !prefs.getString(KEY_PIN_HASH + profileId, null).isNullOrEmpty()
+    fun hasPin(profileId: String): Boolean =
+        !SafePreferences.string(prefs, KEY_PIN_HASH + profileId, null).isNullOrEmpty()
 
     enum class Verification { PASSED, WRONG, LOCKED, CHANGED }
 
     private data class Credential(val salt: String, val hash: String, val revision: Long)
 
     private fun credential(profileId: String, recovery: Boolean): Credential? {
-        val salt = prefs.getString((if (recovery) KEY_REC_SALT else KEY_PIN_SALT) + profileId, null)
-            ?: return null
-        val hash = prefs.getString((if (recovery) KEY_REC_HASH else KEY_PIN_HASH) + profileId, null)
-            ?: return null
+        val salt = SafePreferences.string(
+            prefs,
+            (if (recovery) KEY_REC_SALT else KEY_PIN_SALT) + profileId,
+            null,
+        ) ?: return null
+        val hash = SafePreferences.string(
+            prefs,
+            (if (recovery) KEY_REC_HASH else KEY_PIN_HASH) + profileId,
+            null,
+        ) ?: return null
         return Credential(salt, hash, revisions[profileId] ?: 0L)
     }
 
@@ -151,12 +170,12 @@ class KidsStore(context: Context) {
     }
 
     fun lockRemaining(profileId: String, now: Long = System.currentTimeMillis()): Long {
-        val until = prefs.getLong(KEY_LOCK_UNTIL + profileId, 0L)
+        val until = SafePreferences.long(prefs, KEY_LOCK_UNTIL + profileId, 0L)
         return (until - now).coerceAtLeast(0L)
     }
 
     fun recordFailure(profileId: String, now: Long = System.currentTimeMillis()): Int = synchronized(prefs) {
-        val fails = prefs.getInt(KEY_FAILS + profileId, 0) + 1
+        val fails = SafePreferences.int(prefs, KEY_FAILS + profileId, 0) + 1
         val delay = KidsMode.lockDelayMillis(fails)
         val editor = prefs.edit().putInt(KEY_FAILS + profileId, fails)
         if (delay > 0) editor.putLong(KEY_LOCK_UNTIL + profileId, now + delay)
@@ -174,10 +193,31 @@ class KidsStore(context: Context) {
     }
 
     fun recoveryHint(profileId: String): String =
-        prefs.getString(KEY_REC_HINT + profileId, "").orEmpty()
+        SafePreferences.string(prefs, KEY_REC_HINT + profileId, "").orEmpty()
 
     fun hasRecovery(profileId: String): Boolean =
-        !prefs.getString(KEY_REC_HASH + profileId, null).isNullOrEmpty()
+        !SafePreferences.string(prefs, KEY_REC_HASH + profileId, null).isNullOrEmpty()
+
+    /**
+     * True when a credential exists but can never verify: a salt/hash was lost,
+     * truncated or written by a broken restore. The pad must say so instead of
+     * silently clearing every attempt and looking like a dead keypad.
+     */
+    fun pinDamaged(profileId: String): Boolean =
+        credentialDamaged(profileId, recovery = false)
+
+    fun recoveryDamaged(profileId: String): Boolean =
+        credentialDamaged(profileId, recovery = true)
+
+    private fun credentialDamaged(profileId: String, recovery: Boolean): Boolean {
+        val saltKey = (if (recovery) KEY_REC_SALT else KEY_PIN_SALT) + profileId
+        val hashKey = (if (recovery) KEY_REC_HASH else KEY_PIN_HASH) + profileId
+        val salt = SafePreferences.string(prefs, saltKey, null)
+        val hash = SafePreferences.string(prefs, hashKey, null)
+        if (hash.isNullOrEmpty()) return false
+        if (salt.isNullOrEmpty()) return true
+        return !KidsCrypto.credentialUsable(salt, hash)
+    }
 
     suspend fun setRecovery(profileId: String, hint: String, answer: String) {
         if (answer.trim().isEmpty()) return
@@ -203,7 +243,7 @@ class KidsStore(context: Context) {
     companion object {
         private val revisions = mutableMapOf<String, Long>()
         const val FILE = "kids_mode"
-        private const val KEY_ALLOW = "allow_"
+        internal const val KEY_ALLOW = "allow_"
         private const val KEY_PIN_SALT = "pin_salt_"
         private const val KEY_PIN_HASH = "pin_hash_"
         private const val KEY_FAILS = "fail_"
@@ -255,6 +295,21 @@ internal object KidsCrypto {
 
     fun normalizeAnswer(answer: String): String = answer.trim().lowercase(Locale.ROOT)
 
+    /** Shape check only: no KDF work, safe to call before every PIN entry. */
+    internal fun credentialUsable(salt: String, expected: String): Boolean {
+        val saltOk = runCatching {
+            Base64.getDecoder().decode(salt).size == SALT_BYTES
+        }.getOrDefault(false)
+        if (!saltOk) return false
+        val parts = expected.split('$')
+        if (parts.size != 4 || parts[0] != KDF || parts[1] != KDF_ALG) return false
+        val iterations = parts[2].toIntOrNull() ?: return false
+        if (iterations !in 1..KDF_ITERATIONS) return false
+        return runCatching {
+            Base64.getDecoder().decode(parts[3]).size == 32
+        }.getOrDefault(false)
+    }
+
     private fun pbkdf2(salt: String, value: String, iterations: Int): ByteArray {
         val saltBytes = Base64.getDecoder().decode(salt)
         val spec = PBEKeySpec(value.toCharArray(), saltBytes, iterations, 256)
@@ -279,12 +334,14 @@ internal fun kidsFilter(
 ): List<HomeItem> = items.mapNotNull { item ->
     when (item) {
         is HomeItem.AppItem -> item.takeIf {
-            it.app.packageName == ownPackage || it.app.packageName in allowlist
+            it.app.available &&
+                (it.app.packageName == ownPackage || it.app.packageName in allowlist)
         }
 
         is HomeItem.FolderItem -> {
             val apps = item.apps.filter {
-                it.packageName == ownPackage || it.packageName in allowlist
+                it.available &&
+                    (it.packageName == ownPackage || it.packageName in allowlist)
             }
             item.copy(apps = apps).takeIf { apps.isNotEmpty() }
         }

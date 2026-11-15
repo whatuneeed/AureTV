@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvFocus
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
@@ -151,7 +153,9 @@ fun ProfilePicker(
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp) {
                     keyRepeat.release(event.key)
-                    return@onKeyEvent true
+                    // Only navigation/OK belong to this layer; do not swallow
+                    // volume, media or vendor keys on the way to the system.
+                    return@onKeyEvent false
                 }
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent true
                 // A held button can arrive as repeat KeyDowns or as repeated
@@ -244,9 +248,10 @@ private fun ProfileDisc(
     focusRequester: FocusRequester,
     onPick: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "profileDiscFocus",
     )
     val current = stringResource(R.string.profile_current)
@@ -347,11 +352,16 @@ fun ProfileAvatarPicker(
         ProfileCatalog.freeEmojis(profiles, editingId).toHashSet()
     }
     val editing = profiles.firstOrNull { it.id == editingId }
+    val noFreeAvatar = free.isEmpty()
     var focusIndex by remember(profiles, editingId) {
         mutableIntStateOf(ProfileCatalog.avatarStartIndex(profiles, editingId))
     }
     val requesters = remember { mutableMapOf<Int, FocusRequester>() }
     fun requester(index: Int): FocusRequester = requesters.getOrPut(index) { FocusRequester() }
+    // With every picture taken there is no disc to focus. The notice becomes
+    // the one real focus target, so TalkBack still has something to read and
+    // Back is not the only key that does anything.
+    val noFreeRequester = remember { FocusRequester() }
 
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
@@ -366,12 +376,19 @@ fun ProfileAvatarPicker(
         label = "avatarPickerSlide",
     )
 
-    LaunchedEffect(focusIndex) { requesters[focusIndex]?.requestFocus() }
+    LaunchedEffect(focusIndex, noFreeAvatar) {
+        if (noFreeAvatar) {
+            noFreeRequester.requestWhenAttached()
+        } else {
+            requesters[focusIndex]?.requestWhenAttached()
+        }
+    }
 
     val scale = rememberTvScale()
     val keyRepeat = rememberTvKeyRepeat()
     val scope = rememberCoroutineScope()
     val takenNote = stringResource(R.string.profile_avatar_taken)
+    val noneFreeNote = stringResource(R.string.profile_avatar_none_free)
     val title = stringResource(R.string.profile_avatar_choose)
     val rows = remember { ProfileCatalog.EMOJIS.chunked(ProfileCatalog.AVATAR_COLUMNS) }
 
@@ -387,11 +404,28 @@ fun ProfileAvatarPicker(
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp) {
                     keyRepeat.release(event.key)
-                    return@onKeyEvent true
+                    // Only navigation/OK belong to this layer; do not swallow
+                    // volume, media or vendor keys on the way to the system.
+                    return@onKeyEvent false
                 }
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent true
                 if (TvKeyRepeat.isOneShot(event.key) && !keyRepeat.firstPress(event)) {
                     return@onKeyEvent true
+                }
+                if (noFreeAvatar) {
+                    return@onKeyEvent when (event.key) {
+                        Key.DirectionLeft, Key.DirectionRight,
+                        Key.DirectionUp, Key.DirectionDown,
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
+                        -> true
+                        Key.Back -> {
+                            keyRepeat.stopRepeat()
+                            onDismiss()
+                            true
+                        }
+                        // System media/volume keys still belong to the system.
+                        else -> false
+                    }
                 }
                 fun move(dx: Int, dy: Int) {
                     focusIndex = ProfileCatalog.avatarMove(
@@ -458,7 +492,22 @@ fun ProfileAvatarPicker(
                     .clearAndSetSemantics { heading(); contentDescription = title },
             )
             Spacer(Modifier.height(scale.dp(AVATAR_TITLE_GAP)))
-            Column(horizontalAlignment = Alignment.Start) {
+            if (noFreeAvatar) {
+                Text(
+                    text = noneFreeNote,
+                    color = LauncherColors.textPrimary,
+                    fontSize = scale.sp(AVATAR_HEADER_FONT),
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(horizontal = scale.dp(AVATAR_CELL_GAP))
+                        .focusRequester(noFreeRequester)
+                        .focusable()
+                        .clearAndSetSemantics {
+                            contentDescription = noneFreeNote
+                        },
+                )
+            } else Column(horizontalAlignment = Alignment.Start) {
                 var previousGroup = -1
                 rows.forEachIndexed { rowIndex, row ->
                     val group = ProfileCatalog.groupOf(row.first())
@@ -520,9 +569,10 @@ private fun AvatarDisc(
     focusRequester: FocusRequester,
     onPick: () -> Unit,
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val focusAmount by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "avatarDiscFocus",
     )
     val grow = 1f + (AVATAR_FOCUS_SCALE - 1f) * focusAmount
@@ -589,4 +639,14 @@ private fun AvatarDisc(
             }
         }
     }
+}
+
+// The avatar grid is composed in the same pass that asks for its focus. Retry
+// on the frame clock so a cold start does not leave focus on the overlay root.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
 }

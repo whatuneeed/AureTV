@@ -2,7 +2,10 @@ package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -87,14 +90,21 @@ internal object AerialRefresh {
         // The attempt is recorded before the network call so an unreachable
         // CDN is retried on the next interval, not on every resume.
         SaverPreferences.setRefreshAttempt(app, System.currentTimeMillis())
-        runCatching { updateNow(app) }
-            .onFailure { error -> Log.w(TAG, "aerial catalogue refresh failed", error) }
-            .getOrDefault(AerialRefreshResult.FAILED)
+        try {
+            updateNow(app)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "aerial catalogue refresh failed", error)
+            AerialRefreshResult.FAILED
+        }
     }
 
-    private fun updateNow(context: Context): AerialRefreshResult {
+    private suspend fun updateNow(context: Context): AerialRefreshResult {
         val archive = download() ?: return fail("download", AerialRefreshResult.FAILED)
+        currentCoroutineContext().ensureActive()
         val files = AerialTar.extract(archive, setOf(ENTRIES, STRINGS_EN, STRINGS_RU))
+        currentCoroutineContext().ensureActive()
         val entries = files[ENTRIES]?.toString(Charsets.UTF_8)
             ?: return fail("entries", AerialRefreshResult.FAILED)
         if (!AerialCatalogBuilder.supports(entries)) {
@@ -122,7 +132,19 @@ internal object AerialRefresh {
         return result
     }
 
-    private fun download(url: String = SOURCE_URL, redirects: Int = 0): ByteArray? = runCatching {
+    private suspend fun download(url: String = SOURCE_URL, redirects: Int = 0): ByteArray? {
+        return try {
+            downloadOnce(url, redirects)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "aerial catalogue download failed", error)
+            null
+        }
+    }
+
+    private suspend fun downloadOnce(url: String, redirects: Int): ByteArray? {
+        currentCoroutineContext().ensureActive()
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
@@ -144,6 +166,7 @@ internal object AerialRefresh {
                 val buffer = ByteArray(COPY_CHUNK)
                 var total = 0
                 while (true) {
+                    currentCoroutineContext().ensureActive()
                     val read = input.read(buffer)
                     if (read < 0) break
                     total += read
@@ -151,11 +174,12 @@ internal object AerialRefresh {
                     out.write(buffer, 0, read)
                 }
             }
-            out.toByteArray()
+            return out.toByteArray()
         } finally {
             connection.disconnect()
         }
-    }.onFailure { error -> Log.w(TAG, "aerial catalogue download failed", error) }.getOrNull()
+    }
+
 }
 
 /** The catalogue may only come from Apple's host over TLS. */

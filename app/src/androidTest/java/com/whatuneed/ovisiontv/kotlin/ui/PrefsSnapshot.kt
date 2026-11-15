@@ -6,6 +6,7 @@ import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
+import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 
 /**
  * Connected tests clear the launcher's focus and order memory for deterministic
@@ -34,6 +35,11 @@ internal object PrefsSnapshot {
 
     fun restoreStartup(context: Context, values: Map<String, Any?>) =
         write(context, StartupPreferences.NAME, values)
+
+    fun captureWeather(context: Context): Map<String, Any?> = read(context, WeatherPreferences.NAME)
+
+    fun restoreWeather(context: Context, values: Map<String, Any?>) =
+        write(context, WeatherPreferences.NAME, values)
 
     fun captureProfiles(context: Context): Map<String, Any?> = read(context, ProfileStore.FILE)
 

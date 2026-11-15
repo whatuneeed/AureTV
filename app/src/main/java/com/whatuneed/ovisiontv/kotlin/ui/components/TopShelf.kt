@@ -1,34 +1,33 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.LinearGradient
-import android.graphics.Paint
-import android.graphics.RadialGradient
-import android.graphics.RectF
-import android.graphics.Shader
 import android.net.Uri
 import android.util.LruCache
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,45 +37,67 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
-import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
-import com.whatuneed.ovisiontv.kotlin.data.ShelfCard
+import com.whatuneed.ovisiontv.kotlin.data.ArtFailureCache
+import com.whatuneed.ovisiontv.kotlin.data.estimatedArtBytes
 import com.whatuneed.ovisiontv.kotlin.data.AppArtCache
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.loadShelfBanner
+import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
+import com.whatuneed.ovisiontv.kotlin.discovery.artUri
 import com.whatuneed.ovisiontv.kotlin.ui.ArtEasing
+import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
+import com.whatuneed.ovisiontv.kotlin.ui.TvInk
+import com.whatuneed.ovisiontv.kotlin.ui.TvLeading
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
+import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
+import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import com.whatuneed.ovisiontv.kotlin.ui.bannerIsHero
 import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
-import com.whatuneed.ovisiontv.kotlin.ui.TvLeading
-import com.whatuneed.ovisiontv.kotlin.ui.TvType
-import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -87,184 +108,602 @@ import kotlin.math.roundToInt
 // outgoing poster is kept composed for the whole fade.
 private const val ART_CROSSFADE_MS = 350
 
-// Decoded once per URI at roughly screen width. Hero art is redrawn every
-// frame, so it must never be decoded, blurred or scaled on the render thread.
-// The profile lowers the cap only on devices that cannot hold the full poster.
-
-private const val DOT_SIZE = 7f
-// The current page has to read at a glance over bright artwork, so it grows
-// into a short capsule instead of relying on opacity alone (06_TOP_SHELF §7).
-private const val DOT_ACTIVE_WIDTH = 20f
-private const val DOT_GAP = 14f
-// The dock band lifts by DOCK_FOCUS_SHIFT while the first row holds focus, so
-// the dots are measured from the raised band edge, with 28 pt of air above it.
-private const val DOTS_BOTTOM_GAP = TvOs.SCREEN_HEIGHT -
-    (TvOs.DOCK_Y - TvOs.DOCK_FOCUS_SHIFT - 28f)
-// 06_TOP_SHELF §7: while the parade owns the screen its page controls sit
-// 24 pt above the bottom edge, as measured on tvOS.
-private const val DOTS_BOTTOM_CAROUSEL = 24f
-// The Java hero put the details at the bottom-left while the carousel had the
-// remote; the dock line is where they rest when the tiles are on screen.
-private const val INFO_BOTTOM_CAROUSEL = 40f
-private const val INFO_BOTTOM_DOCK = TvOs.SCREEN_HEIGHT - 700f
+// The rail is the tvOS "Up Next" row: large landscape cards, one hero behind
+// them, and a compact section bar instead of a second line of page dots.
+private const val CARD_WIDTH = 330f
+private const val CARD_HEIGHT = 186f
+private const val CARD_GAP = 24f
+private const val CARD_RADIUS = 18f
+private const val RAIL_BOTTOM = 56f
+private const val RAIL_TITLE_GAP = 12f
 
 /**
- * tvOS home: the focused app owns the whole screen. Its selected recommendation
- * fills the display, the dots below switch between recommendations, and an app
- * that published nothing keeps its banner or stays bare (06_TOP_SHELF §9).
- *
- * There is no GPU blur here on purpose: art is decoded once at screen size,
- * which is what the Java launcher did with its baked hero frames. A per-frame
- * RenderEffect on a full-screen surface measured ~20 fps on the TV image.
+ * The selected card is scrolled to the left edge of the rail. The context menu
+ * belongs there, next to the card, not in the middle of the screen.
+ */
+internal fun shelfCardAnchor(): Offset = Offset(
+    TvOs.SAFE_AREA + CARD_WIDTH / 2f,
+    TvOs.SCREEN_HEIGHT - RAIL_BOTTOM - CARD_HEIGHT / 2f,
+)
+private const val INFO_BOTTOM = 340f
+private const val SECTION_BAR_TOP = 270f
+private const val SECTION_BAR_HEIGHT = 44f
+private const val SECTION_GAP = 12f
+
+/**
+ * tvOS top shelf, extended into rails. The focused app still owns the screen:
+ * its poster fills the display and its rows are the first section. The section
+ * bar only appears when the profile has more than one non-empty rail, so a home
+ * with nothing to discover looks exactly like before.
  */
 @Composable
 fun TopShelf(
     app: TvApp?,
-    cards: List<ShelfCard>,
+    rails: List<DiscoveryRail>,
+    selectedSection: DiscoverySection?,
     selectedCard: Int,
     focusedCard: Int,
-    onCardActivate: (ShelfCard) -> Unit,
+    sectionFocused: Boolean,
+    onCardActivate: (DiscoveryItem) -> Unit,
+    onSectionActivate: (DiscoverySection) -> Unit,
     scale: TvScale,
     reduceMotion: Boolean = false,
+    // A resume, a closed menu or a closed search can leave Android focus on a
+    // node that no longer exists; this tick asks the shelf to restore its card.
+    focusTick: Int = 0,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val selected = cards.getOrNull(selectedCard)
-    val arts = rememberShelfArts(cards)
+    val rail = rails.firstOrNull { it.section == selectedSection } ?: rails.firstOrNull()
+    val selected = rail?.items?.getOrNull(selectedCard) ?: rail?.items?.firstOrNull()
+    val arts = rememberRailArts(rail?.items.orEmpty(), selected?.id)
     val bannerArt = app?.let { rememberShelfBanner(it) }
+
     // An app with no banner and no published rows draws nothing at all: even a
     // scrim would read as a band over the home backdrop.
-    if (bannerArt == null && cards.isEmpty()) return
+    if (bannerArt == null && rails.isEmpty()) return
 
-    // A loaded poster already covers the screen, so painting the banner under it
-    // is a second full-screen fill per frame for nothing. A banner smaller than
-    // the screen can hold at 2× is a grid thumbnail, not a hero image: stretched
-    // 6–12× it only shows pixels, so the wallpaper stays visible instead.
     val density = LocalDensity.current.density
-    val bannerUnderlay = bannerArt
-        ?.takeIf { bannerIsHero(it.width, scale.factor * density) }
-        ?.takeIf { selected?.artUri == null || arts[selected.artUri] == null }
+    val heroPrefix = "${ArtRole.HERO}:"
+    val currentHero = selected?.let { arts["$heroPrefix${it.id}"] }
 
     Box(Modifier.fillMaxSize()) {
-        // The app banner is the fallback backdrop for cards without art.
-        bannerUnderlay?.let { banner ->
-            Image(
-                bitmap = banner,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                filterQuality = FilterQuality.Low,
-            )
-        }
-
-        Crossfade(
-            targetState = selected?.artUri,
-            animationSpec = tween(ART_CROSSFADE_MS, easing = ArtEasing),
-            label = "shelfArt",
-        ) { uri ->
-            // Keyed by URI: a package broadcast rebuilds every TvApp with fresh
-            // bitmaps and must not replay the fade on the same poster (T8).
-            val art = uri?.let(arts::get)
-            if (art != null) {
-                Image(
-                    bitmap = art,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    filterQuality = FilterQuality.Medium,
-                )
+        // Backdrop: the hero when it is large enough to fill the screen, the
+        // app banner otherwise. A narrow source is shown as a card, never
+        // stretched into a fake 4K backdrop.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(LauncherColors.backgroundTop, LauncherColors.backgroundBottom),
+                    ),
+                ),
+        )
+        if (currentHero != null) {
+            // The previous hero stays in the map for one transition, so the
+            // outgoing poster is composed for the whole fade (T8).
+            Crossfade(
+                targetState = selected?.id,
+                animationSpec = tween(ART_CROSSFADE_MS, easing = ArtEasing),
+                label = "shelfHero",
+            ) { id ->
+                val bitmap = id?.let { arts["$heroPrefix$it"] }
+                if (bitmap != null) {
+                    if (heroIsWide(bitmap, scale, density)) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            filterQuality = FilterQuality.Medium,
+                        )
+                    } else {
+                        // A provider poster smaller than half the screen stays
+                        // a poster; a portrait source is not cropped into a
+                        // fake backdrop.
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(bottom = scale.dp(80f))
+                                .width(scale.dp(760f))
+                                .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
+                                .clip(RoundedCornerShape(scale.dp(CARD_RADIUS)))
+                                .shadow(24.dp, RoundedCornerShape(scale.dp(CARD_RADIUS)))
+                                .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.14f),
+                                    RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                                ),
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                }
             }
+        } else if (rail?.section == DiscoverySection.FROM_APP || rails.isEmpty()) {
+            // The dock app's banner is only honest behind its own shelf; a
+            // cross-app rail with no art keeps the neutral gradient instead of
+            // borrowing the wrong app's branding.
+            bannerArt
+                ?.takeIf { bannerIsHero(it.width, scale.factor * density) }
+                ?.let { banner ->
+                    Image(
+                        bitmap = banner,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        filterQuality = FilterQuality.Low,
+                    )
+                }
         }
 
+        // Readability veil; the hero is never darkened into mud.
         Box(
             Modifier
                 .fillMaxSize()
                 .drawBehind {
                     val width = size.width.roundToInt()
                     val height = size.height.roundToInt()
+                    // A smooth veil has no detail to lose: keep the cached
+                    // gradient at design size instead of allocating a 4K
+                    // ARGB bitmap (33 MB on a 3840×2160 panel).
                     drawImage(
-                        image = shelfScrim(width, height),
+                        image = shelfScrim(
+                            width.coerceAtMost(SCRIM_MAX_WIDTH),
+                            height.coerceAtMost(SCRIM_MAX_HEIGHT),
+                        ),
                         dstSize = IntSize(width, height),
                         filterQuality = FilterQuality.Low,
                     )
                 },
         )
 
-        Column(
-            // The weather pill owns the top-left corner (top 48, height 76, and
-            // it grows from that corner); the title starts below its bottom edge
-            // so the focused app's name is never covered.
-            Modifier
-                .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(150f))
-                .width(scale.dp(750f)),
-        ) {
-            Text(
-                text = app?.label ?: selected?.packageName.orEmpty(),
-                color = Color.White,
-                fontSize = scale.sp(TvType.title),
-                lineHeight = scale.sp(TvLeading.shelfTitle),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = TextStyle(
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.55f),
-                        blurRadius = 30f,
-                    ),
-                ),
+        TopShelfHeading(
+            app = app,
+            section = rail?.section,
+            selected = selected,
+            locale = locale,
+            scale = scale,
+        )
+
+        if (rails.size > 1 && rail != null) {
+            SectionBar(
+                rails = rails,
+                selected = rail.section,
+                focused = sectionFocused,
+                appLabel = app?.label,
+                onSectionActivate = onSectionActivate,
+                scale = scale,
+                reduceMotion = reduceMotion,
+                focusTick = focusTick,
             )
+        }
+
+        if (selected != null) {
+            RecommendationInfo(selected, scale)
+        }
+
+        if (rail != null) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(),
+            ) {
+                ShelfRail(
+                    rail = rail,
+                    appLabel = app?.label,
+                    selectedCard = selectedCard,
+                    focusedCard = focusedCard,
+                    arts = arts,
+                    showSource = rail.section != DiscoverySection.FROM_APP,
+                    onCardActivate = onCardActivate,
+                    scale = scale,
+                    reduceMotion = reduceMotion,
+                    focusTick = focusTick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopShelfHeading(
+    app: TvApp?,
+    section: DiscoverySection?,
+    selected: DiscoveryItem?,
+    locale: java.util.Locale,
+    scale: TvScale,
+) {
+    val appLabel = app?.label
+    val title = when (section) {
+        DiscoverySection.FROM_APP -> appLabel ?: selected?.packageLabel ?: stringResource(R.string.shelf_context)
+        DiscoverySection.FOR_YOU -> stringResource(R.string.discovery_section_for_you)
+        DiscoverySection.CONTINUE -> stringResource(R.string.discovery_section_continue)
+        DiscoverySection.RECENT -> stringResource(R.string.discovery_section_recent)
+        DiscoverySection.FAVORITES -> stringResource(R.string.discovery_section_favorites)
+        null -> appLabel ?: selected?.packageLabel.orEmpty()
+    }
+    val subtitle = when (section) {
+        DiscoverySection.FROM_APP, null -> stringResource(R.string.shelf_context).uppercase(locale)
+        // A cross-app hero belongs to the app that published the card, not to
+        // whichever dock tile happens to be under the cursor.
+        else -> selected?.packageLabel ?: appLabel
+    }
+    Column(
+        Modifier
+            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(150f))
+            .width(scale.dp(750f)),
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = scale.sp(TvType.title),
+            lineHeight = scale.sp(TvLeading.shelfTitle),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = TextStyle(
+                shadow = Shadow(color = Color.Black.copy(alpha = 0.55f), blurRadius = 30f),
+            ),
+        )
+        if (!subtitle.isNullOrBlank()) {
             Spacer(Modifier.height(scale.dp(10f)))
             Text(
-                text = stringResource(R.string.shelf_context).uppercase(locale),
+                text = subtitle.uppercase(locale),
                 color = Color.White.copy(alpha = 0.5f),
                 fontSize = scale.sp(TvType.callout),
                 letterSpacing = (23f * scale.factor * 0.08f).sp,
                 fontWeight = FontWeight.Medium,
             )
         }
+    }
+}
 
-        if (selected != null) {
-            RecommendationInfo(
-                card = selected,
-                focused = focusedCard >= 0,
-                reduceMotion = reduceMotion,
-                scale = scale,
+@Composable
+private fun SectionBar(
+    rails: List<DiscoveryRail>,
+    selected: DiscoverySection,
+    focused: Boolean,
+    appLabel: String?,
+    onSectionActivate: (DiscoverySection) -> Unit,
+    scale: TvScale,
+    reduceMotion: Boolean,
+    focusTick: Int = 0,
+) {
+    val requesters = remember(rails) { mutableMapOf<DiscoverySection, FocusRequester>() }
+    // The pill is a real focus target: the custom cursor used to paint only,
+    // so TalkBack stayed on the grid while the bar visibly owned the remote.
+    LaunchedEffect(focused, selected, focusTick) {
+        if (focused) requesters[selected]?.requestWhenAttached()
+    }
+    Row(
+        modifier = Modifier
+            .padding(
+                start = scale.dp(TvOs.SAFE_AREA),
+                top = scale.dp(SECTION_BAR_TOP),
             )
-        }
-
-        if (cards.size > 1) {
-            val label = stringResource(R.string.shelf_continue)
-            ShelfDots(
-                count = cards.size,
-                selected = selectedCard.coerceIn(0, cards.lastIndex),
-                focused = focusedCard >= 0,
-                scale = scale,
-                reduceMotion = reduceMotion,
-                description = selected?.let { "$label: ${it.title}" } ?: label,
+            .height(scale.dp(SECTION_BAR_HEIGHT)),
+        horizontalArrangement = Arrangement.spacedBy(scale.dp(SECTION_GAP)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        rails.forEach { rail ->
+            val active = rail.section == selected
+            val label = sectionLabel(rail.section, appLabel)
+            val alpha by animateFloatAsState(
+                targetValue = if (active) 0.92f else 0.12f,
+                animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
+                label = "sectionPill",
             )
+            val requester = requesters.getOrPut(rail.section) { FocusRequester() }
+            Box(
+                modifier = Modifier
+                    .focusRequester(requester)
+                    .focusable()
+                    .clip(RoundedCornerShape(scale.dp(22f)))
+                    .background(
+                        if (active) {
+                            Color.White.copy(alpha = alpha)
+                        } else {
+                            Color.Black.copy(alpha = 0.32f)
+                        },
+                    )
+                    .then(
+                        if (active && focused) {
+                            Modifier.border(
+                                2.dp,
+                                Color.White,
+                                RoundedCornerShape(scale.dp(22f)),
+                            )
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .padding(
+                        horizontal = scale.dp(18f),
+                        vertical = scale.dp(8f),
+                    )
+                    .semantics {
+                        contentDescription = label
+                        role = Role.Tab
+                        onClick(label = label) {
+                            onSectionActivate(rail.section)
+                            true
+                        }
+                    }
+                    .testTag("shelfSection"),
+            ) {
+                Text(
+                    text = label,
+                    color = if (active) TvInk.focusInk else Color.White.copy(alpha = 0.72f),
+                    fontSize = scale.sp(TvType.callout),
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
 
-/** Title, episode and resume point of the poster that is on screen. */
 @Composable
-private fun RecommendationInfo(
-    card: ShelfCard,
-    focused: Boolean,
-    reduceMotion: Boolean,
+private fun sectionLabel(section: DiscoverySection, appLabel: String?): String = when (section) {
+    DiscoverySection.CONTINUE -> stringResource(R.string.discovery_section_continue)
+    DiscoverySection.FOR_YOU -> stringResource(R.string.discovery_section_for_you)
+    DiscoverySection.FROM_APP -> if (appLabel.isNullOrBlank()) {
+        stringResource(R.string.discovery_section_from_current)
+    } else {
+        stringResource(R.string.discovery_section_from_app, appLabel)
+    }
+    DiscoverySection.RECENT -> stringResource(R.string.discovery_section_recent)
+    DiscoverySection.FAVORITES -> stringResource(R.string.discovery_section_favorites)
+}
+
+@Composable
+private fun ShelfRail(
+    rail: DiscoveryRail,
+    appLabel: String?,
+    selectedCard: Int,
+    focusedCard: Int,
+    arts: Map<String, ImageBitmap>,
+    showSource: Boolean,
+    onCardActivate: (DiscoveryItem) -> Unit,
     scale: TvScale,
+    reduceMotion: Boolean,
+    focusTick: Int = 0,
 ) {
-    // tvOS parade: the details sit at the bottom-left while the carousel owns
-    // the screen, and rise to the dock line when the tiles come back.
-    val bottom by animateDpAsState(
-        targetValue = scale.dp(if (focused) INFO_BOTTOM_CAROUSEL else INFO_BOTTOM_DOCK),
-        animationSpec = tween(motionDuration(TvOs.SCROLL_DURATION_MS, reduceMotion)),
-        label = "shelfInfoBottom",
+    val state = rememberLazyListState()
+    val requesters = remember(rail.items) { mutableMapOf<String, FocusRequester>() }
+    LaunchedEffect(rail.section, rail.items, selectedCard, focusedCard, focusTick) {
+        val target = if (focusedCard >= 0) focusedCard else selectedCard
+        if (rail.items.isNotEmpty()) {
+            val requester = if (focusedCard >= 0) {
+                requesters[rail.items[focusedCard.coerceIn(0, rail.items.lastIndex)].id]
+            } else {
+                null
+            }
+            // A card outside the lazy window has not been composed yet, so the
+            // first request can fail. Reveal it, then ask again once it exists.
+            requester?.requestWhenAttached()
+            // Reveal the card by the smallest amount. Aligning every step to
+            // the left edge made the rail jump under the cursor.
+            val info = state.layoutInfo
+            val visible = info.visibleItemsInfo.firstOrNull { it.index == target }
+            if (visible == null) {
+                state.animateScrollToItem(target.coerceIn(0, rail.items.lastIndex))
+            } else {
+                val delta = when {
+                    visible.offset < info.viewportStartOffset ->
+                        visible.offset - info.viewportStartOffset
+                    visible.offset + visible.size > info.viewportEndOffset ->
+                        visible.offset + visible.size - info.viewportEndOffset
+                    else -> 0
+                }
+                if (delta != 0) {
+                    state.animateScrollBy(
+                        delta.toFloat(),
+                        tween(motionDuration(TvOs.SCROLL_DURATION_MS, reduceMotion)),
+                    )
+                }
+            }
+            requester?.requestWhenAttached()
+        }
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = scale.dp(RAIL_BOTTOM)),
+    ) {
+        Text(
+            text = sectionLabel(rail.section, appLabel),
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = scale.sp(TvType.subhead),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = scale.dp(TvOs.SAFE_AREA)),
+        )
+        Spacer(Modifier.height(scale.dp(RAIL_TITLE_GAP)))
+        LazyRow(
+            state = state,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = scale.dp(TvOs.SAFE_AREA)),
+            horizontalArrangement = Arrangement.spacedBy(scale.dp(CARD_GAP)),
+        ) {
+            itemsIndexed(rail.items, key = { _, item -> item.id }) { index, item ->
+                val focused = index == focusedCard
+                val requester = remember(item.id) { FocusRequester() }
+                requesters[item.id] = requester
+                RailCard(
+                    item = item,
+                    art = arts[cardKey(item)],
+                    focused = focused,
+                    selected = index == selectedCard,
+                    showSource = showSource,
+                    onActivate = { onCardActivate(item) },
+                    scale = scale,
+                    reduceMotion = reduceMotion,
+                    focusRequester = requester,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RailCard(
+    item: DiscoveryItem,
+    art: ImageBitmap?,
+    focused: Boolean,
+    selected: Boolean,
+    showSource: Boolean,
+    onActivate: () -> Unit,
+    scale: TvScale,
+    reduceMotion: Boolean,
+    focusRequester: FocusRequester,
+) {
+    val grow by animateFloatAsState(
+        targetValue = if (focused) 1.06f else 1f,
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
+        label = "railCard",
     )
+    // A lazy row composes its first cards during the first measure, after the
+    // parent's LaunchedEffect has already run. The card therefore owns the
+    // focus request as well: an initially focused shelf (or a card revealed by
+    // a scroll) must take focus once it actually exists.
+    LaunchedEffect(focused) {
+        if (focused) focusRequester.requestWhenAttached()
+    }
+    Box(
+        Modifier
+            .width(scale.dp(CARD_WIDTH))
+            .height(scale.dp(CARD_HEIGHT))
+            .focusRequester(focusRequester)
+            .focusable()
+            .graphicsLayer {
+                scaleX = grow
+                scaleY = grow
+            }
+            .shadow(
+                elevation = if (focused) 22.dp else 8.dp,
+                shape = RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                clip = false,
+            )
+            .clip(RoundedCornerShape(scale.dp(CARD_RADIUS)))
+            .background(TvInk.panel)
+            .then(
+                when {
+                    focused -> Modifier.border(
+                        3.dp,
+                        Color.White,
+                        RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                    )
+                    // The hero above is this card; keep a quiet marker even
+                    // while the section bar owns the remote.
+                    selected -> Modifier.border(
+                        2.dp,
+                        Color.White.copy(alpha = 0.55f),
+                        RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                    )
+                    else -> Modifier.border(
+                        1.dp,
+                        Color.White.copy(alpha = 0.10f),
+                        RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                    )
+                },
+            )
+            .semantics {
+                contentDescription = item.title
+                role = Role.Button
+                onClick(label = item.title) {
+                    onActivate()
+                    true
+                }
+            }
+            .testTag("shelfCard"),
+    ) {
+        if (art != null) {
+            Image(
+                bitmap = art,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                filterQuality = FilterQuality.Low,
+            )
+        } else {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                LauncherColors.cardFallbackTop,
+                                LauncherColors.cardFallbackBottom,
+                            ),
+                        ),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = item.title,
+                    color = Color.White.copy(alpha = 0.82f),
+                    fontSize = scale.sp(TvType.callout),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = scale.dp(18f)),
+                )
+            }
+        }
+
+        val progress = item.progress
+        if (progress != null && progress > 0f) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .height(scale.dp(4f))
+                    .background(Color.White.copy(alpha = 0.24f)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(progress.coerceIn(0f, 1f))
+                        .height(scale.dp(4f))
+                        .background(Color.White.copy(alpha = 0.92f)),
+                )
+            }
+        }
+
+        val source = item.packageLabel
+        if (showSource && !source.isNullOrBlank()) {
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(scale.dp(TvSpace.sm))
+                    .clip(RoundedCornerShape(scale.dp(9f)))
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = scale.dp(8f), vertical = scale.dp(3f)),
+            ) {
+                Text(
+                    text = source,
+                    color = Color.White.copy(alpha = 0.88f),
+                    fontSize = scale.sp(15f),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendationInfo(card: DiscoveryItem, scale: TvScale) {
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = scale.dp(TvOs.SAFE_AREA), bottom = bottom)
+                .padding(
+                    start = scale.dp(TvOs.SAFE_AREA),
+                    bottom = scale.dp(INFO_BOTTOM),
+                )
                 .width(scale.dp(900f)),
             verticalArrangement = Arrangement.Bottom,
         ) {
@@ -275,7 +714,7 @@ private fun RecommendationInfo(
                 fontSize = scale.sp(TvType.subhead),
                 lineHeight = scale.sp(TvLeading.infoTitle),
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     shadow = Shadow(color = Color.Black.copy(alpha = 0.5f), blurRadius = 24f),
@@ -292,6 +731,14 @@ private fun RecommendationInfo(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            Spacer(Modifier.height(scale.dp(8f)))
+            Text(
+                text = reasonLabel(card.reason),
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = scale.sp(TvType.caption),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             val progress = card.progress
             if (progress != null && progress > 0f) {
                 Spacer(Modifier.height(scale.dp(TvSpace.md)))
@@ -314,88 +761,43 @@ private fun RecommendationInfo(
 }
 
 @Composable
-private fun ShelfDots(
-    count: Int,
-    selected: Int,
-    focused: Boolean,
-    scale: TvScale,
-    reduceMotion: Boolean,
-    description: String,
-) {
-    // 06_TOP_SHELF §7: the parade's page controls drop to a 24 pt bottom inset
-    // with the details; above the dock they keep their band-relative spot.
-    val bottom by animateDpAsState(
-        targetValue = scale.dp(if (focused) DOTS_BOTTOM_CAROUSEL else DOTS_BOTTOM_GAP),
-        animationSpec = tween(motionDuration(TvOs.SCROLL_DURATION_MS, reduceMotion)),
-        label = "shelfDotsBottom",
-    )
-    Box(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = bottom)
-                .semantics {
-                    // A page indicator, as in tvOS: it reports the current card
-                    // to TalkBack but is not a control. The carousel itself
-                    // takes the arrows and OK launches the poster.
-                    contentDescription = description
-                },
-            horizontalArrangement = Arrangement.spacedBy(
-                space = scale.dp(DOT_GAP),
-                alignment = Alignment.CenterHorizontally,
-            ),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            repeat(count) { index ->
-                val active = index == selected
-                val alpha by animateFloatAsState(
-                    targetValue = when {
-                        active -> 1f
-                        focused -> 0.42f
-                        else -> 0.32f
-                    },
-                    animationSpec = tween(TvOs.FOCUS_MS),
-                    label = "shelfDot",
-                )
-                val width by animateDpAsState(
-                    targetValue = scale.dp(if (active) DOT_ACTIVE_WIDTH else DOT_SIZE),
-                    animationSpec = tween(TvOs.FOCUS_MS),
-                    label = "shelfDotWidth",
-                )
-                Box(
-                    Modifier
-                        .size(width = width, height = scale.dp(DOT_SIZE))
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = CircleShape,
-                            clip = false,
-                            ambientColor = Color.Black,
-                            spotColor = Color.Black,
-                        )
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = alpha))
-                        .testTag("shelfDot"),
-                )
-            }
-        }
-    }
+private fun reasonLabel(reason: DiscoveryReason): String = when (reason) {
+    DiscoveryReason.CONTINUE_WATCHING -> stringResource(R.string.discovery_reason_continue)
+    DiscoveryReason.RECENTLY_LAUNCHED -> stringResource(R.string.discovery_reason_recent)
+    DiscoveryReason.FAVORITE -> stringResource(R.string.discovery_reason_favorite)
+    DiscoveryReason.NEW_FROM_APP -> stringResource(R.string.discovery_reason_new)
+    DiscoveryReason.OFTEN_USED -> stringResource(R.string.discovery_reason_often)
+    DiscoveryReason.FROM_CURRENT_APP -> stringResource(R.string.discovery_reason_from_app)
+    DiscoveryReason.DIVERSE_PICK -> stringResource(R.string.discovery_reason_diverse)
 }
 
-// Sized for the twelve posters the carousel keeps on screen (see below): an
-// eight-entry budget evicted art that was still being drawn and every step
-// through a longer row re-decoded from disk. Only the LOW profile shrinks it.
+// ---------------------------------------------------------------------------
+// Artwork. Two decode sizes and two cache keys per item: the rail card is not
+// allowed to pin the full-screen hero (and the hero is not downsampled to a
+// card). Everything is bounds-first and never upscaled.
+// ---------------------------------------------------------------------------
+
+internal enum class ArtRole { CARD, HERO }
+
 private val shelfArtCache =
-    object : LruCache<String, ImageBitmap>(Adaptive.budgets.shelfArtEntries) {}
+    object : LruCache<String, ImageBitmap>(Adaptive.budgets.discoveryArtBytes) {
+        // The old cache was bounded by entry count: twelve 2560px heroes could
+        // sit at ~176 MB while the budget read "12". Bytes make the cap honest.
+        override fun sizeOf(key: String, value: ImageBitmap): Int =
+            estimatedArtBytes(value.width, value.height)
+    }
 
 /**
- * Bumped by every trim. The carousel remembers the posters it has shown in
- * [rememberShelfArts]; that map was a second owner of the same bitmaps, so an
- * eviction freed nothing (audit A-02). A bump makes it drop its entries, which
- * leaves the LruCache as the only owner and lets the trim actually return memory.
+ * Bumped by every trim. The shelf keeps decoded art in a Compose map; that map
+ * was a second owner of the same bitmaps, so an eviction freed nothing
+ * (audit A-02). A bump makes it drop its entries.
  */
 private val shelfArtEpoch = mutableIntStateOf(0)
 
-/** Called from MemoryPressure; the provider still holds every poster. */
+// A dead poster host must not be retried on every recomposition. Failures are
+// negative-cached briefly; the TTL keeps a temporary offline state recoverable.
+private val shelfArtFailures = ArtFailureCache()
+
 internal fun trimShelfArtCache(percent: Int) {
     if (percent >= 100) {
         val max = shelfArtCache.maxSize()
@@ -409,9 +811,8 @@ internal fun trimShelfArtCache(percent: Int) {
     shelfArtEpoch.intValue++
 }
 
-/** Follows a profile downgrade: the entry budget may only shrink. */
-internal fun trimShelfArtCacheTo(entries: Int) {
-    val target = entries.coerceAtLeast(1)
+internal fun trimShelfArtCacheTo(bytes: Int) {
+    val target = bytes.coerceAtLeast(1)
     if (target < shelfArtCache.maxSize()) {
         shelfArtCache.resize(target)
         shelfArtCache.trimToSize(target)
@@ -419,113 +820,191 @@ internal fun trimShelfArtCacheTo(entries: Int) {
     }
 }
 
-// P-GPU-2: the scrim used to be three full-screen gradient rects per frame.
-// Its stops never move, so it is baked once into one half-resolution bitmap and
-// drawn as a single image; upscaling a smooth gradient is invisible.
-private const val SCRIM_SCALE = 0.5f
-private const val SCRIM_TRANSPARENT = 0x00000000
-private const val SCRIM_LEFT = 0xD9101012.toInt()
-private const val SCRIM_LEFT_MID = 0x73101012.toInt()
-private const val SCRIM_CORNER = 0x660E0E11.toInt()
-private const val SCRIM_BOTTOM_MID = 0xB3101012.toInt()
-private const val SCRIM_BOTTOM_EDGE = 0xFF101012.toInt()
-
-private var scrimImage: ImageBitmap? = null
-private var scrimWidth = 0
-private var scrimHeight = 0
-
-/** Baked once per surface size; safe to drop under pressure, it rebuilds on draw. */
-internal fun dropShelfScrim() {
-    scrimImage = null
-    scrimWidth = 0
-    scrimHeight = 0
-}
-
-private fun shelfScrim(width: Int, height: Int): ImageBitmap {
-    scrimImage?.let { if (scrimWidth == width && scrimHeight == height) return it }
-    val bakedWidth = (width * SCRIM_SCALE).roundToInt().coerceAtLeast(1)
-    val bakedHeight = (height * SCRIM_SCALE).roundToInt().coerceAtLeast(1)
-    val bitmap = Bitmap.createBitmap(bakedWidth, bakedHeight, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    val paint = Paint()
-    val w = bakedWidth.toFloat()
-    val h = bakedHeight.toFloat()
-
-    // Left scrim: the app title and shelf copy sit on bright artwork.
-    paint.shader = LinearGradient(
-        0f, 0f, w, 0f,
-        intArrayOf(SCRIM_LEFT, SCRIM_LEFT_MID, SCRIM_TRANSPARENT),
-        floatArrayOf(0f, 0.42f, 0.78f),
-        Shader.TileMode.CLAMP,
-    )
-    canvas.drawRect(0f, 0f, w, h, paint)
-    // Corner vignette that keeps the top-left poster edge from glowing.
-    paint.shader = RadialGradient(
-        0f, 0f, w * 0.5f,
-        intArrayOf(SCRIM_CORNER, SCRIM_TRANSPARENT),
-        floatArrayOf(0f, 1f),
-        Shader.TileMode.CLAMP,
-    )
-    canvas.drawRect(0f, 0f, w, h, paint)
-    // Bottom darkening into the home background so the dock gap is seamless.
-    paint.shader = LinearGradient(
-        0f, 0f, 0f, h,
-        intArrayOf(SCRIM_TRANSPARENT, SCRIM_BOTTOM_MID, SCRIM_BOTTOM_EDGE),
-        floatArrayOf(0.48f, 0.82f, 1f),
-        Shader.TileMode.CLAMP,
-    )
-    canvas.drawRect(0f, 0f, w, h, paint)
-
-    return bitmap.asImageBitmap().also {
-        scrimImage = it
-        scrimWidth = width
-        scrimHeight = height
-    }
-}
-
 /**
- * Preloads every distinct poster for the app while its tiles are still on
- * screen, so stepping through the carousel never waits on a decode.
+ * Preloads the rail and the selected hero. The provider still owns every
+ * poster; this is a decoded working set, not a second catalogue.
  */
 @Composable
-private fun rememberShelfArts(cards: List<ShelfCard>): Map<String, ImageBitmap> {
+private fun rememberRailArts(
+    items: List<DiscoveryItem>,
+    selectedId: String?,
+): Map<String, ImageBitmap> {
     val context = LocalContext.current
     val arts = remember { mutableStateMapOf<String, ImageBitmap>() }
     val epoch = shelfArtEpoch.intValue
     var loadedEpoch by remember { mutableIntStateOf(epoch) }
-    LaunchedEffect(cards, epoch) {
-        // A trim dropped the cache entries: let go of the remembered posters
-        // before reloading, or they outlive the eviction that was meant to free
-        // them (A-02).
+    LaunchedEffect(items, selectedId, epoch) {
         if (loadedEpoch != epoch) {
             arts.clear()
             loadedEpoch = epoch
         }
-        val current = cards.mapNotNull { it.artUri }.distinct()
-        for (uri in current) {
-            if (arts[uri] != null) continue
-            val cached = shelfArtCache.get(uri)
-            val loaded = cached ?: withContext(Dispatchers.IO) { loadShelfArt(context, uri) }
-            if (loaded != null) {
-                if (cached == null) shelfArtCache.put(uri, loaded)
-                arts[uri] = loaded
+        // Drop cards that left the rail and the hero of a previous selection.
+        // Without this, browsing twenty cards would fill the map with old
+        // heroes and an arbitrary trim could evict a card still on screen.
+        val cards = items.mapTo(HashSet()) { cardKey(it) }
+        val hero = selectedId?.let { "${ArtRole.HERO}:$it" }
+        val heroKeys = arts.keys.toList().filter { it.startsWith("${ArtRole.HERO}:") }
+        // Keep the current hero and the one before it so Crossfade can compose
+        // the outgoing poster; anything older is safe to drop.
+        val previousHero = heroKeys.lastOrNull { it != hero }
+        arts.keys.toList().forEach { key ->
+            if ((key.startsWith("${ArtRole.CARD}:") && key !in cards) ||
+                (key.startsWith("${ArtRole.HERO}:") && key != hero && key != previousHero)
+            ) {
+                arts.remove(key)
             }
         }
-        // Keep the posters in focus plus the one still fading out.
-        val keep = Adaptive.budgets.shelfArtEntries
+        items.forEach { item ->
+            loadInto(arts, context, item, ArtRole.CARD)
+        }
+        items.firstOrNull { it.id == selectedId }?.let { item ->
+            loadInto(arts, context, item, ArtRole.HERO)
+        }
+        // Keep the rail plus the hero; the LRU would evict anyway, but the map
+        // must not outlive the cache entry it points at.
+        val keep = Adaptive.budgets.discoveryArtEntries
         if (arts.size > keep) {
-            arts.keys.filterNot { it in current }.take(arts.size - keep).forEach(arts::remove)
+            val overflow = arts.size - keep
+            arts.keys.take(overflow).forEach(arts::remove)
         }
     }
     return arts
 }
 
+private suspend fun loadInto(
+    arts: MutableMap<String, ImageBitmap>,
+    context: Context,
+    item: DiscoveryItem,
+    role: ArtRole,
+) {
+    val key = if (role == ArtRole.HERO) heroKey(item) else cardKey(item)
+    if (arts[key] != null) return
+    val target = when (role) {
+        ArtRole.HERO -> Adaptive.budgets.discoveryHeroPx
+        ArtRole.CARD -> Adaptive.budgets.discoveryCardPx
+    }
+    val cacheKey = "${item.source}:${item.artUri}|$target|$role"
+    if (shelfArtFailures.isFailed(cacheKey)) return
+    val cached = shelfArtCache.get(cacheKey)
+    val loaded = cached ?: withContext(Dispatchers.IO) { loadArt(context, item, target) }
+    if (loaded != null) {
+        if (cached == null) shelfArtCache.put(cacheKey, loaded)
+        arts[key] = loaded
+        shelfArtFailures.clear(cacheKey)
+    } else if (cached == null) {
+        shelfArtFailures.markFailed(cacheKey)
+    }
+}
+
+private fun heroKey(item: DiscoveryItem): String = "${ArtRole.HERO}:${item.id}"
+private fun cardKey(item: DiscoveryItem): String = "${ArtRole.CARD}:${item.id}"
+
 /**
- * The shelf banner covers the screen only when it can do so within
- * [bannerIsHero]'s 2× limit, while [TvApp.banner] is a 400×240 grid thumbnail.
- * The focused app is therefore decoded once at screen size, so an app that
- * ships a larger banner is not shown from the thumbnail; a smaller source keeps
- * the thumbnail instead of being upscaled into a bigger bitmap.
+ * TV providers publish posters on hosts that may hang. The old path opened the
+ * URL twice with no connect/read timeout and no size cap, so one dead host held
+ * a Dispatchers.IO thread for minutes and could allocate an unbounded buffer
+ * (audit A-04). Now the bytes are read once, bounded, and decoded from memory.
+ */
+private const val ART_TIMEOUT_MS = 10_000
+private const val ART_MAX_BYTES = 8 * 1024 * 1024
+
+private suspend fun loadArt(context: Context, item: DiscoveryItem, targetPx: Int): ImageBitmap? {
+    if (item.source == DiscoverySource.PACKAGE_MANAGER) {
+        val banner = item.landscapeUri?.let { key ->
+            AppArtCache.get(key) ?: AppArtCache.load(context, key)
+        }
+        if (banner != null) return banner
+        return item.posterUri?.let { key ->
+            AppArtCache.get(key) ?: AppArtCache.load(context, key)
+        }
+    }
+    val candidates = listOfNotNull(item.landscapeUri, item.posterUri).distinct()
+    for (value in candidates) {
+        decodeArt(context, value, targetPx)?.let { return it }
+    }
+    return null
+}
+
+private suspend fun decodeArt(
+    context: Context,
+    value: String,
+    targetPx: Int,
+): ImageBitmap? {
+    return try {
+        val uri = Uri.parse(value)
+        val bytes = readArtBytes(context, uri, value) ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        val limit = targetPx.coerceAtLeast(1)
+        while (bounds.outWidth / sample > limit || bounds.outHeight / sample > limit) {
+            sample *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inScaled = false
+            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+        }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private suspend fun readArtBytes(
+    context: Context,
+    uri: Uri,
+    value: String,
+): ByteArray? {
+    return try {
+        currentCoroutineContext().ensureActive()
+        if (uri.scheme == "http" || uri.scheme == "https") {
+            val connection = URL(value).openConnection() as HttpURLConnection
+            connection.connectTimeout = ART_TIMEOUT_MS
+            connection.readTimeout = ART_TIMEOUT_MS
+            connection.instanceFollowRedirects = true
+            try {
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+                if (connection.contentLengthLong > ART_MAX_BYTES) return null
+                connection.inputStream.use { it.readAtMost(ART_MAX_BYTES) }
+            } finally {
+                connection.disconnect()
+            }
+        } else {
+            context.contentResolver.openInputStream(uri)?.use { it.readAtMost(ART_MAX_BYTES) }
+        }
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** Reads a stream into one buffer, refusing anything over [limit] bytes. */
+private suspend fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
+    val out = java.io.ByteArrayOutputStream(COPY_CHUNK)
+    val buffer = ByteArray(COPY_CHUNK)
+    var total = 0
+    while (true) {
+        currentCoroutineContext().ensureActive()
+        val read = read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > limit) return null
+        out.write(buffer, 0, read)
+    }
+    return out.toByteArray()
+}
+
+private const val COPY_CHUNK = 64 * 1024
+
+/**
+ * The focused app is decoded once at screen size, so an app that ships a larger
+ * banner is not shown from the thumbnail; a smaller source keeps the thumbnail
+ * instead of being upscaled into a bigger bitmap.
  */
 @Composable
 private fun rememberShelfBanner(app: TvApp): ImageBitmap? {
@@ -549,62 +1028,63 @@ private fun rememberShelfBanner(app: TvApp): ImageBitmap? {
 }
 
 /**
- * TV providers publish posters on hosts that may hang. The old path opened the
- * URL twice with no connect/read timeout and no size cap, so one dead host held
- * a Dispatchers.IO thread for minutes and could allocate an unbounded buffer
- * (audit A-04). Now the bytes are read once, bounded, and decoded from memory.
+ * A hero must be landscape and cover at least half of the physical screen
+ * before it fills it. A tall poster that happens to be high-resolution would
+ * otherwise be cropped into a fake backdrop; it is shown as a card instead.
  */
-private const val ART_TIMEOUT_MS = 10_000
-private const val ART_MAX_BYTES = 8 * 1024 * 1024
+private fun heroIsWide(art: ImageBitmap, scale: TvScale, density: Float): Boolean =
+    art.width >= art.height * 1.4f &&
+        art.width * 2 >= (TvOs.SCREEN_WIDTH * scale.factor * density).roundToInt()
 
-private fun loadShelfArt(context: Context, value: String): ImageBitmap? = runCatching {
-    val uri = Uri.parse(value)
-    val bytes = readArtBytes(context, uri, value) ?: return@runCatching null
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-    var sample = 1
-    val maxPx = Adaptive.budgets.shelfArtMaxPx
-    while (bounds.outWidth / sample > maxPx || bounds.outHeight / sample > maxPx) {
-        sample *= 2
-    }
-    val options = BitmapFactory.Options().apply {
-        inSampleSize = sample
-        inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
-    }
-    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
-}.getOrNull()
+private const val SCRIM_MAX_WIDTH = 960
+private const val SCRIM_MAX_HEIGHT = 540
 
-private fun readArtBytes(context: Context, uri: Uri, value: String): ByteArray? = runCatching {
-    if (uri.scheme == "http" || uri.scheme == "https") {
-        val connection = URL(value).openConnection() as HttpURLConnection
-        connection.connectTimeout = ART_TIMEOUT_MS
-        connection.readTimeout = ART_TIMEOUT_MS
-        connection.instanceFollowRedirects = true
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            if (connection.contentLengthLong > ART_MAX_BYTES) return null
-            connection.inputStream.use { it.readAtMost(ART_MAX_BYTES) }
-        } finally {
-            connection.disconnect()
-        }
-    } else {
-        context.contentResolver.openInputStream(uri)?.use { it.readAtMost(ART_MAX_BYTES) }
-    }
-}.getOrNull()
+private var scrimImage: ImageBitmap? = null
+private var scrimWidth = 0
+private var scrimHeight = 0
 
-/** Reads a stream into one buffer, refusing anything over [limit] bytes. */
-private fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
-    val out = java.io.ByteArrayOutputStream(COPY_CHUNK)
-    val buffer = ByteArray(COPY_CHUNK)
-    var total = 0
-    while (true) {
-        val read = read(buffer)
-        if (read < 0) break
-        total += read
-        if (total > limit) return null
-        out.write(buffer, 0, read)
-    }
-    return out.toByteArray()
+internal fun dropShelfScrim() {
+    scrimImage = null
 }
 
-private const val COPY_CHUNK = 64 * 1024
+/** One vertical veil, rebuilt only when the surface size changes. */
+private fun shelfScrim(width: Int, height: Int): ImageBitmap {
+    val cached = scrimImage
+    if (cached != null && scrimWidth == width && scrimHeight == height) return cached
+    val bitmap = android.graphics.Bitmap.createBitmap(
+        width.coerceAtLeast(1),
+        height.coerceAtLeast(1),
+        android.graphics.Bitmap.Config.ARGB_8888,
+    )
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint()
+    paint.shader = android.graphics.LinearGradient(
+        0f,
+        0f,
+        0f,
+        height.toFloat(),
+        intArrayOf(
+            android.graphics.Color.argb(90, 0, 0, 0),
+            android.graphics.Color.argb(20, 0, 0, 0),
+            android.graphics.Color.argb(170, 0, 0, 0),
+        ),
+        floatArrayOf(0f, 0.45f, 1f),
+        android.graphics.Shader.TileMode.CLAMP,
+    )
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+    val image = bitmap.asImageBitmap()
+    scrimImage = image
+    scrimWidth = width
+    scrimHeight = height
+    return image
+}
+
+// Same layout-attach retry as Home: a requester created by this composition
+// is not attached until the next layout pass.
+private suspend fun FocusRequester.requestWhenAttached(): Boolean {
+    repeat(3) {
+        if (runCatching { requestFocus() }.isSuccess) return true
+        withFrameNanos { }
+    }
+    return false
+}

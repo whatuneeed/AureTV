@@ -29,7 +29,7 @@ class AerialCatalogBuilderTest {
         assertEquals(0, clips.count { it.theme == SaverTheme.LANDSCAPES && it.nameEn.isBlank() })
 
         clips.forEach { clip ->
-            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("http://sylvan.apple.com/"))
+            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("https://sylvan.apple.com/"))
             assertTrue(clip.nameEn.isNotBlank())
             assertTrue(clip.nameRu.isNotBlank())
         }

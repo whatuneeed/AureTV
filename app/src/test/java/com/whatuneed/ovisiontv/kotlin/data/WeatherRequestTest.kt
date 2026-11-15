@@ -25,4 +25,11 @@ class WeatherRequestTest {
         val request = WeatherRequest("c|openmeteo|auto", "ru")
         assertFalse(weatherRequestIsCurrent(request, "c|openmeteo|auto", "en"))
     }
+
+    @Test
+    fun clearing_saved_weather_during_the_fetch_drops_the_result() {
+        val request = WeatherRequest("c|openmeteo|auto", "ru", generation = 4)
+        assertTrue(weatherRequestIsCurrent(request, "c|openmeteo|auto", "ru", 4))
+        assertFalse(weatherRequestIsCurrent(request, "c|openmeteo|auto", "ru", 5))
+    }
 }

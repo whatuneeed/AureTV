@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.util.Log
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.mutableIntStateOf
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
@@ -142,8 +144,11 @@ internal fun artKey(key: String, art: ImageBitmap?): String? =
 
 /** Phone-only apps stay visible by default; Settings can hide them. */
 internal fun showPhoneApps(context: Context): Boolean =
-    context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
-        .getBoolean(LauncherPrefs.KEY_SHOW_PHONE_APPS, true)
+    SafePreferences.boolean(
+        context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE),
+        LauncherPrefs.KEY_SHOW_PHONE_APPS,
+        true,
+    )
 
 internal fun setShowPhoneApps(context: Context, show: Boolean) {
     context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
@@ -164,6 +169,19 @@ internal fun filterPhoneOnly(apps: List<TvApp>, showPhoneApps: Boolean): List<Tv
 internal fun gridBannerBox(panelWidthPx: Int): Pair<Int, Int> =
     if (panelWidthPx >= 2560) 500 to 300 else 400 to 240
 
+private const val APP_TAG = "AppRepository"
+
+private fun AppLoadResult.appsOrEmpty(): List<TvApp> = when (this) {
+    is AppLoadResult.Loaded -> apps
+    is AppLoadResult.Failed -> emptyList()
+}
+
+/** A failed scan must stay distinguishable from a genuinely empty app list. */
+sealed interface AppLoadResult {
+    data class Loaded(val apps: List<TvApp>) : AppLoadResult
+    data class Failed(val error: Exception) : AppLoadResult
+}
+
 class AppRepository(context: Context) {
     // The launcher language lives in its own preference and is applied by
     // wrapping an Activity; the application context keeps the system locale.
@@ -173,11 +191,26 @@ class AppRepository(context: Context) {
 
     suspend fun load(): List<TvApp> = load(withArtwork = true)
 
+    suspend fun load(withArtwork: Boolean): List<TvApp> = loadResult(withArtwork).appsOrEmpty()
+
+    /**
+     * A Primary-surface load: a failure is returned to the caller instead of
+     * escaping a UI coroutine. Cancellation is never converted into a failure.
+     */
+    suspend fun loadResult(withArtwork: Boolean = true): AppLoadResult = try {
+        AppLoadResult.Loaded(loadNow(withArtwork))
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        Log.w(APP_TAG, "app catalogue load failed", error)
+        AppLoadResult.Failed(error)
+    }
+
     /**
      * Settings lists names only; decoding a banner and an icon for every
      * installed app would allocate bitmaps that screen never draws.
      */
-    suspend fun load(withArtwork: Boolean): List<TvApp> = withContext(Dispatchers.IO) {
+    private suspend fun loadNow(withArtwork: Boolean): List<TvApp> = withContext(Dispatchers.IO) {
         val packageManager = context.packageManager
         // The launcher can show a language different from the system one; the
         // grid order must follow the captions the user actually reads.
@@ -215,11 +248,9 @@ class AppRepository(context: Context) {
 
         for ((category, leanback) in categories) {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(category)
-            val resolved = try {
-                packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
-            } catch (_: Exception) {
-                emptyList()
-            }
+            // A failed query is a failed scan, not a genuinely empty launcher:
+            // let it reach loadResult so Home can offer a retry.
+            val resolved = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
             for (resolveInfo in resolved) {
                 val activity = resolveInfo.activityInfo ?: continue
                 // The launcher itself is not an app tile, but its Settings screen
@@ -241,14 +272,27 @@ class AppRepository(context: Context) {
         activity: ActivityInfo,
         leanback: Boolean,
         withArtwork: Boolean,
+    ): TvApp? = try {
+        readAppUnchecked(packageManager, activity, leanback, withArtwork)
+    } catch (_: PackageManager.NameNotFoundException) {
+        // The package disappeared after the query; the rest of the grid is still valid.
+        null
+    } catch (_: Exception) {
+        // One broken package (resources, label, security state) must not abort
+        // the whole catalogue and leave Home without its other tiles.
+        Log.w(APP_TAG, "app entry skipped after a load error")
+        null
+    }
+
+    private fun readAppUnchecked(
+        packageManager: PackageManager,
+        activity: ActivityInfo,
+        leanback: Boolean,
+        withArtwork: Boolean,
     ): TvApp? {
         // PackageInfo carries both the application entry and lastUpdateTime, so
         // one lookup keys the artwork cache to the exact package version.
-        val packageInfo = try {
-            packageManager.getPackageInfo(activity.packageName, 0)
-        } catch (_: PackageManager.NameNotFoundException) {
-            return null
-        }
+        val packageInfo = packageManager.getPackageInfo(activity.packageName, 0)
         val appInfo = packageInfo.applicationInfo ?: return null
         // A component disabled after the scan must not keep a dead tile.
         if (!activity.enabled || !appInfo.enabled) return null

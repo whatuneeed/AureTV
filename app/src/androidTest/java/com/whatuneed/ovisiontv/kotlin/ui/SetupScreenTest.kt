@@ -315,17 +315,21 @@ class SetupScreenTest {
 
     @Test
     fun theWeatherRowsWriteTheRealPreference() {
+        // Weather defaults off; an earlier test or a previous run must not leak
+        // an enabled value into this assertion.
+        context.getSharedPreferences(WeatherPreferences.NAME, Context.MODE_PRIVATE)
+            .edit().clear().commit()
         setSetup(startStep = 4)
 
         rule.onNodeWithText(title(R.string.setup_weather_title)).assertExists()
-        // The first row is the internet-address answer; the radio starts there.
-        assertTrue(WeatherPreferences.enabled(context))
-        // Two rows down is "No Weather": choosing it must reach the store.
+        // The first row is the internet-address answer; it starts unselected.
+        assertFalse(WeatherPreferences.enabled(context))
+        // Two rows down is "No Weather": choosing it keeps the weather off.
         press(Key.DirectionDown, 2)
         press(Key.DirectionCenter)
 
         assertFalse(WeatherPreferences.enabled(context))
-        // And back up to the first row turns the weather on again, without a city.
+        // Back up to the first row turns the weather on explicitly, without a city.
         press(Key.DirectionUp, 2)
         press(Key.DirectionCenter)
 

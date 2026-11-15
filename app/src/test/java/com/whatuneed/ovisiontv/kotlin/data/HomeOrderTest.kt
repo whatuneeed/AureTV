@@ -33,19 +33,31 @@ class HomeOrderTest {
     }
 
     @Test
-    fun uninstalledAppsDisappearAndEmptyFolderIsDropped() {
+    fun uninstalledAppsKeepTheirPositionAsUnavailableTiles() {
         val saved = """[{"id":"f1","name":"Папка","apps":["gone"]},"beta"]"""
         val result = buildHomeOrder(saved, apps, "Folder")
-        assertEquals(listOf("beta", "alpha", "gamma", "delta"), result.keys())
-        assertTrue(result.none { it is HomeItem.FolderItem })
+        assertEquals(listOf("folder:f1", "beta", "alpha", "gamma", "delta"), result.keys())
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals(listOf("gone"), folder.apps.map { it.packageName })
+        assertEquals(false, folder.apps.single().available)
     }
 
     @Test
-    fun folderKeepsSurvivingChildren() {
+    fun folderKeepsSurvivingAndMissingChildren() {
         val saved = """[{"id":"f1","name":"Папка","apps":["alpha","gone"]},"beta"]"""
         val result = buildHomeOrder(saved, apps, "Folder")
         val folder = result.first() as HomeItem.FolderItem
-        assertEquals(listOf("alpha"), folder.apps.map { it.packageName })
+        assertEquals(listOf("alpha", "gone"), folder.apps.map { it.packageName })
+        assertEquals(true, folder.apps[0].available)
+        assertEquals(false, folder.apps[1].available)
+    }
+
+    @Test
+    fun aMissingRootAppStaysWhereTheUserPutIt() {
+        val saved = """["gone","beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("gone", "beta", "alpha", "gamma", "delta"), result.keys())
+        assertEquals(false, (result.first() as HomeItem.AppItem).app.available)
     }
 
     @Test
@@ -186,6 +198,22 @@ class HomeOrderTest {
         assertTrue(built.repairedIds)
         val ids = built.items.filterIsInstance<HomeItem.FolderItem>().map { it.id }
         assertEquals(2, ids.toSet().size)
+    }
+
+    @Test
+    fun an_order_with_too_many_entries_is_truncated_and_rewritten() {
+        val saved = (0 until 1_001).joinToString(",", "[", "]") { "\"alpha\"" }
+        val built = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(built.repairedIds)
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), built.items.keys())
+    }
+
+    @Test
+    fun an_oversized_order_is_ignored_before_it_is_parsed() {
+        val saved = "[\"alpha\"]" + " ".repeat(512 * 1024)
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), result.keys())
+        assertEquals(false, savedOrderCovers(saved, apps))
     }
 
     private fun List<HomeItem>.keys(): List<String> = map { it.key }

@@ -111,28 +111,31 @@ object SaverSettings {
 }
 
 object SaverPreferences {
-    private const val KEY_DELAY_MINUTES = "saver_delay_minutes"
-    private const val KEY_MUSIC = "saver_music"
-    private const val KEY_REFRESH = "saver_refresh"
-    private const val KEY_REFRESH_ATTEMPT = "saver_refresh_attempt_ms"
-    private const val KEY_THEMES = "saver_themes"
-    private const val KEY_HIDDEN_CLIPS = "saver_hidden_clips"
+    internal const val KEY_DELAY_MINUTES = "saver_delay_minutes"
+    internal const val KEY_MUSIC = "saver_music"
+    internal const val KEY_REFRESH = "saver_refresh"
+    internal const val KEY_REFRESH_ATTEMPT = "saver_refresh_attempt_ms"
+    internal const val KEY_THEMES = "saver_themes"
+    internal const val KEY_HIDDEN_CLIPS = "saver_hidden_clips"
 
     fun delay(context: Context): SaverDelay =
-        SaverDelay.fromMinutes(prefs(context).getInt(KEY_DELAY_MINUTES, SaverDelay.FIVE.minutes))
+        SaverDelay.fromMinutes(
+            SafePreferences.int(prefs(context), KEY_DELAY_MINUTES, SaverDelay.FIVE.minutes),
+        )
 
     fun setDelay(context: Context, delay: SaverDelay) {
         prefs(context).edit().putInt(KEY_DELAY_MINUTES, delay.minutes).apply()
     }
 
-    fun music(context: Context): Boolean = prefs(context).getBoolean(KEY_MUSIC, true)
+    fun music(context: Context): Boolean =
+        SafePreferences.boolean(prefs(context), KEY_MUSIC, true)
 
     fun setMusic(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_MUSIC, enabled).apply()
     }
 
     fun refresh(context: Context): SaverRefresh {
-        val raw = prefs(context).getString(KEY_REFRESH, null)
+        val raw = SafePreferences.string(prefs(context), KEY_REFRESH, null)
         return SaverRefresh.entries.firstOrNull { it.name == raw } ?: SaverRefresh.WEEKLY
     }
 
@@ -141,14 +144,14 @@ object SaverPreferences {
     }
 
     fun refreshAttempt(context: Context): Long =
-        prefs(context).getLong(KEY_REFRESH_ATTEMPT, 0L)
+        SafePreferences.long(prefs(context), KEY_REFRESH_ATTEMPT, 0L)
 
     fun setRefreshAttempt(context: Context, atMs: Long) {
         prefs(context).edit().putLong(KEY_REFRESH_ATTEMPT, atMs).apply()
     }
 
     fun themes(context: Context): Set<SaverTheme> =
-        SaverSettings.decodeThemes(prefs(context).getString(KEY_THEMES, null))
+        SaverSettings.decodeThemes(SafePreferences.string(prefs(context), KEY_THEMES, null))
 
     fun toggleTheme(context: Context, theme: SaverTheme, clips: List<AerialClip>): Set<SaverTheme> {
         val next = SaverSettings.toggleTheme(themes(context), theme, clips, hidden(context))
@@ -160,7 +163,7 @@ object SaverPreferences {
         toggleTheme(context, theme, emptyList())
 
     fun hidden(context: Context): Set<String> =
-        SaverSettings.decodeHidden(prefs(context).getString(KEY_HIDDEN_CLIPS, null))
+        SaverSettings.decodeHidden(SafePreferences.string(prefs(context), KEY_HIDDEN_CLIPS, null))
 
     fun toggleHidden(context: Context, id: String, visible: Int): Set<String> {
         val next = SaverSettings.toggleHidden(hidden(context), id, visible)
@@ -184,6 +187,6 @@ object SaverPreferences {
             .apply()
     }
 
-    private fun prefs(context: Context) =
+    internal fun prefs(context: Context) =
         context.getSharedPreferences(LauncherPrefs.NAME, Context.MODE_PRIVATE)
 }

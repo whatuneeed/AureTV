@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Weather
+import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.TvFocus
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
@@ -47,6 +48,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import com.whatuneed.ovisiontv.kotlin.ui.TvLeading
 import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
+import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 
 // The Java card sat at dp(24) from both edges of its 960-wide canvas; the
 // Kotlin launcher works in 1920×1080 points, so the same corner is 48 here and
@@ -81,14 +83,15 @@ internal fun WeatherCapsule(
         append(weatherDescription(data.code, data.day))
     }
     val label = stringResource(R.string.weather_a11y, "${data.temp}°", place)
+    val reduceMotion = LocalReduceMotion.current
     val grow by animateFloatAsState(
         targetValue = if (focused) WEATHER_FOCUS_SCALE else 1f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "weatherFocus",
     )
     val ring by animateFloatAsState(
         targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(TvOs.FOCUS_MS),
+        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
         label = "weatherRing",
     )
     val shape = RoundedCornerShape(scale.dp(WEATHER_CAPSULE_HEIGHT / 2f))

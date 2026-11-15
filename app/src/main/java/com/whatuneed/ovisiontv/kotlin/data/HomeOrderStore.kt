@@ -19,12 +19,21 @@ class HomeOrderStore(
     private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
     fun applyOrder(apps: List<TvApp>): List<HomeItem> {
+        val saved = SafePreferences.string(prefs, LauncherPrefs.KEY_HOME_ORDER, null)
         val built = buildHomeOrderRepair(
-            saved = prefs.getString(LauncherPrefs.KEY_HOME_ORDER, null),
+            saved = saved,
             apps = apps,
             defaultFolderName = context.getString(R.string.folder_default),
             hiddenFolderName = context.getString(R.string.hidden_folder_name),
         )
+        // Keep the raw value before a repair can overwrite it. The backup is
+        // one bounded key, so a corrupt order stays diagnosable after the
+        // launcher has already rebuilt a usable grid.
+        if (built.repairedIds || saved?.let(::invalidOrderJson) == true) {
+            saved?.takeIf { it.length <= MAX_QUARANTINE_CHARS }?.let {
+                prefs.edit().putString(KEY_QUARANTINE, it).apply()
+            }
+        }
         // Persist a generated folder id even when the saved order already
         // covers every app: otherwise the next read invents another UUID and
         // the Compose key and saved focus become unstable (AQ-28).
@@ -46,7 +55,11 @@ class HomeOrderStore(
     }
 
     /** The raw saved value, so Home can tell whether Settings changed it. */
-    fun savedOrder(): String? = prefs.getString(LauncherPrefs.KEY_HOME_ORDER, null)
+    fun savedOrder(): String? = SafePreferences.string(
+        prefs,
+        LauncherPrefs.KEY_HOME_ORDER,
+        null,
+    )
 
     fun clearOrder() {
         prefs.edit().remove(LauncherPrefs.KEY_HOME_ORDER).apply()
@@ -86,24 +99,35 @@ class HomeOrderStore(
  * adds nothing. Missing entries, unreadable JSON and a blank value all mean the
  * current build is the fallback and has to be written down.
  */
+private const val MAX_QUARANTINE_CHARS = 256 * 1024
+private const val MAX_ORDER_CHARS = 512 * 1024
+private const val MAX_ORDER_ENTRIES = 1_000
+private const val MAX_FOLDER_APPS = 1_000
+private const val MAX_TEXT_CHARS = 256
+private const val KEY_QUARANTINE = "order_quarantine"
+
+private fun invalidOrderJson(saved: String): Boolean =
+    runCatching { JSONArray(saved) }.isFailure
+
 internal fun savedOrderCovers(saved: String?, apps: List<TvApp>): Boolean {
     if (apps.isEmpty()) return saved != null
-    if (saved == null) return false
+    if (saved == null || saved.length > MAX_ORDER_CHARS) return false
     val entries = try {
         JSONArray(saved)
     } catch (_: Exception) {
         return false
     }
-    if (entries.length() == 0) return false
+    if (entries.length() == 0 || entries.length() > MAX_ORDER_ENTRIES) return false
     val covered = HashSet<String>(entries.length())
-    for (index in 0 until entries.length()) {
+    for (index in 0 until minOf(entries.length(), MAX_ORDER_ENTRIES)) {
         val entry = entries.opt(index)
         if (entry is String) {
-            covered += entry
+            if (entry.length <= MAX_TEXT_CHARS) covered += entry
         } else if (entry is JSONObject) {
             val packages = entry.optJSONArray("apps") ?: continue
-            for (packageIndex in 0 until packages.length()) {
-                covered += packages.optString(packageIndex)
+            for (packageIndex in 0 until minOf(packages.length(), MAX_FOLDER_APPS)) {
+                val packageName = packages.optString(packageIndex)
+                if (packageName.length <= MAX_TEXT_CHARS) covered += packageName
             }
         }
     }
@@ -127,6 +151,16 @@ internal fun buildHomeOrder(
     hiddenFolderName: String? = null,
 ): List<HomeItem> = buildHomeOrderRepair(saved, apps, defaultFolderName, hiddenFolderName).items
 
+/** A saved package that is not installed now; its position is still the user's. */
+internal fun missingApp(packageName: String): TvApp = TvApp(
+    packageName = packageName,
+    activityName = "",
+    label = packageName,
+    banner = null,
+    icon = null,
+    available = false,
+)
+
 internal fun buildHomeOrderRepair(
     saved: String?,
     apps: List<TvApp>,
@@ -135,6 +169,9 @@ internal fun buildHomeOrderRepair(
 ): BuiltHomeOrder {
     val fallback = apps.map(HomeItem::AppItem)
     if (saved == null) return BuiltHomeOrder(fallback, repairedIds = false)
+    if (saved.length > MAX_ORDER_CHARS) {
+        return BuiltHomeOrder(fallback, repairedIds = true)
+    }
     val entries = try {
         JSONArray(saved)
     } catch (_: Exception) {
@@ -143,32 +180,36 @@ internal fun buildHomeOrderRepair(
     if (entries.length() == 0) return BuiltHomeOrder(fallback, repairedIds = false)
 
     val byPackage = apps.associateBy { it.packageName }
-    val used = HashSet<String>(entries.length())
+    val entryLimit = minOf(entries.length(), MAX_ORDER_ENTRIES)
+    val used = HashSet<String>(entryLimit)
     val usedIds = HashSet<String>()
-    val result = ArrayList<HomeItem>(entries.length())
-    var repairedIds = false
-    for (index in 0 until entries.length()) {
+    val result = ArrayList<HomeItem>(entryLimit)
+    var repairedIds = entries.length() > MAX_ORDER_ENTRIES
+    for (index in 0 until entryLimit) {
         val entry = entries.opt(index)
         if (entry is String) {
-            val app = byPackage[entry] ?: continue
+            if (entry.length > MAX_TEXT_CHARS) continue
+            val app = byPackage[entry] ?: missingApp(entry)
             if (used.add(entry)) result += HomeItem.AppItem(app)
         } else if (entry is JSONObject) {
             val folderApps = ArrayList<TvApp>()
             val packages = entry.optJSONArray("apps") ?: JSONArray()
-            for (packageIndex in 0 until packages.length()) {
+            for (packageIndex in 0 until minOf(packages.length(), MAX_FOLDER_APPS)) {
                 val packageName = packages.optString(packageIndex)
-                val app = byPackage[packageName] ?: continue
+                if (packageName.length > MAX_TEXT_CHARS) continue
+                val app = byPackage[packageName] ?: missingApp(packageName)
                 if (used.add(packageName)) folderApps += app
             }
             if (folderApps.isEmpty()) continue
             // Duplicate ids would collide with the key Compose uses for each cell.
-            var id = entry.optString("id")
+            var id = entry.optString("id").takeIf { it.length <= MAX_TEXT_CHARS }.orEmpty()
             if (id.isEmpty() || !usedIds.add(id)) {
                 id = UUID.randomUUID().toString()
                 usedIds.add(id)
                 repairedIds = true
             }
-            val storedName = entry.optString("name").takeIf { it.isNotBlank() }
+            val storedName = entry.optString("name")
+                .takeIf { it.isNotBlank() && it.length <= MAX_TEXT_CHARS }
             // The hidden folder is a system bucket with a fixed caption, not a
             // user choice: its stored name would otherwise stay in the language
             // that was active when the first app was hidden.

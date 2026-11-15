@@ -1,29 +1,19 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
-import android.content.Intent
 import android.database.Cursor
 import android.media.tv.TvContract
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-/** One real row an app published for the TV home surface. */
-data class ShelfCard(
-    val packageName: String,
-    val title: String,
-    val subtitle: String?,
-    val thumbnailUri: String?,
-    val posterUri: String?,
-    val intentUri: String,
-    val progress: Float?,
-    val engagement: Long,
-) {
-    /** Landscape art is the shelf's native ratio; posters are the fallback. */
-    val artUri: String? get() = thumbnailUri ?: posterUri
-}
-
-/** Unfiiltered provider row; ranking stays pure so it can be unit-tested. */
+/**
+ * One real row an app published for the TV home surface. The discovery engine
+ * maps these rows into its own model; this type stays the provider DTO, so the
+ * ranking of one app's shelf keeps its pure, testable shape.
+ */
 internal data class WatchNextRow(
     val packageName: String,
     val title: String,
@@ -42,9 +32,9 @@ internal fun watchNextProgress(positionMs: Long, durationMs: Long): Float? {
 }
 
 /**
- * The shelf belongs to the focused dock app, so rows for other packages are
- * dropped before the limit; an app with nothing published gets its branding
- * instead of borrowed or invented content (PHASE 33).
+ * App-specific ranking: the shelf belongs to the focused dock app, so rows for
+ * other packages are dropped before the limit; an app with nothing published
+ * gets its branding instead of borrowed or invented content (PHASE 33).
  */
 internal fun rankWatchNext(
     rows: List<WatchNextRow>,
@@ -66,50 +56,34 @@ internal fun rankWatchNext(
 object WatchNextSource {
     const val MAX_CARDS = 6
     private const val MAX_ROWS = 500
+    private const val MAX_TITLE_CHARS = 512
+    private const val MAX_SUBTITLE_CHARS = 512
+    private const val MAX_URI_CHARS = 4_096
+    private const val MAX_PACKAGE_CHARS = 255
 
     /**
      * Reads Watch Next first and the older Preview Programs listing second:
      * apps that never migrated still publish recommendations there. Only public
      * provider rows are read; private app databases are not touched.
+     *
+     * [packageName] null means "every installed app", which is what the
+     * cross-app rails need. The app-specific shelf passes its own package and
+     * keeps the old ranking.
      */
-    suspend fun load(
+    internal suspend fun loadRows(
         context: Context,
-        packageName: String,
-        includeContinue: Boolean,
-    ): List<ShelfCard> = withContext(Dispatchers.IO) {
+        packageName: String? = null,
+    ): List<WatchNextRow> = withContext(Dispatchers.IO) {
         if (!ContentPreferences.canReadListings(context)) return@withContext emptyList()
-        val rows = readWatchNext(context, packageName) + readPreviewPrograms(context, packageName)
-        rankWatchNext(rows, packageName, includeContinue).map { row ->
-                ShelfCard(
-                    packageName = row.packageName,
-                    title = row.title,
-                    subtitle = row.subtitle,
-                    thumbnailUri = row.thumbnailUri,
-                    posterUri = row.posterUri,
-                    intentUri = row.intentUri.orEmpty(),
-                    progress = row.progress,
-                    engagement = row.engagement,
-                )
-            }
-        }
-
-    /**
-     * A deep link is only used when it resolves back to the app that published
-     * it; a provider row must not be able to open an arbitrary package.
-     */
-    fun contentIntent(context: Context, card: ShelfCard): Intent? {
-        val intent = runCatching {
-            Intent.parseUri(card.intentUri, Intent.URI_INTENT_SCHEME)
-        }.getOrNull() ?: return null
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val resolved = runCatching {
-            context.packageManager.resolveActivity(intent, 0)
-        }.getOrNull() ?: return null
-        if (resolved.activityInfo?.packageName != card.packageName) return null
-        return intent
+        currentCoroutineContext().ensureActive()
+        val watchNext = readWatchNext(context, packageName)
+        // A provider that took a long time must not keep the old query alive
+        // after the shelf has moved on or the screen has gone.
+        currentCoroutineContext().ensureActive()
+        watchNext + readPreviewPrograms(context, packageName)
     }
 
-    private fun readWatchNext(context: Context, packageName: String): List<WatchNextRow> = query(
+    private fun readWatchNext(context: Context, packageName: String?): List<WatchNextRow> = query(
         context = context,
         uri = TvContract.WatchNextPrograms.CONTENT_URI,
         columns = arrayOf(
@@ -130,12 +104,14 @@ object WatchNextSource {
         positionColumn = TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
         engagementColumn = TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS,
         typeColumn = TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE,
-        selection = "${TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME} = ?",
-        selectionArgs = arrayOf(packageName),
+        packageName = packageName,
     )
 
     @Suppress("DEPRECATION")
-    private fun readPreviewPrograms(context: Context, packageName: String): List<WatchNextRow> = query(
+    private fun readPreviewPrograms(
+        context: Context,
+        packageName: String?,
+    ): List<WatchNextRow> = query(
         context = context,
         uri = TvContract.PreviewPrograms.CONTENT_URI,
         columns = arrayOf(
@@ -153,6 +129,7 @@ object WatchNextSource {
         positionColumn = TvContract.PreviewPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
         engagementColumn = null,
         typeColumn = null,
+        packageName = packageName,
     )
 
     private fun query(
@@ -165,9 +142,10 @@ object WatchNextSource {
         positionColumn: String,
         engagementColumn: String?,
         typeColumn: String?,
-        selection: String? = null,
-        selectionArgs: Array<String>? = null,
+        packageName: String?,
     ): List<WatchNextRow> {
+        val selection = packageName?.let { "${TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME} = ?" }
+        val selectionArgs = packageName?.let { arrayOf(it) }
         val cursor: Cursor = runCatching {
             context.contentResolver.query(uri, columns, selection, selectionArgs, null)
         }.getOrNull() ?: return emptyList()
@@ -189,19 +167,28 @@ object WatchNextSource {
                     var count = 0
                     while (it.moveToNext() && count < MAX_ROWS) {
                         count++
-                        val packageName = it.stringOrNull(packageIndex) ?: continue
-                        val title = it.stringOrNull(titleIndex) ?: continue
+                        val rowPackage = it.stringOrNull(packageIndex)
+                            ?.takeIf { value -> value.length <= MAX_PACKAGE_CHARS }
+                            ?: continue
+                        val title = boundedWatchText(it.stringOrNull(titleIndex), MAX_TITLE_CHARS)
+                            ?: continue
                         val duration = it.longOrZero(durationIndex)
                         val position = it.longOrZero(positionIndex)
                         val type = if (typeIndex < 0) -1 else it.getInt(typeIndex)
                         add(
                             WatchNextRow(
-                                packageName = packageName,
+                                packageName = rowPackage,
                                 title = title,
-                                subtitle = it.stringOrNull(subtitleIndex),
-                                thumbnailUri = it.stringOrNull(thumbnailIndex),
-                                posterUri = it.stringOrNull(posterIndex),
-                                intentUri = it.stringOrNull(intentIndex),
+                                subtitle = boundedWatchText(
+                                    it.stringOrNull(subtitleIndex),
+                                    MAX_SUBTITLE_CHARS,
+                                ),
+                                thumbnailUri = boundedWatchUri(
+                                    it.stringOrNull(thumbnailIndex),
+                                    MAX_URI_CHARS,
+                                ),
+                                posterUri = boundedWatchUri(it.stringOrNull(posterIndex), MAX_URI_CHARS),
+                                intentUri = boundedWatchUri(it.stringOrNull(intentIndex), MAX_URI_CHARS),
                                 progress = watchNextProgress(position, duration),
                                 engagement = it.longOrZero(engagementIndex),
                                 continueRow = type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE ||
@@ -224,3 +211,11 @@ object WatchNextSource {
         return getLong(index)
     }
 }
+
+/** Provider text is untrusted; truncate before it reaches layout or storage. */
+internal fun boundedWatchText(value: String?, max: Int): String? =
+    value?.take(max)?.takeIf { it.isNotBlank() }
+
+/** A malformed overlong deep link is dropped rather than truncated into a different intent. */
+internal fun boundedWatchUri(value: String?, max: Int): String? =
+    value?.takeIf { it.isNotBlank() && it.length <= max }
