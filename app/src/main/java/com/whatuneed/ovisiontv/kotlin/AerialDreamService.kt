@@ -128,6 +128,8 @@ private fun DreamSaver(onFinished: () -> Unit) {
     AmbientScreen(
         mode = settings.mode,
         items = items,
+        clockFormat = settings.clockFormat,
+        pixelShift = settings.pixelShift,
         onCloseRequested = onFinished,
         onDismissed = onFinished,
         publishMediaSession = settings.mode == AmbientMode.AERIAL,

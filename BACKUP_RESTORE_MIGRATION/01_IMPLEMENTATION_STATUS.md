@@ -2,7 +2,7 @@
 
 Дата обновления: **2026-11-15 13:52 RTZ**  
 Ветка: `master`  
-**2026-11-15, 0.5.1:** добавлен `AmbientMode` (`mode` в `SaverData`, schema 1 остаётся обратно совместимой); см. `AMBIENT_EXPERIENCE/01_IMPLEMENTATION_STATUS.md`.
+**2026-11-15, 0.5.2:** добавлены `AmbientMode`, `AmbientClockFormat`, `pixelShift` (`mode`/`clockFormat`/`pixelShift` в `SaverData`, schema 1 остаётся обратно совместимой); см. `AMBIENT_EXPERIENCE/01_IMPLEMENTATION_STATUS.md`.
 Статус: **Stage 0–8 реализованы; Stage 9 (устройства/физические TV) частично. Основной AVD-сценарий зелёный, release собирается.**
 
 ---

@@ -57,6 +57,30 @@ class AmbientModelsTest {
     }
 
     @Test
+    fun an_unknown_stored_clock_format_falls_back_to_system() {
+        assertEquals(AmbientClockFormat.SYSTEM, AmbientClockFormat.fromKey(null))
+        assertEquals(AmbientClockFormat.SYSTEM, AmbientClockFormat.fromKey(""))
+        assertEquals(AmbientClockFormat.SYSTEM, AmbientClockFormat.fromKey("future"))
+        assertEquals(AmbientClockFormat.TWELVE, AmbientClockFormat.fromKey("twelve"))
+        assertEquals(AmbientClockFormat.TWENTY_FOUR, AmbientClockFormat.fromKey("twenty_four"))
+    }
+
+    @Test
+    fun the_clock_format_follows_or_overrides_the_system() {
+        assertTrue(AmbientClockFormat.SYSTEM.use24Hour(systemIs24Hour = true))
+        assertFalse(AmbientClockFormat.SYSTEM.use24Hour(systemIs24Hour = false))
+        assertFalse(AmbientClockFormat.TWELVE.use24Hour(systemIs24Hour = true))
+        assertTrue(AmbientClockFormat.TWENTY_FOUR.use24Hour(systemIs24Hour = false))
+    }
+
+    @Test
+    fun the_clock_format_keys_are_stable_for_backups() {
+        assertEquals("system", AmbientClockFormat.SYSTEM.key)
+        assertEquals("twelve", AmbientClockFormat.TWELVE.key)
+        assertEquals("twenty_four", AmbientClockFormat.TWENTY_FOUR.key)
+    }
+
+    @Test
     fun only_aerial_needs_clips() {
         assertTrue(AmbientScheduler.needsClips(AmbientMode.AERIAL))
         assertFalse(AmbientScheduler.needsClips(AmbientMode.CLOCK))

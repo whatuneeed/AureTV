@@ -249,6 +249,9 @@ internal data class SaverData(
     val hidden: Set<String>,
     /** Added after schema 1; absent in older archives means Aerial. */
     val mode: String = "aerial",
+    /** Added after schema 1; absent in older archives means system clock. */
+    val clockFormat: String = "system",
+    val pixelShift: Boolean = true,
 )
 
 internal data class LanguageData(

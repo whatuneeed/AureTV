@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.ui.components
 import android.text.format.DateFormat
 import android.view.View
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusable
@@ -22,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,10 +49,13 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.media3.exoplayer.ExoPlayer
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClock
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPixelShift
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
@@ -84,6 +89,8 @@ private const val CLOCK_DRIFT_MS = 15_000L
 internal fun AmbientScreen(
     mode: AmbientMode,
     items: List<AerialClip>,
+    clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
+    pixelShift: Boolean = true,
     closing: Boolean = false,
     swallowOpeningPress: Boolean = false,
     players: List<ExoPlayer>? = null,
@@ -107,6 +114,8 @@ internal fun AmbientScreen(
     }
     AmbientStillScreen(
         mode = mode,
+        clockFormat = clockFormat,
+        pixelShift = pixelShift,
         closing = closing,
         swallowOpeningPress = swallowOpeningPress,
         onCloseRequested = onCloseRequested,
@@ -118,6 +127,8 @@ internal fun AmbientScreen(
 @Composable
 private fun AmbientStillScreen(
     mode: AmbientMode,
+    clockFormat: AmbientClockFormat,
+    pixelShift: Boolean,
     closing: Boolean,
     swallowOpeningPress: Boolean,
     onCloseRequested: () -> Unit,
@@ -129,7 +140,8 @@ private fun AmbientStillScreen(
     val reduceMotion = LocalReduceMotion.current
     val scale = rememberTvScale()
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val systemIs24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
     val modeLabel = ambientModeLabel(mode)
     val clockTime = if (mode == AmbientMode.CLOCK) {
@@ -223,6 +235,7 @@ private fun AmbientStillScreen(
                 now = now,
                 is24Hour = is24Hour,
                 locale = locale,
+                pixelShift = pixelShift,
             )
         }
     }
@@ -233,10 +246,16 @@ private fun AmbientStillScreen(
  * decoder; the full-screen surface is opened deliberately, as before.
  */
 @Composable
-internal fun AmbientPreview(scale: TvScale, mode: AmbientMode) {
+internal fun AmbientPreview(
+    scale: TvScale,
+    mode: AmbientMode,
+    clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
+    pixelShift: Boolean = true,
+) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val systemIs24Hour = remember(context) { DateFormat.is24HourFormat(context) }
+    val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
     val shape = RoundedCornerShape(scale.dp(TvRadius.field))
     Box(
@@ -253,6 +272,7 @@ internal fun AmbientPreview(scale: TvScale, mode: AmbientMode) {
                 now = now,
                 is24Hour = is24Hour,
                 locale = locale,
+                pixelShift = pixelShift,
             )
         }
     }
@@ -264,10 +284,34 @@ private fun ClockFace(
     now: ZonedDateTime,
     is24Hour: Boolean,
     locale: Locale,
+    pixelShift: Boolean,
 ) {
+    var shiftStep by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(pixelShift) {
+        if (!pixelShift) {
+            shiftStep = 0
+            return@LaunchedEffect
+        }
+        while (true) {
+            delay(AmbientPixelShift.STEP_MS)
+            shiftStep++
+        }
+    }
+    val shift = AmbientPixelShift.offset(shiftStep)
+    val shiftX by animateDpAsState(
+        targetValue = scale.dp(shift.xDp),
+        animationSpec = tween(durationMillis = 2_500),
+        label = "clockShiftX",
+    )
+    val shiftY by animateDpAsState(
+        targetValue = scale.dp(shift.yDp),
+        animationSpec = tween(durationMillis = 2_500),
+        label = "clockShiftY",
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .offset { IntOffset(shiftX.roundToPx(), shiftY.roundToPx()) }
             .padding(horizontal = scale.dp(120f)),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,

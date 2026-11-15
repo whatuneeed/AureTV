@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
@@ -125,6 +126,8 @@ class BackupManagerInstrumentedTest {
         )
         assertEquals(setOf("clip-1"), SaverPreferences.hidden(context))
         assertEquals(AmbientMode.AERIAL, AmbientSettingsStore.mode(context))
+        assertEquals(AmbientClockFormat.SYSTEM, AmbientSettingsStore.clockFormat(context))
+        assertTrue(AmbientSettingsStore.pixelShift(context))
 
         assertTrue(WeatherPreferences.enabled(context))
         assertTrue(WeatherPreferences.manual(context))
@@ -355,6 +358,8 @@ class BackupManagerInstrumentedTest {
             .commit()
         DiscoveryStore(context, LauncherPrefs.NAME).clearAll()
         AmbientSettingsStore.setMode(context, AmbientMode.CLOCK)
+        AmbientSettingsStore.setClockFormat(context, AmbientClockFormat.TWENTY_FOUR)
+        AmbientSettingsStore.setPixelShift(context, false)
     }
 
     private fun profile(

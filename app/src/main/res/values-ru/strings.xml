@@ -117,6 +117,13 @@
     <string name="saver_mode_clock">Часы</string>
     <string name="saver_mode_minimal">Минимализм</string>
     <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально и не используют сеть.</string>
+    <string name="saver_clock_format">Формат часов</string>
+    <string name="saver_clock_format_system">Системный</string>
+    <string name="saver_clock_format_12">12-часовой</string>
+    <string name="saver_clock_format_24">24-часовой</string>
+    <string name="saver_clock_format_hint">«Системный» следует настройке ТВ. 12- и 24-часовой форматы переопределяют его только для часов.</string>
+    <string name="saver_pixel_shift">Сдвиг пикселей</string>
+    <string name="saver_pixel_shift_hint">Часы немного смещаются раз в минуту, чтобы один яркий элемент не оставался на одних и тех же пикселях. Это не гарантия от выгорания.</string>
     <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="saver_choose">Ролики</string>

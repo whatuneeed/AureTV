@@ -1,11 +1,11 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
-**Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)  
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–3 — 0.5.1 (`versionCode 74`), `minSdk 28`, `targetSdk 35`  
-**Дата аудита:** 2026-11-15  
-**Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.  
-**Реализация:** Stage 2–3 начаты и проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.  
-**Аудит выполнялся read-only;** изменения кода — отдельный этап после него.  
+**Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–3 — 0.5.2 (`versionCode 75`), `minSdk 28`, `targetSdk 35`
+**Дата аудита:** 2026-11-15
+**Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
+**Реализация:** Stage 2–3 проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
+**Аудит выполнялся read-only;** изменения кода — отдельный этап после него.
 **Следующий шаг:** Stage 4 — OLED/energy decisions и Weather, затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
 
 ---
@@ -17,7 +17,7 @@
 3. Контент — **100 реальных роликов Apple Aerial** в четырёх темах, с реальными still-кадрами и реальными названиями. Никаких фейковых изображений нет.
 4. Качество — **1080p H.264 SDR**. 4K, HEVC, HDR, 10-bit и выбор display mode **не реализованы**; на 4K-панели это апскейл 1080p.
 5. Настройка **Download Frequency** сейчас фактически **не даёт обновлений**: публичный tar Apple — старая плоская схема, а `AerialCatalogBuilder.supports()` принимает только category schema. Код честно возвращает `UNCHANGED` и сохраняет встроенный каталог, но пользователь видит настройку, которая ничего не меняет.
-6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal.**
+6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal, включая формат часов и Pixel Shift.**
 7. OLED-защита отсутствует: статический нижний градиент, статичная подпись, нет pixel shift, нет dim/blackout, нет ограничения сессии. `keepScreenOn` держит экран включённым, пока оверлей виден.
 8. Энергопотребление не измерялось. В активной заставке работают **два ExoPlayer-декодера** (один играет, второй префетчит), плюс `TextureView`-композиция и still-битмап.
 9. Надёжность — сильная сторона: таймауты старта/стопа, 3 последовательных отказа → stills-only, backoff 15/30/60/120 с, отсутствие «чёрного экрана» при отсутствии картинки, отказ от HTTP-даунгрейда.
@@ -202,7 +202,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3 частично закрыты AMB-01, AMB-02 и AMB-11 (Aerial/Clock/Minimal + IA); 4K, Photos, Weather, OLED и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3 частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift часов); 4K, Photos, Weather, dim/blackout/session и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|

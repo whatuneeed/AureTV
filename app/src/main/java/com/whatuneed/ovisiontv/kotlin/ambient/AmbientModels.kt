@@ -26,6 +26,28 @@ enum class AmbientMode(val key: String) {
 }
 
 /**
+ * Clock follows the system by default. An explicit choice is stored because a
+ * TV can report 24-hour time while the viewer prefers 12-hour, or the reverse.
+ */
+enum class AmbientClockFormat(val key: String) {
+    SYSTEM("system"),
+    TWELVE("twelve"),
+    TWENTY_FOUR("twenty_four"),
+    ;
+
+    fun use24Hour(systemIs24Hour: Boolean): Boolean = when (this) {
+        SYSTEM -> systemIs24Hour
+        TWELVE -> false
+        TWENTY_FOUR -> true
+    }
+
+    companion object {
+        fun fromKey(raw: String?): AmbientClockFormat =
+            entries.firstOrNull { it.key == raw } ?: SYSTEM
+    }
+}
+
+/**
  * Everything the ambient surface needs for one session. It is a snapshot, not
  * a live prefs reader: Home and the DreamService read it once and then keep a
  * consistent set of options while the overlay is visible.
@@ -37,6 +59,8 @@ data class AmbientSettings(
     val themes: Set<SaverTheme>,
     val hidden: Set<String>,
     val refresh: SaverRefresh,
+    val clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
+    val pixelShift: Boolean = true,
 )
 
 /**
@@ -46,6 +70,8 @@ data class AmbientSettings(
  */
 object AmbientSettingsStore {
     const val KEY_MODE = "ambient_mode"
+    const val KEY_CLOCK_FORMAT = "ambient_clock_format"
+    const val KEY_PIXEL_SHIFT = "ambient_pixel_shift"
 
     fun load(context: Context): AmbientSettings = AmbientSettings(
         mode = mode(context),
@@ -54,6 +80,8 @@ object AmbientSettingsStore {
         themes = SaverPreferences.themes(context),
         hidden = SaverPreferences.hidden(context),
         refresh = SaverPreferences.refresh(context),
+        clockFormat = clockFormat(context),
+        pixelShift = pixelShift(context),
     )
 
     fun mode(context: Context): AmbientMode =
@@ -65,10 +93,28 @@ object AmbientSettingsStore {
         prefs(context).edit().putString(KEY_MODE, mode.key).apply()
     }
 
-    /** Reset is the same reset the Aerial page always did, plus the mode. */
+    fun clockFormat(context: Context): AmbientClockFormat =
+        AmbientClockFormat.fromKey(
+            SafePreferences.string(prefs(context), KEY_CLOCK_FORMAT, null),
+        )
+
+    fun setClockFormat(context: Context, format: AmbientClockFormat) {
+        prefs(context).edit().putString(KEY_CLOCK_FORMAT, format.key).apply()
+    }
+
+    fun pixelShift(context: Context): Boolean =
+        SafePreferences.boolean(prefs(context), KEY_PIXEL_SHIFT, true)
+
+    fun setPixelShift(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PIXEL_SHIFT, enabled).apply()
+    }
+
+    /** Reset is the same reset the Aerial page always did, plus ambient fields. */
     fun reset(context: Context) {
         SaverPreferences.reset(context)
         setMode(context, AmbientMode.AERIAL)
+        setClockFormat(context, AmbientClockFormat.SYSTEM)
+        setPixelShift(context, true)
     }
 
     internal fun prefs(context: Context) =

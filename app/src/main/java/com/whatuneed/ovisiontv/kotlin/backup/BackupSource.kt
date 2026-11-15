@@ -91,6 +91,8 @@ internal class BackupSource(private val context: Context) {
                 themes = SaverPreferences.themes(context).mapTo(LinkedHashSet()) { it.key },
                 hidden = SaverPreferences.hidden(context),
                 mode = AmbientSettingsStore.mode(context).key,
+                clockFormat = AmbientSettingsStore.clockFormat(context).key,
+                pixelShift = AmbientSettingsStore.pixelShift(context),
             )
         } else {
             null

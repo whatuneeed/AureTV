@@ -7,6 +7,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.Usage
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -86,6 +87,8 @@ class BackupCodecTest {
             themes = setOf("landscapes", "cities"),
             hidden = setOf("clip-1"),
             mode = "clock",
+            clockFormat = "twenty_four",
+            pixelShift = false,
         ),
         language = LanguageData("ru", showPhoneApps = false),
         content = ContentData(recommendations = true, continueWatching = false),
@@ -143,6 +146,8 @@ class BackupCodecTest {
         assertEquals(2, validated.data.discovery["p1"]?.usage?.get("com.example.one")?.count)
         assertEquals(setOf("com.example.two"), validated.data.kids["p2"]?.allowlist)
         assertEquals("clock", validated.data.saver?.mode)
+        assertEquals("twenty_four", validated.data.saver?.clockFormat)
+        assertFalse(validated.data.saver?.pixelShift ?: true)
         assertEquals("app:com.example.one", validated.data.startup?.target)
     }
 

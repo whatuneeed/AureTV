@@ -115,6 +115,13 @@
     <string name="saver_mode_clock">Clock</string>
     <string name="saver_mode_minimal">Minimal</string>
     <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally and use no network.</string>
+    <string name="saver_clock_format">Clock Format</string>
+    <string name="saver_clock_format_system">System</string>
+    <string name="saver_clock_format_12">12-hour</string>
+    <string name="saver_clock_format_24">24-hour</string>
+    <string name="saver_clock_format_hint">System follows the TV. The 12-hour and 24-hour choices override it for the clock only.</string>
+    <string name="saver_pixel_shift">Pixel Shift</string>
+    <string name="saver_pixel_shift_hint">Moves the clock slightly once a minute so one bright element does not stay on the same pixels. This is not a guarantee against burn-in.</string>
     <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
     <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
     <string name="saver_choose">Aerial Clips</string>

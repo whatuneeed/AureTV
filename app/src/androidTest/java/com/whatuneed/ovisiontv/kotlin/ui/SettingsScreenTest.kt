@@ -47,6 +47,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
@@ -755,6 +756,34 @@ class SettingsScreenTest {
             row(string(R.string.saver_mode), string(R.string.saver_mode_clock)),
         ).assertIsDisplayed()
         rule.onNodeWithTag(AMBIENT_PREVIEW_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_clock_page_sets_a_12_24_format_and_pixel_shift() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        click(string(R.string.saver_mode_clock))
+        press(Key.Back)
+
+        click(
+            row(
+                string(R.string.saver_clock_format),
+                string(R.string.saver_clock_format_system),
+            ),
+        )
+        click(string(R.string.saver_clock_format_24))
+        assertEquals(AmbientClockFormat.TWENTY_FOUR, AmbientSettingsStore.clockFormat(context))
+
+        press(Key.Back)
+        rule.waitForIdle()
+        click(
+            row(
+                string(R.string.saver_pixel_shift),
+                string(R.string.saver_on),
+            ),
+        )
+        assertFalse(AmbientSettingsStore.pixelShift(context))
     }
 
     @Test

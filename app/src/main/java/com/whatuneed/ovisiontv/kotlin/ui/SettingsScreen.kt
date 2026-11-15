@@ -147,6 +147,7 @@ import com.whatuneed.ovisiontv.kotlin.data.PermissionSummary
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
@@ -176,6 +177,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientModeLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.saverThemeLabel
@@ -288,6 +290,7 @@ private const val PAGE_SAVER_DELAY = 5
 private const val PAGE_SAVER_THEMES = 6
 private const val PAGE_SAVER_REFRESH = 7
 private const val PAGE_SAVER_MODE = 43
+private const val PAGE_SAVER_CLOCK_FORMAT = 44
 private const val PAGE_NETWORK = 8
 private const val PAGE_DEVICE = 9
 private const val PAGE_STORAGE = 10
@@ -680,6 +683,12 @@ fun SettingsScreen(
     // shows the value from the first composition.
     var saverDelay by remember(resumeTick) { mutableStateOf(SaverPreferences.delay(context)) }
     var ambientMode by remember(resumeTick) { mutableStateOf(AmbientSettingsStore.mode(context)) }
+    var ambientClockFormat by remember(resumeTick) {
+        mutableStateOf(AmbientSettingsStore.clockFormat(context))
+    }
+    var ambientPixelShift by remember(resumeTick) {
+        mutableStateOf(AmbientSettingsStore.pixelShift(context))
+    }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -897,7 +906,7 @@ fun SettingsScreen(
         PAGE_LANGUAGE -> PAGE_INTERFACE
         PAGE_SAVER -> PAGE_INTERFACE
         PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
-        PAGE_SAVER_RESET, PAGE_SAVER_MODE,
+        PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
         -> PAGE_SAVER
         PAGE_STORAGE_CLEAR -> PAGE_STORAGE
         PAGE_NETWORK, PAGE_DEVICE, PAGE_STORAGE, PAGE_PERMISSIONS, PAGE_SYSTEM ->
@@ -1079,6 +1088,8 @@ fun SettingsScreen(
         AmbientSettingsStore.reset(context)
         saverDelay = SaverPreferences.delay(context)
         ambientMode = AmbientSettingsStore.mode(context)
+        ambientClockFormat = AmbientSettingsStore.clockFormat(context)
+        ambientPixelShift = AmbientSettingsStore.pixelShift(context)
         saverMusic = SaverPreferences.music(context)
         saverRefresh = SaverPreferences.refresh(context)
         saverThemes = SaverPreferences.themes(context)
@@ -1256,6 +1267,34 @@ fun SettingsScreen(
                     },
                 ),
             )
+            // Clock has two behaviours that Aerial and Minimal do not: the
+            // hour format and the anti-burn-in shift of the bright text.
+            if (ambientMode == AmbientMode.CLOCK) {
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_clock_format),
+                        value = ambientClockFormatLabel(ambientClockFormat),
+                        chevron = true,
+                        action = {
+                            open(
+                                PAGE_SAVER_CLOCK_FORMAT,
+                                focus = AmbientClockFormat.entries.indexOf(ambientClockFormat),
+                            )
+                        },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_pixel_shift),
+                        value = stringResource(if (ambientPixelShift) R.string.saver_on else R.string.saver_off),
+                        toggleState = ambientPixelShift,
+                        action = {
+                            ambientPixelShift = !ambientPixelShift
+                            AmbientSettingsStore.setPixelShift(context, ambientPixelShift)
+                        },
+                    ),
+                )
+            }
             // The Aerial catalogue only matters to the Aerial mode. Hiding
             // these rows in Clock/Minimal keeps the page honest instead of
             // offering themes that would never be drawn.
@@ -1328,6 +1367,18 @@ fun SettingsScreen(
                 action = {
                     ambientMode = mode
                     AmbientSettingsStore.setMode(context, mode)
+                },
+            )
+        }
+
+        PAGE_SAVER_CLOCK_FORMAT -> AmbientClockFormat.entries.map { format ->
+            SettingsRow(
+                title = ambientClockFormatLabel(format),
+                checked = format == ambientClockFormat,
+                choice = true,
+                action = {
+                    ambientClockFormat = format
+                    AmbientSettingsStore.setClockFormat(context, format)
                 },
             )
         }
@@ -2317,6 +2368,7 @@ fun SettingsScreen(
                 PAGE_KIDS_APPS -> R.string.kids_allowed
                 PAGE_SAVER -> R.string.settings_saver
                 PAGE_SAVER_MODE -> R.string.saver_mode
+                PAGE_SAVER_CLOCK_FORMAT -> R.string.saver_clock_format
                 PAGE_SAVER_CHOOSER -> R.string.saver_choose
                 PAGE_SAVER_DELAY -> R.string.saver_start_after
                 PAGE_SAVER_THEMES -> R.string.saver_themes
@@ -2424,7 +2476,13 @@ fun SettingsScreen(
         PAGE_KIDS_PIN_REMOVE -> stringResource(R.string.kids_pin_remove_hint)
         PAGE_KIDS_APPS -> stringResource(R.string.kids_allowed_hint)
         PAGE_SAVER_RESET -> stringResource(R.string.saver_reset_hint)
+        PAGE_SAVER -> if (ambientMode == AmbientMode.CLOCK) {
+            stringResource(R.string.saver_pixel_shift_hint)
+        } else {
+            null
+        }
         PAGE_SAVER_MODE -> stringResource(R.string.saver_mode_hint)
+        PAGE_SAVER_CLOCK_FORMAT -> stringResource(R.string.saver_clock_format_hint)
         PAGE_STORAGE_CLEAR -> stringResource(R.string.settings_cache_clear_hint)
         PAGE_SAVER_THEMES -> stringResource(R.string.saver_themes_hint)
         PAGE_STORAGE -> stringResource(R.string.settings_storage_hint)
@@ -2958,7 +3016,12 @@ fun SettingsScreen(
                     themes = saverThemes,
                 )
             } else {
-                AmbientPreview(scale = scale, mode = ambientMode)
+                AmbientPreview(
+                    scale = scale,
+                    mode = ambientMode,
+                    clockFormat = ambientClockFormat,
+                    pixelShift = ambientPixelShift,
+                )
             }
         }
 
@@ -3149,6 +3212,7 @@ fun SettingsScreen(
                             // Radio rows in one list are one selectable group.
                             if (page == PAGE_LANGUAGE || page == PAGE_SAVER_DELAY ||
                                 page == PAGE_SAVER_REFRESH || page == PAGE_SAVER_MODE ||
+                                page == PAGE_SAVER_CLOCK_FORMAT ||
                                 page == PAGE_WEATHER_LOCATION ||
                                 page == PAGE_WEATHER_UNITS || page == PAGE_WEATHER_SOURCE ||
                                 page == PAGE_WEATHER_REFRESH
@@ -4038,7 +4102,7 @@ private fun pageOf(section: Section): Int = when (section) {    Section.INTERFAC
 private fun sectionOf(page: Int): Section? = when (page) {
     PAGE_INTERFACE, PAGE_LANGUAGE,
     PAGE_SAVER, PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
-    PAGE_SAVER_RESET,
+    PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
     -> Section.INTERFACE
     PAGE_HOME_SCREEN, PAGE_HIDDEN, PAGE_RESET, PAGE_DISCOVERY,
     PAGE_DISCOVERY_HIDDEN, PAGE_DISCOVERY_CLEAR ->
