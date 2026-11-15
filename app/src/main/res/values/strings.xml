@@ -114,7 +114,8 @@
     <string name="saver_mode_aerial">Aerials</string>
     <string name="saver_mode_clock">Clock</string>
     <string name="saver_mode_minimal">Minimal</string>
-    <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally and use no network.</string>
+    <string name="saver_mode_photos">Photos</string>
+    <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally. Photos come from the folder or photos you choose.</string>
     <string name="saver_clock_format">Clock Format</string>
     <string name="saver_clock_format_system">System</string>
     <string name="saver_clock_format_12">12-hour</string>
@@ -138,6 +139,20 @@
     <string name="saver_weather_off">Weather off</string>
     <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
     <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
+    <string name="ambient_photos_description">Personal photos. Press any button to exit.</string>
+    <string name="saver_photos_folder">Photos Folder</string>
+    <string name="saver_photos_none">Not selected</string>
+    <string name="saver_photos_selected_title">Selected Photos</string>
+    <string name="saver_photos_forget">Forget Folder</string>
+    <string name="saver_photos_forget_photos">Forget Photos</string>
+    <string name="saver_photos_cleared">Selection cleared</string>
+    <string name="saver_photos_hint">Photos come only from the folder or photos you choose. They stay on this TV and are not included in backups.</string>
+    <string name="saver_photos_unavailable">This TV has no system photo picker.</string>
+    <string name="saver_photos_unavailable_short">Unavailable</string>
+    <plurals name="saver_photos_selected">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
     <string name="saver_choose">Aerial Clips</string>
     <string name="saver_aerials">Aerials</string>
     <string name="saver_start_after">Start After</string>

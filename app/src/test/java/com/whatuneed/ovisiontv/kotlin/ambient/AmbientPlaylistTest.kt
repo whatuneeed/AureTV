@@ -46,12 +46,16 @@ class AmbientPlaylistTest {
         assertTrue(
             AmbientPlaylist.scenes(clips, settings(AmbientMode.MINIMAL)).isEmpty(),
         )
+        assertTrue(
+            AmbientPlaylist.scenes(clips, settings(AmbientMode.PHOTOS)).isEmpty(),
+        )
     }
 
     @Test
     fun clock_and_minimal_are_content_even_without_a_catalogue() {
         assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.CLOCK)))
         assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.MINIMAL)))
+        assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.PHOTOS)))
         assertFalse(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.AERIAL)))
     }
 

@@ -52,6 +52,16 @@ class PrivacyPolicyTextTest {
     }
 
     @Test
+    fun photosAreDisclosedAsALocalPickerGrantAndNotBackedUp() {
+        assertTrue(en.contains("system picker"))
+        assertTrue(en.contains("never uploaded"))
+        assertTrue(en.contains("not included in a backup"))
+        assertTrue(ru.contains("системный выбор"))
+        assertTrue(ru.contains("никогда не отправляются"))
+        assertTrue(ru.contains("не попадают в резервную копию"))
+    }
+
+    @Test
     fun weatherIsDisclosedAsOffUntilChosenAndHasADeletePath() {
         assertTrue(en.contains("Weather is off until you choose it"))
         assertTrue(ru.contains("Погода выключена, пока вы её не включите"))

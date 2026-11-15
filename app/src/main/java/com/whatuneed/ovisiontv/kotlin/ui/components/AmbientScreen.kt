@@ -1,12 +1,17 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.View
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +44,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -59,6 +66,8 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClock
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoDecoder
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoPlaylist
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPixelShift
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPowerPolicy
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
@@ -82,6 +91,7 @@ import java.util.Locale
 internal const val AMBIENT_SCREEN_TAG = "ambient_screen"
 internal const val AMBIENT_CLOCK_TAG = "ambient_clock"
 internal const val AMBIENT_PREVIEW_TAG = "ambient_preview"
+internal const val AMBIENT_PHOTO_TAG = "ambient_photo"
 
 private const val AMBIENT_ENTRY_MS = 450
 private const val AMBIENT_ALPHA_MS = 250
@@ -90,6 +100,10 @@ private const val AMBIENT_REDUCED_MS = 400
 private const val AMBIENT_SCALE = 1.03f
 private const val CLOCK_DRIFT_MS = 15_000L
 private const val POWER_TICK_MS = 15_000L
+private const val PHOTO_HOLD_MS = 12_000L
+private const val PHOTO_FADE_MS = 1_200
+private const val PHOTO_PREVIEW_WIDTH = 960
+private const val PHOTO_PREVIEW_HEIGHT = 540
 
 /**
  * One ambient surface for every mode. Aerial delegates to the existing
@@ -105,6 +119,8 @@ internal fun AmbientScreen(
     dimAfter: AmbientDim = AmbientDim.NEVER,
     maxSession: AmbientSession = AmbientSession.NEVER,
     showWeather: Boolean = false,
+    photos: List<Uri> = emptyList(),
+    photosAllowed: Boolean = true,
     closing: Boolean = false,
     swallowOpeningPress: Boolean = false,
     players: List<ExoPlayer>? = null,
@@ -133,6 +149,8 @@ internal fun AmbientScreen(
         dimAfter = dimAfter,
         maxSession = maxSession,
         showWeather = showWeather,
+        photos = photos,
+        photosAllowed = photosAllowed,
         closing = closing,
         swallowOpeningPress = swallowOpeningPress,
         onCloseRequested = onCloseRequested,
@@ -149,6 +167,8 @@ private fun AmbientStillScreen(
     dimAfter: AmbientDim,
     maxSession: AmbientSession,
     showWeather: Boolean,
+    photos: List<Uri>,
+    photosAllowed: Boolean,
     closing: Boolean,
     swallowOpeningPress: Boolean,
     onCloseRequested: () -> Unit,
@@ -164,21 +184,29 @@ private fun AmbientStillScreen(
     val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
     val modeLabel = ambientModeLabel(mode)
-    val clockTime = if (mode == AmbientMode.CLOCK) {
+    // Photos with no readable folder fall back to the clock. A screen saver
+    // that silently shows an empty gradient is worse than a calm, real clock.
+    val showClock = mode == AmbientMode.CLOCK ||
+        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty()))
+    val clockTime = if (showClock) {
         AmbientClock.formatTime(now, is24Hour, locale)
     } else {
         ""
     }
-    val clockDate = if (mode == AmbientMode.CLOCK) {
+    val clockDate = if (showClock) {
         AmbientClock.formatDate(now, locale)
     } else {
         ""
     }
-    val weather = rememberAmbientWeather(context, mode, showWeather)
-    val description = if (mode == AmbientMode.CLOCK) {
-        stringResource(R.string.ambient_clock_description, clockTime, clockDate)
-    } else {
-        stringResource(R.string.ambient_screen_description, modeLabel)
+    val weather = rememberAmbientWeather(
+        context,
+        if (showClock) AmbientMode.CLOCK else mode,
+        showWeather,
+    )
+    val description = when {
+        showClock -> stringResource(R.string.ambient_clock_description, clockTime, clockDate)
+        mode == AmbientMode.PHOTOS -> stringResource(R.string.ambient_photos_description)
+        else -> stringResource(R.string.ambient_screen_description, modeLabel)
     }
 
     var entered by remember { mutableStateOf(false) }
@@ -270,14 +298,21 @@ private fun AmbientStillScreen(
             .clearAndSetSemantics { contentDescription = description },
     ) {
         AmbientBackdrop(mode = mode, reduceMotion = reduceMotion)
-        if (mode == AmbientMode.CLOCK) {
-            ClockFace(
+        when {
+            showClock -> ClockFace(
                 scale = scale,
                 now = now,
                 is24Hour = is24Hour,
                 locale = locale,
                 pixelShift = pixelShift,
                 weather = weather,
+            )
+
+            mode == AmbientMode.PHOTOS -> PhotoFace(
+                context = context,
+                photos = photos,
+                allowed = photosAllowed,
+                reduceMotion = reduceMotion,
             )
         }
     }
@@ -294,13 +329,21 @@ internal fun AmbientPreview(
     clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
     pixelShift: Boolean = true,
     showWeather: Boolean = false,
+    photos: List<Uri> = emptyList(),
+    photosAllowed: Boolean = true,
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     val systemIs24Hour = remember(context) { DateFormat.is24HourFormat(context) }
     val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
-    val weather = rememberAmbientWeather(context, mode, showWeather)
+    val showClock = mode == AmbientMode.CLOCK ||
+        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty()))
+    val weather = rememberAmbientWeather(
+        context,
+        if (showClock) AmbientMode.CLOCK else mode,
+        showWeather,
+    )
     val shape = RoundedCornerShape(scale.dp(TvRadius.field))
     Box(
         Modifier
@@ -310,14 +353,105 @@ internal fun AmbientPreview(
             .clip(shape),
     ) {
         AmbientBackdrop(mode = mode, reduceMotion = true)
-        if (mode == AmbientMode.CLOCK) {
-            ClockFace(
+        when {
+            showClock -> ClockFace(
                 scale = TvScale(scale.factor * 0.55f),
                 now = now,
                 is24Hour = is24Hour,
                 locale = locale,
                 pixelShift = pixelShift,
                 weather = weather,
+            )
+
+            mode == AmbientMode.PHOTOS -> PhotoFace(
+                context = context,
+                photos = photos,
+                allowed = photosAllowed,
+                reduceMotion = true,
+                preview = true,
+            )
+        }
+    }
+}
+
+/**
+ * One photo at a time, decoded off the main thread and held for [PHOTO_HOLD_MS].
+ * The previous frame stays only for the crossfade, so at most two bitmaps are
+ * alive. A failed decode skips that file; when every file fails the gradient
+ * backdrop remains, never a crash or an endless retry loop.
+ */
+@Composable
+private fun PhotoFace(
+    context: Context,
+    photos: List<Uri>,
+    allowed: Boolean,
+    reduceMotion: Boolean,
+    preview: Boolean = false,
+) {
+    val ordered = remember(photos) { AmbientPhotoPlaylist.ordered(photos) }
+    var current by remember(ordered) { mutableStateOf<Bitmap?>(null) }
+    var previous by remember(ordered) { mutableStateOf<Bitmap?>(null) }
+    val progress = remember { Animatable(0f) }
+
+    LaunchedEffect(ordered, allowed, preview) {
+        current = null
+        previous = null
+        progress.snapTo(0f)
+        if (!allowed || ordered.isEmpty()) return@LaunchedEffect
+        val width = if (preview) PHOTO_PREVIEW_WIDTH else AmbientPhotoDecoder.MAX_WIDTH
+        val height = if (preview) PHOTO_PREVIEW_HEIGHT else AmbientPhotoDecoder.MAX_HEIGHT
+
+        if (preview) {
+            current = AmbientPhotoDecoder.decode(context, ordered.first(), width, height)
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+
+        var index = 0
+        var failures = 0
+        while (true) {
+            val bitmap = AmbientPhotoDecoder.decode(context, ordered[index], width, height)
+            index = (index + 1) % ordered.size
+            if (bitmap == null) {
+                failures++
+                if (failures >= ordered.size) return@LaunchedEffect
+                continue
+            }
+            failures = 0
+            previous = current
+            current = bitmap
+            progress.snapTo(0f)
+            progress.animateTo(
+                1f,
+                animationSpec = tween(
+                    durationMillis = if (reduceMotion) 1 else PHOTO_FADE_MS,
+                ),
+            )
+            previous = null
+            if (ordered.size == 1) return@LaunchedEffect
+            delay(PHOTO_HOLD_MS)
+        }
+    }
+
+    Box(Modifier.fillMaxSize().testTag(AMBIENT_PHOTO_TAG)) {
+        previous?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 1f - progress.value },
+            )
+        }
+        current?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = progress.value },
             )
         }
     }

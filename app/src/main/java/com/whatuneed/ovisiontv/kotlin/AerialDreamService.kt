@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin
 
 import android.content.Context
+import android.net.Uri
 import android.service.dreams.DreamService
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,10 +20,12 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientScreen
@@ -107,6 +110,15 @@ class AerialDreamService : DreamService() {
 private fun DreamSaver(onFinished: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { AmbientSettingsStore.load(context) }
+    val photosAllowed = remember { !ProfileStore(context).current().kids }
+    var photoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    LaunchedEffect(settings.mode, photosAllowed) {
+        photoUris = if (settings.mode == AmbientMode.PHOTOS && photosAllowed) {
+            withContext(Dispatchers.IO) { AmbientPhotoLibrary.load(context) }
+        } else {
+            emptyList()
+        }
+    }
     var catalogue by remember(settings.mode) {
         mutableStateOf<List<AerialClip>?>(
             if (settings.mode == AmbientMode.AERIAL) null else emptyList(),
@@ -133,6 +145,8 @@ private fun DreamSaver(onFinished: () -> Unit) {
         dimAfter = settings.dimAfter,
         maxSession = settings.maxSession,
         showWeather = settings.showWeather,
+        photos = photoUris,
+        photosAllowed = photosAllowed,
         onCloseRequested = onFinished,
         onDismissed = onFinished,
         publishMediaSession = settings.mode == AmbientMode.AERIAL,

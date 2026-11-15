@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.util.Log
@@ -150,7 +151,10 @@ import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientClockFormat
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoStore
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
+import com.whatuneed.ovisiontv.kotlin.ambient.PhotoPickerContract
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
@@ -521,6 +525,12 @@ private data class CacheSizes(
     val total: Long get() = stills + posters
 }
 
+private data class PhotoFolderState(
+    val uris: List<Uri>,
+    val label: String?,
+    val selected: Int = 0,
+)
+
 /**
  * `apps` is a test hook: the screen otherwise loads package names itself and
  * deliberately skips artwork it would never draw here. `clips` is the same for
@@ -702,6 +712,14 @@ fun SettingsScreen(
     var ambientShowWeather by remember(resumeTick) {
         mutableStateOf(AmbientSettingsStore.showWeather(context))
     }
+    var photoFolder by remember(resumeTick) {
+        mutableStateOf(
+            PhotoFolderState(
+                uris = emptyList(),
+                label = AmbientPhotoStore.folderLabel(context),
+            ),
+        )
+    }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -862,6 +880,90 @@ fun SettingsScreen(
     ) {
         locationAllowed = DeviceFactsReader.hasWifiNamePermission(context)
         permissionsAsked = permissionsAsked + DeviceFactsReader.wifiNamePermission()
+    }
+    val photoFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            if (AmbientPhotoStore.setTree(context, uri)) {
+                ambientMode = AmbientMode.PHOTOS
+                AmbientSettingsStore.setMode(context, AmbientMode.PHOTOS)
+                scope.launch {
+                    val uris = withContext(Dispatchers.IO) {
+                        AmbientPhotoLibrary.load(context)
+                    }
+                    photoFolder = PhotoFolderState(
+                        uris = uris,
+                        label = AmbientPhotoStore.folderLabel(context),
+                        selected = AmbientPhotoStore.selectedPhotos(context).size,
+                    )
+                }
+            } else {
+                Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        PhotoPickerContract(AmbientPhotoStore.MAX_SELECTED),
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            if (AmbientPhotoStore.setPhotos(context, uris)) {
+                ambientMode = AmbientMode.PHOTOS
+                AmbientSettingsStore.setMode(context, AmbientMode.PHOTOS)
+                scope.launch {
+                    val loaded = withContext(Dispatchers.IO) {
+                        AmbientPhotoLibrary.load(context)
+                    }
+                    photoFolder = PhotoFolderState(
+                        uris = loaded,
+                        label = AmbientPhotoStore.folderLabel(context),
+                        selected = AmbientPhotoStore.selectedPhotos(context).size,
+                    )
+                }
+            } else {
+                Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }
+
+    // The photo source is device-local, so it is read when Photos is opened or
+    // when Settings resumes; the picker callback refreshes it after a new
+    // choice.
+    LaunchedEffect(ambientMode, resumeTick) {
+        if (ambientMode != AmbientMode.PHOTOS) return@LaunchedEffect
+        val uris = withContext(Dispatchers.IO) { AmbientPhotoLibrary.load(context) }
+        photoFolder = PhotoFolderState(
+            uris = uris,
+            label = AmbientPhotoStore.folderLabel(context),
+            selected = AmbientPhotoStore.selectedPhotos(context).size,
+        )
+    }
+
+    fun choosePhotoFolder() {
+        if (!AmbientPhotoStore.canPickFolder(context)) {
+            Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            photoFolderPicker.launch(null)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun choosePhotos() {
+        if (!AmbientPhotoStore.canPickPhotos(context)) {
+            Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            photoPicker.launch(Unit)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG).show()
+        }
     }
 
     LaunchedEffect(page, cacheTick, resumeTick) {
@@ -1100,6 +1202,10 @@ fun SettingsScreen(
 
     fun resetSaver() {
         AmbientSettingsStore.reset(context)
+        // A reset also drops the personal photo source; otherwise its persisted
+        // grant would survive a request to return to the defaults.
+        AmbientPhotoStore.clear(context)
+        photoFolder = PhotoFolderState(emptyList(), null)
         saverDelay = SaverPreferences.delay(context)
         ambientMode = AmbientSettingsStore.mode(context)
         ambientClockFormat = AmbientSettingsStore.clockFormat(context)
@@ -1364,6 +1470,72 @@ fun SettingsScreen(
                             value = stringResource(R.string.saver_weather_off),
                             chevron = true,
                             action = { open(PAGE_WEATHER) },
+                        ),
+                    )
+                }
+            }
+            // Photos have one source at a time: a folder or individual photos
+            // granted by the system picker. The grant is persisted by the
+            // provider, not a broad permission.
+            if (ambientMode == AmbientMode.PHOTOS) {
+                val canPickFolder = AmbientPhotoStore.canPickFolder(context)
+                val canPickPhotos = AmbientPhotoStore.canPickPhotos(context)
+                add(
+                    SettingsRow(
+                        title = stringResource(
+                            if (canPickFolder) {
+                                R.string.saver_photos_folder
+                            } else {
+                                R.string.saver_photos_selected_title
+                            },
+                        ),
+                        value = when {
+                            photoFolder.label != null -> photoFolder.label.orEmpty()
+                            photoFolder.selected > 0 -> pluralStringResource(
+                                R.plurals.saver_photos_selected,
+                                photoFolder.selected,
+                                photoFolder.selected,
+                            )
+                            canPickFolder || canPickPhotos ->
+                                stringResource(R.string.saver_photos_none)
+                            else -> stringResource(R.string.saver_photos_unavailable_short)
+                        },
+                        chevron = true,
+                        action = {
+                            when {
+                                canPickFolder -> choosePhotoFolder()
+                                canPickPhotos -> choosePhotos()
+                                else -> Toast.makeText(
+                                    context,
+                                    R.string.saver_photos_unavailable,
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        },
+                    ),
+                )
+                if (photoFolder.label != null || photoFolder.selected > 0) {
+                    add(
+                        SettingsRow(
+                            title = stringResource(
+                                if (photoFolder.label != null) {
+                                    R.string.saver_photos_forget
+                                } else {
+                                    R.string.saver_photos_forget_photos
+                                },
+                            ),
+                            chevron = true,
+                            action = {
+                                AmbientPhotoStore.clear(context)
+                                photoFolder = PhotoFolderState(emptyList(), null)
+                                ambientMode = AmbientMode.AERIAL
+                                AmbientSettingsStore.setMode(context, AmbientMode.AERIAL)
+                                Toast.makeText(
+                                    context,
+                                    R.string.saver_photos_cleared,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            },
                         ),
                     )
                 }
@@ -2575,10 +2747,10 @@ fun SettingsScreen(
         PAGE_KIDS_PIN_REMOVE -> stringResource(R.string.kids_pin_remove_hint)
         PAGE_KIDS_APPS -> stringResource(R.string.kids_allowed_hint)
         PAGE_SAVER_RESET -> stringResource(R.string.saver_reset_hint)
-        PAGE_SAVER -> if (ambientMode == AmbientMode.CLOCK) {
-            stringResource(R.string.saver_pixel_shift_hint)
-        } else {
-            null
+        PAGE_SAVER -> when (ambientMode) {
+            AmbientMode.CLOCK -> stringResource(R.string.saver_pixel_shift_hint)
+            AmbientMode.PHOTOS -> stringResource(R.string.saver_photos_hint)
+            else -> null
         }
         PAGE_SAVER_MODE -> stringResource(R.string.saver_mode_hint)
         PAGE_SAVER_CLOCK_FORMAT -> stringResource(R.string.saver_clock_format_hint)
@@ -3124,6 +3296,7 @@ fun SettingsScreen(
                     clockFormat = ambientClockFormat,
                     pixelShift = ambientPixelShift,
                     showWeather = ambientShowWeather,
+                    photos = photoFolder.uris,
                 )
             }
         }

@@ -2,6 +2,7 @@
 
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -72,6 +73,57 @@ class AmbientScreenTest {
 
         rule.onNodeWithTag(AMBIENT_SCREEN_TAG).assertIsDisplayed()
         rule.onAllNodesWithTag(AMBIENT_CLOCK_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun photos_without_a_folder_fall_back_to_the_clock() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.PHOTOS,
+                    items = emptyList(),
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertExists()
+        rule.onAllNodesWithTag(AMBIENT_PHOTO_TAG, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun kids_get_the_clock_instead_of_personal_photos() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.PHOTOS,
+                    items = emptyList(),
+                    photos = listOf(Uri.parse("content://photos/a")),
+                    photosAllowed = false,
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertExists()
+        rule.onAllNodesWithTag(AMBIENT_PHOTO_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun photos_with_a_real_selection_use_the_photo_surface() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.PHOTOS,
+                    items = emptyList(),
+                    photos = listOf(Uri.parse("content://photos/a")),
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(AMBIENT_PHOTO_TAG, useUnmergedTree = true).assertExists()
+        rule.onAllNodesWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

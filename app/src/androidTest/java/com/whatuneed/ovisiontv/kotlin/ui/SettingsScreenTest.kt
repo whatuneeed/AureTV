@@ -3,6 +3,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.content.Context
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoStore
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.layout.Box
@@ -758,6 +759,39 @@ class SettingsScreenTest {
             row(string(R.string.saver_mode), string(R.string.saver_mode_clock)),
         ).assertIsDisplayed()
         rule.onNodeWithTag(AMBIENT_PREVIEW_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_photos_mode_names_its_folder_and_never_pretends_it_is_chosen() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        click(string(R.string.saver_mode_photos))
+
+        assertEquals(AmbientMode.PHOTOS, AmbientSettingsStore.mode(context))
+        press(Key.Back)
+        rule.waitForIdle()
+
+        rule.onNodeWithContentDescription(
+            row(string(R.string.saver_mode), string(R.string.saver_mode_photos)),
+        ).assertIsDisplayed()
+        val sourceTitle = if (
+            AmbientPhotoStore.canPickFolder(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+        ) {
+            R.string.saver_photos_folder
+        } else {
+            R.string.saver_photos_selected_title
+        }
+        rule.onNodeWithContentDescription(
+            string(sourceTitle),
+            substring = true,
+        ).assertIsDisplayed()
+        rule.onAllNodesWithContentDescription(
+            string(R.string.saver_photos_forget),
+            substring = true,
+        ).assertCountEquals(0)
     }
 
     @Test

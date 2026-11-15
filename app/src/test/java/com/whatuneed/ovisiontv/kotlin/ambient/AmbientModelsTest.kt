@@ -32,6 +32,7 @@ class AmbientModelsTest {
         assertEquals(AmbientMode.AERIAL, AmbientMode.fromKey("future-mode"))
         assertEquals(AmbientMode.CLOCK, AmbientMode.fromKey("clock"))
         assertEquals(AmbientMode.MINIMAL, AmbientMode.fromKey("minimal"))
+        assertEquals(AmbientMode.PHOTOS, AmbientMode.fromKey("photos"))
     }
 
     @Test
@@ -39,6 +40,7 @@ class AmbientModelsTest {
         assertEquals("aerial", AmbientMode.AERIAL.key)
         assertEquals("clock", AmbientMode.CLOCK.key)
         assertEquals("minimal", AmbientMode.MINIMAL.key)
+        assertEquals("photos", AmbientMode.PHOTOS.key)
     }
 
     @Test
@@ -100,5 +102,6 @@ class AmbientModelsTest {
         assertTrue(AmbientScheduler.needsClips(AmbientMode.AERIAL))
         assertFalse(AmbientScheduler.needsClips(AmbientMode.CLOCK))
         assertFalse(AmbientScheduler.needsClips(AmbientMode.MINIMAL))
+        assertFalse(AmbientScheduler.needsClips(AmbientMode.PHOTOS))
     }
 }

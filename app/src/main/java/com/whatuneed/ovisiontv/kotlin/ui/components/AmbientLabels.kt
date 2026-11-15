@@ -14,6 +14,7 @@ internal fun ambientModeLabel(mode: AmbientMode): String = stringResource(
         AmbientMode.AERIAL -> R.string.saver_mode_aerial
         AmbientMode.CLOCK -> R.string.saver_mode_clock
         AmbientMode.MINIMAL -> R.string.saver_mode_minimal
+        AmbientMode.PHOTOS -> R.string.saver_mode_photos
     },
 )
 

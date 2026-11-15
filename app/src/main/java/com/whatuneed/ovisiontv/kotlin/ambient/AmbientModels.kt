@@ -17,6 +17,7 @@ enum class AmbientMode(val key: String) {
     AERIAL("aerial"),
     CLOCK("clock"),
     MINIMAL("minimal"),
+    PHOTOS("photos"),
     ;
 
     companion object {

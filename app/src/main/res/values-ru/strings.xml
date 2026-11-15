@@ -116,7 +116,8 @@
     <string name="saver_mode_aerial">Виды с воздуха</string>
     <string name="saver_mode_clock">Часы</string>
     <string name="saver_mode_minimal">Минимализм</string>
-    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально и не используют сеть.</string>
+    <string name="saver_mode_photos">Фотографии</string>
+    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально. Фотографии берутся из выбранной папки или выбранных снимков.</string>
     <string name="saver_clock_format">Формат часов</string>
     <string name="saver_clock_format_system">Системный</string>
     <string name="saver_clock_format_12">12-часовой</string>
@@ -140,6 +141,22 @@
     <string name="saver_weather_off">Погода выключена</string>
     <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="ambient_photos_description">Личные фотографии. Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="saver_photos_folder">Папка с фотографиями</string>
+    <string name="saver_photos_none">Не выбрано</string>
+    <string name="saver_photos_selected_title">Выбранные фото</string>
+    <string name="saver_photos_forget">Забыть папку</string>
+    <string name="saver_photos_forget_photos">Забыть фотографии</string>
+    <string name="saver_photos_cleared">Выбор очищен</string>
+    <string name="saver_photos_hint">Фотографии берутся только из выбранной папки или выбранных снимков. Они остаются на этом ТВ и не попадают в резервные копии.</string>
+    <string name="saver_photos_unavailable">На этом ТВ нет системного выбора фотографий.</string>
+    <string name="saver_photos_unavailable_short">Недоступно</string>
+    <plurals name="saver_photos_selected">
+        <item quantity="one">%1$d фотография</item>
+        <item quantity="few">%1$d фотографии</item>
+        <item quantity="many">%1$d фотографий</item>
+        <item quantity="other">%1$d фотографии</item>
+    </plurals>
     <string name="saver_choose">Ролики</string>
     <string name="saver_aerials">Виды с воздуха</string>
     <string name="saver_start_after">Начинать через</string>

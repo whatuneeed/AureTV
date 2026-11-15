@@ -60,6 +60,7 @@ import com.whatuneed.ovisiontv.kotlin.KidsEntryGrant
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientScheduler
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
@@ -184,6 +185,17 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     }
     val saverItems = remember(resumeTick, aerialClips, ambient) {
         AmbientPlaylist.scenes(aerialClips, ambient, Random.Default)
+    }
+    // Personal photos are listed only while the saver is actually visible and
+    // only outside Kids Mode. The system picker grant is the only source; a
+    // Kids profile gets the neutral clock fallback instead of family photos.
+    var photoUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    LaunchedEffect(saverVisible, ambient.mode, kidsActive) {
+        photoUris = if (saverVisible && ambient.mode == AmbientMode.PHOTOS && !kidsActive) {
+            withContext(Dispatchers.IO) { AmbientPhotoLibrary.load(context) }
+        } else {
+            emptyList()
+        }
     }
     val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
     // tvOS has a separate Reduce Motion path for the entrance: no scale.
@@ -632,6 +644,8 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 dimAfter = ambient.dimAfter,
                 maxSession = ambient.maxSession,
                 showWeather = ambient.showWeather,
+                photos = photoUris,
+                photosAllowed = !kidsActive,
                 closing = saverClosing,
                 players = saverPlayers,
                 publishMediaSession = ambient.mode == AmbientMode.AERIAL,

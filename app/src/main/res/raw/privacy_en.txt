@@ -1,6 +1,6 @@
 Privacy
 
-Policy version 2, updated 2026-11-15.
+Policy version 3, updated 2026-11-15.
 
 The launcher needs no account and has no developer-operated server. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
@@ -9,6 +9,8 @@ Stored on the device
 Tile order, folders, hidden apps, profiles, the selected profile, screen-saver settings, language and content preferences are kept locally in app storage. The launcher also keeps a small amount of local discovery data: which apps you launched, favorite and hidden recommendation cards, and which cards were already shown. That data is used only to arrange this launcher.
 
 Weather is off until you choose it. If you turn it on, the city you pick (or an approximate location derived from the internet address), the last forecast, units and source are kept locally. Turning weather off stops further weather refreshes. Settings → Weather → Clear Weather Data deletes the saved city, coordinates and last forecast immediately; otherwise the last forecast remains until it is overwritten or the app data is cleared.
+
+Photos for the screen saver are separate from those settings: if you pick a folder or individual photos through the system picker, the launcher keeps only that read grant and the chosen URIs. It reads those images locally to draw the screen saver; they are never uploaded and are not included in a backup. The launcher does not request broad photo or storage permission, and removing the photo source releases the grant.
 
 Kids Mode stores a salted PBKDF2 hash of its PIN, a recovery hint and hash, the app allowlist and lockout state. The PIN itself is never stored. The recovery hint and app names are stored in plain text inside the app's private storage.
 
@@ -36,7 +38,7 @@ The accessibility switch is optional. It lets the launcher take over the TV's Ho
 
 Device admin is optional and used only for standby / the sleep timer. Android asks for confirmation and the launcher requests only the force-lock policy.
 
-The launcher does not request contacts, microphone, camera, calendar, SMS, call log or user storage access.
+The launcher does not request contacts, microphone, camera, calendar, SMS, call log or broad user storage/media access. Photos for the screen saver use only the folder or photos you choose in the system picker.
 
 Third-party apps
 
@@ -48,7 +50,7 @@ Kids Mode is a local launcher filter and PIN gate. It is not Android parental co
 
 Your controls
 
-Turn weather off, clear saved weather data, hide recommendation rows, clear discovery history, delete a profile, or clear the app's cache. Deleting a profile removes its layout, discovery data, PIN, recovery data and allowlist. Clearing app data removes everything the launcher stored; Clear cache removes saved media and the local crash trace, not your settings.
+Turn weather off, clear saved weather data, hide recommendation rows, clear discovery history, delete a profile, remove the screen-saver photo source, or clear the app's cache. Deleting a profile removes its layout, discovery data, PIN, recovery data and allowlist. Clearing app data removes everything the launcher stored; Clear cache removes saved media and the local crash trace, not your settings.
 
 Questions
 

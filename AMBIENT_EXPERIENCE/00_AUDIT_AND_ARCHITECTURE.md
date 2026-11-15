@@ -1,12 +1,12 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
 **Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4b — 0.5.5 (`versionCode 78`), `minSdk 28`, `targetSdk 35`
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–5 — 0.5.6 (`versionCode 79`), `minSdk 28`, `targetSdk 35`
 **Дата аудита:** 2026-11-15
 **Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
-**Реализация:** Stage 2–4b проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
+**Реализация:** Stage 2–5 проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal/Photos, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), Photos через системный выбор (SAF/Photo Picker, без broad permissions), IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
 **Аудит выполнялся read-only;** изменения кода — отдельный этап после него.
-**Следующий шаг:** blackout/ночное расписание — только после решения владельца; затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
+**Следующий шаг:** blackout/ночное расписание — только после решения владельца; Photos требуют проверки D-pad в системном picker на реальном Google TV. 4K/Cinematic — только после лицензионного решения.
 
 ---
 
@@ -17,7 +17,7 @@
 3. Контент — **100 реальных роликов Apple Aerial** в четырёх темах, с реальными still-кадрами и реальными названиями. Никаких фейковых изображений нет.
 4. Качество — **1080p H.264 SDR**. 4K, HEVC, HDR, 10-bit и выбор display mode **не реализованы**; на 4K-панели это апскейл 1080p.
 5. Настройка **Download Frequency** сейчас фактически **не даёт обновлений**: публичный tar Apple — старая плоская схема, а `AerialCatalogBuilder.supports()` принимает только category schema. Код честно возвращает `UNCHANGED` и сохраняет встроенный каталог, но пользователь видит настройку, которая ничего не меняет.
-6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal, включая формат часов и Pixel Shift.**
+6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal, включая формат часов и Pixel Shift; Stage 5 добавил Photos через системный выбор.**
 7. OLED-защита отсутствует: статический нижний градиент, статичная подпись, нет pixel shift, нет dim/blackout, нет ограничения сессии. `keepScreenOn` держит экран включённым, пока оверлей виден.
 8. Энергопотребление не измерялось. В активной заставке работают **два ExoPlayer-декодера** (один играет, второй префетчит), плюс `TextureView`-композиция и still-битмап.
 9. Надёжность — сильная сторона: таймауты старта/стопа, 3 последовательных отказа → stills-only, backoff 15/30/60/120 с, отсутствие «чёрного экрана» при отсутствии картинки, отказ от HTTP-даунгрейда.
@@ -202,7 +202,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3–4b частично закрыты AMB-01, AMB-02, AMB-04, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, Photos, отдельный Weather-режим, blackout и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3–5 частично закрыты AMB-01, AMB-02, AMB-04, AMB-05 и AMB-11 (Aerial/Clock/Minimal/Photos + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, отдельный Weather-режим, blackout и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
@@ -216,7 +216,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 | AMB-08 | Medium (offline) | Нет проверки сети перед стартом; офлайн тратит до 20 с на попытку. | `startFromHead` |
 | AMB-09 | Medium (content) | Нет 4K-контента и лицензионного источника для «Cinematic Photography»; Apple CDN — не гарантия и не SLA. | `NOTICE:12–16` |
 | AMB-10 | Medium (privacy/profile) | Настройки заставки глобальные, не per-profile; будущие фото/погода потребуют profile scoping. | `SaverPreferences.prefs` → `LauncherPrefs.NAME` |
-| AMB-11 | Medium (UX) | Нет режимов Photos/Abstract и отдельного Weather; расписания (ночь/день) нет. Clock/Minimal и opt-in погода на часах реализованы. | modes matrix |
+| AMB-11 | Medium (UX) | Нет режимов Abstract и отдельного Weather; расписания (ночь/день) нет. Clock/Minimal, Photos и opt-in погода на часах реализованы. | modes matrix |
 | AMB-12 | Medium (playback) | Каждый клип всегда с головы, всегда 30 с; нет recency/no-repeat, нет вариативных фрагментов. | `startFromHead` |
 | AMB-13 | Low (accessibility) | Reduce Motion влияет на entrance и zoom, но не на 1.2 с кроссфейд и caption fade; нет отдельного caption toggle; TalkBack не проверен. | `SaverScreen.kt` |
 | AMB-14 | Low (UX) | Нет подсказки «любая кнопка — выход» на экране; только accessibility description. | `saver_screen_description` |
@@ -716,7 +716,7 @@ Settings
 | TalkBack | contentDescription | не проверено |
 | Port 443 blocked | HTTPS-only → stills/backoff | не проверено |
 | Offline | stills-only/backoff | логика есть, не измерено |
-| Vendor TV без DocumentsUI | Photos/SAF | не проверено |
+| Vendor TV без DocumentsUI | Photos/SAF | не проверено; AVD использует photo picker fallback |
 
 ### G.2. Тестовая матрица (целевая)
 
@@ -818,11 +818,13 @@ Settings
 - Stage 4b: погода на часах только если уже включена в `Settings → Weather`; cached данные, без сети из заставки; off by default.
 - Acceptance: no static bright UI; session limit; energy measured. Энергия и OLED на реальной панели **не измерялись**.
 
-### Stage 5 — Photo Gallery (SAF)
+### Stage 5 — Photo Gallery (SAF) — реализовано
 
-- `OpenDocument`/`OpenDocumentTree`; persisted URI; per-profile.
-- No `READ_MEDIA_IMAGES`; no broad media scan.
-- Acceptance: vendor TV without DocumentsUI has a clean fallback; photos never leak into Kids profile.
+- `OPEN_DOCUMENT_TREE` (папка) или `PICK_IMAGES` (до 50 снимков); persisted URI; источник device-local и **не** входит в backup.
+- No `READ_MEDIA_IMAGES`; no broad media scan; один уровень `DocumentsContract`, лимит 300 файлов.
+- Decode off-main ≤1920×1080 (`ALLOCATOR_SOFTWARE`), 12 s hold, 1200 ms crossfade; ошибки пропускаются, все ошибки → градиент.
+- Kids profile: фото не читаются, Clock-fallback.
+- Acceptance: AVD photo picker + 2 фото + preview + full-screen + rotate + BACK + force-stop проверены; **D-pad-only вход в системный picker не подтверждён** (AOSP-образ требует Tab/касания); real vendor DocumentsUI — не проверено.
 
 ### Stage 6 — 4K/HDR pipeline + content licensing
 
@@ -873,14 +875,14 @@ Settings
 2. **Убрать тупиковый «Choose Screen Saver»**: либо сделать реальный выбор режима, либо переименовать строку в «Aerial Themes» и не обещать выбор.
 3. **Честно назвать Download Frequency**: сейчас он не обновляет каталог; либо починить источник, либо переименовать/объяснить.
 4. **Добавить Clock/Minimal + OLED protection** — самый большой UX/OLED-эффект при малом риске.
-5. **Извлечь `AmbientEngine`** до добавления Photos/4K, иначе `SaverScreen` станет 2000+ строк.
+5. **Извлечь `AmbientEngine`** до добавления 4K, иначе `SaverScreen` станет 2000+ строк; Photos уже вынесены в `ambient/` и не раздувают `SaverScreen`.
 6. **Решить лицензию/4K** до любых заявлений о 4K.
 
 ### J.3. Что нельзя обещать
 
 - «4K» — пока нет 4K-контента и подтверждённого 4K pipeline.
 - «Cinematic Photography» — пока нет лицензированного контента.
-- «Photo Gallery» — без решения по приватности и per-profile.
+- «Photo Gallery» — реализована только через системный выбор; нельзя обещать полную галерею, D-pad-only picker или работу без DocumentsUI/Photo Picker.
 - «OLED-safe» — без pixel shift/dim/session и проверки на панели.
 - «Энергоэффективно» — без измерений.
 - «Совместимо со всеми Android TV» — проверен только AVD.
@@ -889,7 +891,8 @@ Settings
 
 - [ ] Юридически подтверждено использование Apple Aerial CDN.
 - [ ] Решено, нужен ли 4K/HDR и есть ли лицензированный источник.
-- [ ] Решено, как Photo Gallery получает доступ (SAF, per-profile).
+- [x] Решено, как Photo Gallery получает доступ: SAF/Photo Picker, device-local, без broad permissions.
+- [x] Photos не попадают в backup и не читаются в Kids-профиле.
 - [ ] Решены defaults OLED: dim/blackout/max session.
 - [ ] Согласовано переименование `Interface → Personalization`.
 - [ ] Согласован список v1-режимов (Aerial + Clock + Minimal).
