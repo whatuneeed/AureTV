@@ -109,8 +109,15 @@
     <string name="settings_reset_hint">Folders will be removed, hidden apps will return to Home, and the order will be alphabetical.</string>
     <string name="settings_reset_confirm">Reset</string>
     <string name="settings_cancel">Cancel</string>
-    <string name="settings_saver">Screen Saver</string>
-    <string name="saver_choose">Choose Screen Saver</string>
+    <string name="settings_saver">Ambient Experience</string>
+    <string name="saver_mode">Ambient Mode</string>
+    <string name="saver_mode_aerial">Aerials</string>
+    <string name="saver_mode_clock">Clock</string>
+    <string name="saver_mode_minimal">Minimal</string>
+    <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally and use no network.</string>
+    <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
+    <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
+    <string name="saver_choose">Aerial Clips</string>
     <string name="saver_aerials">Aerials</string>
     <string name="saver_start_after">Start After</string>
     <string name="saver_delay_2">2 min</string>
@@ -141,20 +148,20 @@
     <string name="saver_refresh_monthly">Monthly</string>
     <string name="saver_refresh_never">Never</string>
     <string name="saver_screen_description">Screen Saver, %1$s. Press any button to exit.</string>
-    <string name="aerial_dream_label">OVisionTV Aerial</string>
+    <string name="aerial_dream_label">OVisionTV Ambient</string>
     <string name="saver_system_title">System screen saver</string>
     <string name="saver_system_value">Choose in TV settings</string>
-    <string name="saver_system_hint">Choose OVisionTV Aerial in Settings → Screen saver</string>
+    <string name="saver_system_hint">Choose OVisionTV Ambient in Settings → Screen saver</string>
     <string name="saver_reset">Reset Screen Saver</string>
     <string name="saver_reset_title">Reset screen saver?</string>
     <string name="saver_reset_confirm">Reset</string>
-    <string name="saver_reset_hint">Themes, delay, music and updates reset; hidden clips come back.</string>
+    <string name="saver_reset_hint">Mode, themes, delay, music and updates reset; hidden clips come back.</string>
     <plurals name="settings_hidden_count">
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
     </plurals>
 
-    <string name="settings_interface">Appearance</string>
+    <string name="settings_interface">Personalization</string>
     <string name="settings_home_screen">Home</string>
     <string name="settings_shelf_state_on">Recommendations on</string>
     <string name="settings_shelf_state_off">Recommendations off</string>

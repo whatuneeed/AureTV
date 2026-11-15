@@ -112,8 +112,15 @@
     <string name="settings_reset_confirm">Сбросить</string>
     <string name="settings_cancel">Отмена</string>
     <string name="settings_saver">Заставка</string>
-    <string name="saver_choose">Выбрать заставку</string>
-    <string name="saver_aerials">Воздушные виды</string>
+    <string name="saver_mode">Режим заставки</string>
+    <string name="saver_mode_aerial">Виды с воздуха</string>
+    <string name="saver_mode_clock">Часы</string>
+    <string name="saver_mode_minimal">Минимализм</string>
+    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально и не используют сеть.</string>
+    <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="saver_choose">Ролики</string>
+    <string name="saver_aerials">Виды с воздуха</string>
     <string name="saver_start_after">Начинать через</string>
     <string name="saver_delay_2">2 мин</string>
     <string name="saver_delay_5">5 мин</string>
@@ -143,14 +150,14 @@
     <string name="saver_refresh_monthly">Ежемесячно</string>
     <string name="saver_refresh_never">Никогда</string>
     <string name="saver_screen_description">Заставка, %1$s. Нажмите любую кнопку, чтобы выйти.</string>
-    <string name="aerial_dream_label">OVisionTV: воздушные виды</string>
+    <string name="aerial_dream_label">OVisionTV: заставка</string>
     <string name="saver_system_title">Системная заставка</string>
     <string name="saver_system_value">Выбрать в настройках ТВ</string>
-    <string name="saver_system_hint">Выберите «OVisionTV: воздушные виды» в Настройки → Заставка</string>
+    <string name="saver_system_hint">Выберите «OVisionTV: заставка» в Настройки → Заставка</string>
     <string name="saver_reset">Сбросить настройки заставки</string>
     <string name="saver_reset_title">Сбросить настройки заставки?</string>
     <string name="saver_reset_confirm">Сбросить</string>
-    <string name="saver_reset_hint">Темы, задержка и загрузка вернутся к значениям по умолчанию, скрытые ролики — снова видны.</string>
+    <string name="saver_reset_hint">Режим, темы, задержка и загрузка вернутся к значениям по умолчанию, скрытые ролики — снова видны.</string>
     <plurals name="settings_hidden_count">
         <item quantity="one">%d приложение</item>
         <item quantity="few">%d приложения</item>
@@ -158,7 +165,7 @@
         <item quantity="other">%d приложения</item>
     </plurals>
 
-    <string name="settings_interface">Интерфейс</string>
+    <string name="settings_interface">Персонализация</string>
     <string name="settings_home_screen">Главная</string>
     <string name="settings_shelf_state_on">Рекомендации вкл</string>
     <string name="settings_shelf_state_off">Рекомендации выкл</string>

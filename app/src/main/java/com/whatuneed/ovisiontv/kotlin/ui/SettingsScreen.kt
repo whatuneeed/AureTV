@@ -147,6 +147,8 @@ import com.whatuneed.ovisiontv.kotlin.data.PermissionSummary
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
@@ -165,6 +167,7 @@ import com.whatuneed.ovisiontv.kotlin.data.kidsLeaveNeedsPin
 import com.whatuneed.ovisiontv.kotlin.data.takeAppOutOfFolder
 import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPosterStore
 import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPreviewStore
+import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.ProfileAvatarPicker
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadMode
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadOverlay
@@ -173,6 +176,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.ui.components.ambientModeLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.saverThemeLabel
 import kotlinx.coroutines.Dispatchers
@@ -283,6 +287,7 @@ private const val PAGE_SAVER_CHOOSER = 4
 private const val PAGE_SAVER_DELAY = 5
 private const val PAGE_SAVER_THEMES = 6
 private const val PAGE_SAVER_REFRESH = 7
+private const val PAGE_SAVER_MODE = 43
 private const val PAGE_NETWORK = 8
 private const val PAGE_DEVICE = 9
 private const val PAGE_STORAGE = 10
@@ -674,6 +679,7 @@ fun SettingsScreen(
     // screen is paused; every one of them is re-read on resume so a row never
     // shows the value from the first composition.
     var saverDelay by remember(resumeTick) { mutableStateOf(SaverPreferences.delay(context)) }
+    var ambientMode by remember(resumeTick) { mutableStateOf(AmbientSettingsStore.mode(context)) }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -891,7 +897,7 @@ fun SettingsScreen(
         PAGE_LANGUAGE -> PAGE_INTERFACE
         PAGE_SAVER -> PAGE_INTERFACE
         PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
-        PAGE_SAVER_RESET,
+        PAGE_SAVER_RESET, PAGE_SAVER_MODE,
         -> PAGE_SAVER
         PAGE_STORAGE_CLEAR -> PAGE_STORAGE
         PAGE_NETWORK, PAGE_DEVICE, PAGE_STORAGE, PAGE_PERMISSIONS, PAGE_SYSTEM ->
@@ -1070,8 +1076,9 @@ fun SettingsScreen(
     }
 
     fun resetSaver() {
-        SaverPreferences.reset(context)
+        AmbientSettingsStore.reset(context)
         saverDelay = SaverPreferences.delay(context)
+        ambientMode = AmbientSettingsStore.mode(context)
         saverMusic = SaverPreferences.music(context)
         saverRefresh = SaverPreferences.refresh(context)
         saverThemes = SaverPreferences.themes(context)
@@ -1215,59 +1222,91 @@ fun SettingsScreen(
 
     @Composable
     fun pageRows(): List<SettingsRow> = when (page) {
-        PAGE_SAVER -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.saver_choose),
-                value = stringResource(R.string.saver_aerials),
-                chevron = true,
-                action = { open(PAGE_SAVER_CHOOSER) },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_start_after),
-                value = saverDelayLabel(saverDelay),
-                chevron = true,
-                // Opening on the first row would let one OK press overwrite the
-                // stored choice with a value the user never looked at.
-                action = {
-                    open(PAGE_SAVER_DELAY, focus = SaverDelay.entries.indexOf(saverDelay))
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_during_music),
-                value = stringResource(if (saverMusic) R.string.saver_on else R.string.saver_off),
-                toggleState = saverMusic,
-                action = {
-                    saverMusic = !saverMusic
-                    SaverPreferences.setMusic(context, saverMusic)
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_themes),
-                value = themeSummary,
-                chevron = true,
-                action = { open(PAGE_SAVER_THEMES) },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_refresh),
-                value = saverRefreshLabel(saverRefresh),
-                chevron = true,
-                action = {
-                    open(PAGE_SAVER_REFRESH, focus = SaverRefresh.entries.indexOf(saverRefresh))
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_system_title),
-                value = stringResource(R.string.saver_system_value),
-                chevron = true,
-                action = { openDreamSettings(context) },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.saver_reset),
-                chevron = true,
-                // Cancel is the safe default, as on the layout reset page.
-                action = { open(PAGE_SAVER_RESET, focus = 1) },
-            ),
-        )
+        PAGE_SAVER -> buildList {
+            add(
+                SettingsRow(
+                    title = stringResource(R.string.saver_mode),
+                    value = ambientModeLabel(ambientMode),
+                    chevron = true,
+                    action = {
+                        open(PAGE_SAVER_MODE, focus = AmbientMode.entries.indexOf(ambientMode))
+                    },
+                ),
+            )
+            add(
+                SettingsRow(
+                    title = stringResource(R.string.saver_start_after),
+                    value = saverDelayLabel(saverDelay),
+                    chevron = true,
+                    // Opening on the first row would let one OK press overwrite the
+                    // stored choice with a value the user never looked at.
+                    action = {
+                        open(PAGE_SAVER_DELAY, focus = SaverDelay.entries.indexOf(saverDelay))
+                    },
+                ),
+            )
+            add(
+                SettingsRow(
+                    title = stringResource(R.string.saver_during_music),
+                    value = stringResource(if (saverMusic) R.string.saver_on else R.string.saver_off),
+                    toggleState = saverMusic,
+                    action = {
+                        saverMusic = !saverMusic
+                        SaverPreferences.setMusic(context, saverMusic)
+                    },
+                ),
+            )
+            // The Aerial catalogue only matters to the Aerial mode. Hiding
+            // these rows in Clock/Minimal keeps the page honest instead of
+            // offering themes that would never be drawn.
+            if (ambientMode == AmbientMode.AERIAL) {
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_choose),
+                        value = stringResource(R.string.saver_aerials),
+                        chevron = true,
+                        action = { open(PAGE_SAVER_CHOOSER) },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_themes),
+                        value = themeSummary,
+                        chevron = true,
+                        action = { open(PAGE_SAVER_THEMES) },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_refresh),
+                        value = saverRefreshLabel(saverRefresh),
+                        chevron = true,
+                        action = {
+                            open(
+                                PAGE_SAVER_REFRESH,
+                                focus = SaverRefresh.entries.indexOf(saverRefresh),
+                            )
+                        },
+                    ),
+                )
+            }
+            add(
+                SettingsRow(
+                    title = stringResource(R.string.saver_system_title),
+                    value = stringResource(R.string.saver_system_value),
+                    chevron = true,
+                    action = { openDreamSettings(context) },
+                ),
+            )
+            add(
+                SettingsRow(
+                    title = stringResource(R.string.saver_reset),
+                    chevron = true,
+                    // Cancel is the safe default, as on the layout reset page.
+                    action = { open(PAGE_SAVER_RESET, focus = 1) },
+                ),
+            )
+        }
 
         PAGE_SAVER_RESET -> listOf(
             SettingsRow(
@@ -1280,6 +1319,18 @@ fun SettingsScreen(
                 action = { back() },
             ),
         )
+
+        PAGE_SAVER_MODE -> AmbientMode.entries.map { mode ->
+            SettingsRow(
+                title = ambientModeLabel(mode),
+                checked = mode == ambientMode,
+                choice = true,
+                action = {
+                    ambientMode = mode
+                    AmbientSettingsStore.setMode(context, mode)
+                },
+            )
+        }
 
         PAGE_SAVER_DELAY -> SaverDelay.entries.map { delay ->
             SettingsRow(
@@ -2265,6 +2316,7 @@ fun SettingsScreen(
                 PAGE_KIDS_PIN_REMOVE -> R.string.kids_pin_remove_title
                 PAGE_KIDS_APPS -> R.string.kids_allowed
                 PAGE_SAVER -> R.string.settings_saver
+                PAGE_SAVER_MODE -> R.string.saver_mode
                 PAGE_SAVER_CHOOSER -> R.string.saver_choose
                 PAGE_SAVER_DELAY -> R.string.saver_start_after
                 PAGE_SAVER_THEMES -> R.string.saver_themes
@@ -2372,6 +2424,7 @@ fun SettingsScreen(
         PAGE_KIDS_PIN_REMOVE -> stringResource(R.string.kids_pin_remove_hint)
         PAGE_KIDS_APPS -> stringResource(R.string.kids_allowed_hint)
         PAGE_SAVER_RESET -> stringResource(R.string.saver_reset_hint)
+        PAGE_SAVER_MODE -> stringResource(R.string.saver_mode_hint)
         PAGE_STORAGE_CLEAR -> stringResource(R.string.settings_cache_clear_hint)
         PAGE_SAVER_THEMES -> stringResource(R.string.saver_themes_hint)
         PAGE_STORAGE -> stringResource(R.string.settings_storage_hint)
@@ -2898,11 +2951,15 @@ fun SettingsScreen(
         // tvOS shows the current screensaver beside the list; the row only
         // configures it, so the preview is not focusable.
         if (page == PAGE_SAVER) {
-            SaverPreview(
-                scale = scale,
-                clip = SaverPlaylist.previewClip(clipList, saverThemes, hiddenClips),
-                themes = saverThemes,
-            )
+            if (ambientMode == AmbientMode.AERIAL) {
+                SaverPreview(
+                    scale = scale,
+                    clip = SaverPlaylist.previewClip(clipList, saverThemes, hiddenClips),
+                    themes = saverThemes,
+                )
+            } else {
+                AmbientPreview(scale = scale, mode = ambientMode)
+            }
         }
 
         if (isDoc) {
@@ -3091,7 +3148,8 @@ fun SettingsScreen(
                         .then(
                             // Radio rows in one list are one selectable group.
                             if (page == PAGE_LANGUAGE || page == PAGE_SAVER_DELAY ||
-                                page == PAGE_SAVER_REFRESH || page == PAGE_WEATHER_LOCATION ||
+                                page == PAGE_SAVER_REFRESH || page == PAGE_SAVER_MODE ||
+                                page == PAGE_WEATHER_LOCATION ||
                                 page == PAGE_WEATHER_UNITS || page == PAGE_WEATHER_SOURCE ||
                                 page == PAGE_WEATHER_REFRESH
                             ) {

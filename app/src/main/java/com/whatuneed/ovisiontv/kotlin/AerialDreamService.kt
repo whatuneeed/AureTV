@@ -18,13 +18,14 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
-import com.whatuneed.ovisiontv.kotlin.data.SaverPlaylist
-import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
-import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
+import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
@@ -105,32 +106,31 @@ class AerialDreamService : DreamService() {
 @Composable
 private fun DreamSaver(onFinished: () -> Unit) {
     val context = LocalContext.current
-    var catalogue by remember { mutableStateOf<List<AerialClip>?>(null) }
-    LaunchedEffect(Unit) {
+    val settings = remember { AmbientSettingsStore.load(context) }
+    var catalogue by remember(settings.mode) {
+        mutableStateOf<List<AerialClip>?>(
+            if (settings.mode == AmbientMode.AERIAL) null else emptyList(),
+        )
+    }
+    LaunchedEffect(settings.mode) {
+        if (settings.mode != AmbientMode.AERIAL) return@LaunchedEffect
         catalogue = withContext(Dispatchers.IO) { AerialCatalog.load(context) }
     }
-    val clips = catalogue
-    val items = remember(clips) {
-        clips?.let { list ->
-            SaverPlaylist.build(
-                list,
-                SaverPreferences.themes(context),
-                SaverPreferences.hidden(context),
-                Random.Default,
-            )
-        }.orEmpty()
+    // Clock and Minimal need no catalogue; Aerial waits for the real clips.
+    val clips = catalogue ?: return
+    val items = remember(clips, settings) {
+        AmbientPlaylist.scenes(clips, settings, Random.Default)
     }
-    if (clips != null && items.isEmpty()) {
+    if (settings.mode == AmbientMode.AERIAL && items.isEmpty()) {
         LaunchedEffect(Unit) { onFinished() }
         return
     }
-    if (items.isNotEmpty()) {
-        SaverScreen(
-            items = items,
-            onCloseRequested = onFinished,
-            onDismissed = onFinished,
-            publishMediaSession = true,
-            handleBack = false,
-        )
-    }
+    AmbientScreen(
+        mode = settings.mode,
+        items = items,
+        onCloseRequested = onFinished,
+        onDismissed = onFinished,
+        publishMediaSession = settings.mode == AmbientMode.AERIAL,
+        handleBack = false,
+    )
 }

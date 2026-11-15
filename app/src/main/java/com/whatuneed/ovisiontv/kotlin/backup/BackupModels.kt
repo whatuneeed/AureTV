@@ -247,6 +247,8 @@ internal data class SaverData(
     val refresh: String,
     val themes: Set<String>,
     val hidden: Set<String>,
+    /** Added after schema 1; absent in older archives means Aerial. */
+    val mode: String = "aerial",
 )
 
 internal data class LanguageData(

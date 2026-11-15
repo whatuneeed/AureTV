@@ -85,6 +85,7 @@ class BackupCodecTest {
             refresh = "WEEKLY",
             themes = setOf("landscapes", "cities"),
             hidden = setOf("clip-1"),
+            mode = "clock",
         ),
         language = LanguageData("ru", showPhoneApps = false),
         content = ContentData(recommendations = true, continueWatching = false),
@@ -141,6 +142,7 @@ class BackupCodecTest {
         assertEquals(1, validated.data.discovery["p1"]?.favorites?.size)
         assertEquals(2, validated.data.discovery["p1"]?.usage?.get("com.example.one")?.count)
         assertEquals(setOf("com.example.two"), validated.data.kids["p2"]?.allowlist)
+        assertEquals("clock", validated.data.saver?.mode)
         assertEquals("app:com.example.one", validated.data.startup?.target)
     }
 

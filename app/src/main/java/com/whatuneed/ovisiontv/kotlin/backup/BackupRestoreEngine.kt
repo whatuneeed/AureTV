@@ -2,6 +2,8 @@ package com.whatuneed.ovisiontv.kotlin.backup
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
@@ -197,6 +199,7 @@ internal class BackupRestoreEngine(private val context: Context) {
                 editor.putString(SaverPreferences.KEY_REFRESH, saver.refresh)
                 editor.putString(SaverPreferences.KEY_THEMES, SaverSettings.encodeThemes(themes))
                 editor.putString(SaverPreferences.KEY_HIDDEN_CLIPS, SaverSettings.encodeHidden(saver.hidden))
+                editor.putString(AmbientSettingsStore.KEY_MODE, AmbientMode.fromKey(saver.mode).key)
             }
         }
 

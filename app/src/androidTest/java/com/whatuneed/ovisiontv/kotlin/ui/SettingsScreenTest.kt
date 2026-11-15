@@ -47,6 +47,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefreshResult
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
@@ -69,6 +71,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
+import com.whatuneed.ovisiontv.kotlin.ui.components.AMBIENT_PREVIEW_TAG
 import com.whatuneed.ovisiontv.kotlin.ui.components.SAVER_PREVIEW_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -734,6 +737,24 @@ class SettingsScreenTest {
         rule.onNodeWithContentDescription(
             row(string(R.string.saver_refresh), string(R.string.saver_refresh_weekly)),
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_ambient_mode_page_switches_between_aerial_and_clock() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        rule.onNodeWithText(string(R.string.saver_mode)).assertIsDisplayed()
+
+        click(string(R.string.saver_mode_clock))
+        assertEquals(AmbientMode.CLOCK, AmbientSettingsStore.mode(context))
+
+        press(Key.Back)
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription(
+            row(string(R.string.saver_mode), string(R.string.saver_mode_clock)),
+        ).assertIsDisplayed()
+        rule.onNodeWithTag(AMBIENT_PREVIEW_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -1688,9 +1709,9 @@ class SettingsScreenTest {
         setSettings()
         openSaver()
 
-        // The reset row is last, after Choose, Start After, Music, Themes,
+        // The reset row is last, after Mode, Choose, Start After, Music, Themes,
         // Frequency and the system screen-saver row.
-        repeat(6) { press(Key.DirectionDown) }
+        repeat(7) { press(Key.DirectionDown) }
         press(Key.DirectionCenter)
         rule.onNodeWithText(string(R.string.saver_reset_title))
             .assertIsDisplayed()

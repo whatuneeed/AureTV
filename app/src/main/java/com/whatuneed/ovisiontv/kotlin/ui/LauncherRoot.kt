@@ -59,6 +59,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.whatuneed.ovisiontv.kotlin.KidsEntryGrant
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientScheduler
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
@@ -74,9 +78,6 @@ import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
-import com.whatuneed.ovisiontv.kotlin.data.SaverPlaylist
-import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
-import com.whatuneed.ovisiontv.kotlin.data.SaverSchedule
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.SleepControls
@@ -87,10 +88,10 @@ import com.whatuneed.ovisiontv.kotlin.data.kidsFilter
 import com.whatuneed.ovisiontv.kotlin.data.kidsLeaveNeedsPin
 import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPosterStore
 import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPreviewStore
+import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadMode
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.ProfilePicker
-import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.createSaverPlayers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -173,8 +174,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
 
     // Settings runs in its own activity, so resumeTick is also the signal to
     // re-read the saver options it may have changed.
-    val saverDelay = remember(resumeTick) { SaverPreferences.delay(context) }
-    val saverShowDuringMusic = remember(resumeTick) { SaverPreferences.music(context) }
+    val ambient = remember(resumeTick) { AmbientSettingsStore.load(context) }
     var catalogTick by remember { mutableIntStateOf(0) }
     // Reading the catalogue parses JSON and may touch the filesystem; keep it
     // off the first frame and publish the result on Main (AQ-08).
@@ -182,13 +182,8 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     LaunchedEffect(context, catalogTick) {
         aerialClips = withContext(Dispatchers.IO) { AerialCatalog.load(context) }
     }
-    val saverItems = remember(resumeTick, aerialClips) {
-        SaverPlaylist.build(
-            aerialClips,
-            SaverPreferences.themes(context),
-            SaverPreferences.hidden(context),
-            Random.Default,
-        )
+    val saverItems = remember(resumeTick, aerialClips, ambient) {
+        AmbientPlaylist.scenes(aerialClips, ambient, Random.Default)
     }
     val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
     // tvOS has a separate Reduce Motion path for the entrance: no scale.
@@ -222,8 +217,9 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
 
     // Download Frequency is checked on resume, not on a background schedule:
     // the launcher only exists while it is the home screen.
-    LaunchedEffect(foreground, context) {
-        if (!foreground || !AerialRefresh.isDue(context)) return@LaunchedEffect
+    LaunchedEffect(foreground, context, ambient.mode) {
+        if (!foreground || ambient.mode != AmbientMode.AERIAL) return@LaunchedEffect
+        if (!AerialRefresh.isDue(context)) return@LaunchedEffect
         // Only a saved catalogue replaces the playlist; a failed download must
         // not restart the saver on the same clips.
         if (AerialRefresh.update(context) == AerialRefreshResult.UPDATED) catalogTick++
@@ -246,9 +242,10 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     LaunchedEffect(trimTick) {
         if (trimTick > 0) warmStill = null
     }
-    LaunchedEffect(foreground, saverItems, saverDelay) {
+    LaunchedEffect(foreground, saverItems, ambient.mode, ambient.delay) {
         warmStill = null
-        if (!foreground || saverDelay == SaverDelay.NEVER) return@LaunchedEffect
+        if (!foreground || ambient.delay == SaverDelay.NEVER) return@LaunchedEffect
+        if (ambient.mode != AmbientMode.AERIAL) return@LaunchedEffect
         val clip = saverItems.firstOrNull() ?: return@LaunchedEffect
         val beforeLoad = MemoryPressure.trimTick.intValue
         val frame = withContext(Dispatchers.IO) {
@@ -264,7 +261,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // Behind another activity they are the largest idle allocation, so they are
     // released and rebuilt on return; SaverScreen can also build its own pair.
     var saverPlayers by remember { mutableStateOf<List<ExoPlayer>?>(null) }
-    LaunchedEffect(foreground, saverVisible, saverDelay) {
+    LaunchedEffect(foreground, saverVisible, ambient.mode, ambient.delay) {
         if (!foreground) {
             if (!saverVisible) {
                 saverPlayers?.forEach(ExoPlayer::release)
@@ -272,7 +269,12 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
             }
             return@LaunchedEffect
         }
-        if (saverDelay == SaverDelay.NEVER || saverPlayers != null) return@LaunchedEffect
+        if (ambient.mode != AmbientMode.AERIAL) {
+            saverPlayers?.forEach(ExoPlayer::release)
+            saverPlayers = null
+            return@LaunchedEffect
+        }
+        if (ambient.delay == SaverDelay.NEVER || saverPlayers != null) return@LaunchedEffect
         // Let Home finish its first frame before the decoders take the thread.
         delay(2_000)
         saverPlayers = createSaverPlayers(context)
@@ -319,8 +321,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     LaunchedEffect(
         foreground,
         saverVisible,
-        saverDelay,
-        saverShowDuringMusic,
+        ambient,
         resumeTick,
         saverItems,
         pickerVisible,
@@ -332,26 +333,28 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         // behind the PIN pad.
         if (
             !foreground || saverVisible || pickerVisible || pinGate != null ||
-            saverDelay == SaverDelay.NEVER
+            ambient.delay == SaverDelay.NEVER
         ) {
             return@LaunchedEffect
         }
-        // Nothing to show is better than an empty overlay.
-        if (saverItems.isEmpty()) return@LaunchedEffect
+        // Only Aerial needs a clip plan; clock/minimal draw themselves.
+        if (!AmbientPlaylist.hasContent(saverItems, ambient)) {
+            return@LaunchedEffect
+        }
         while (true) {
             val musicPlaying = audioManager?.isMusicActive == true
             val idleMs = SystemClock.elapsedRealtime() - lastActivity.longValue
-            if (SaverSchedule.isDue(saverDelay, idleMs, musicPlaying, saverShowDuringMusic)) {
+            if (AmbientScheduler.isDue(ambient, idleMs, musicPlaying)) {
                 saverClosing = false
                 saverVisible = true
                 break
             }
-            val waitMs = if (musicPlaying && !saverShowDuringMusic) {
+            val waitMs = if (musicPlaying && !ambient.duringMusic) {
                 // No deadline while music holds the saver back: the callback
                 // ends the wait, the slow check is a safety net.
                 SAVER_MUSIC_CHECK_MS
             } else {
-                (saverDelay.minutes * 60_000L - idleMs).coerceAtLeast(1L)
+                (ambient.delay.minutes * 60_000L - idleMs).coerceAtLeast(1L)
             }
             delay(waitMs)
         }
@@ -621,11 +624,12 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         // Drawn over the grid so the idle screen keeps the launcher's look and
         // the saver leaves its focus surface in one place.
         if (saverVisible) {
-            SaverScreen(
+            AmbientScreen(
+                mode = ambient.mode,
                 items = saverItems,
                 closing = saverClosing,
                 players = saverPlayers,
-                publishMediaSession = true,
+                publishMediaSession = ambient.mode == AmbientMode.AERIAL,
                 onCloseRequested = { saverClosing = true },
                 onDismissed = {
                     saverVisible = false

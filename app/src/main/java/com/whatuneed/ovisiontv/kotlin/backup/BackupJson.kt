@@ -512,6 +512,7 @@ internal object BackupJson {
         .put("refresh", data.refresh)
         .put("themes", JSONArray(data.themes.sorted()))
         .put("hidden", JSONArray(data.hidden.sorted()))
+        .put("mode", data.mode)
 
     private fun decodeSaver(json: JSONObject): SaverData {
         val themes = json.optJSONArray("themes")?.stringSet() ?: emptySet()
@@ -522,6 +523,7 @@ internal object BackupJson {
             refresh = json.optString("refresh", "WEEKLY"),
             themes = themes,
             hidden = hidden,
+            mode = json.optString("mode", "aerial"),
         )
     }
 

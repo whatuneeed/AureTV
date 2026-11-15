@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.backup
 
 import android.content.Context
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
@@ -89,6 +90,7 @@ internal class BackupSource(private val context: Context) {
                 refresh = SaverPreferences.refresh(context).name,
                 themes = SaverPreferences.themes(context).mapTo(LinkedHashSet()) { it.key },
                 hidden = SaverPreferences.hidden(context),
+                mode = AmbientSettingsStore.mode(context).key,
             )
         } else {
             null

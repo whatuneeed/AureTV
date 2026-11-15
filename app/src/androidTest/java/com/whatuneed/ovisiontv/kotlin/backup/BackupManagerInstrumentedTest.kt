@@ -9,6 +9,8 @@ import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
@@ -122,6 +124,7 @@ class BackupManagerInstrumentedTest {
             SaverPreferences.themes(context),
         )
         assertEquals(setOf("clip-1"), SaverPreferences.hidden(context))
+        assertEquals(AmbientMode.AERIAL, AmbientSettingsStore.mode(context))
 
         assertTrue(WeatherPreferences.enabled(context))
         assertTrue(WeatherPreferences.manual(context))
@@ -351,6 +354,7 @@ class BackupManagerInstrumentedTest {
             .putBoolean(StartupPreferences.KEY_ON_WAKE, false)
             .commit()
         DiscoveryStore(context, LauncherPrefs.NAME).clearAll()
+        AmbientSettingsStore.setMode(context, AmbientMode.CLOCK)
     }
 
     private fun profile(
