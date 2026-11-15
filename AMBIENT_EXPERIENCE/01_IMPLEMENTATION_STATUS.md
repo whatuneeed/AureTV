@@ -1,9 +1,9 @@
-# Ambient Experience — статус реализации Stage 2–4a
+# Ambient Experience — статус реализации Stage 2–4b
 
 **Дата:** 2026-11-15
-**База:** OVisionTV Launcher 0.5.3, `versionCode 76`
-**Статус:** Stage 2–3 реализованы; Stage 4a — опциональные Dim After и Max Session.
-**Не реализовано и не обещается:** 4K/HDR, Photo Gallery, Weather-режим, Cinematic Photography, Abstract Motion, blackout, энергоизмерения, физические ТВ. Pixel shift/dim — не «OLED-safe» и не гарантия от burn-in.
+**База:** OVisionTV Launcher 0.5.4, `versionCode 77`
+**Статус:** Stage 2–3 реализованы; Stage 4a — опциональные Dim After и Max Session; Stage 4b — opt-in погода на часах (только из кэша).
+**Не реализовано и не обещается:** 4K/HDR, Photo Gallery, отдельный Weather-режим (погода — только строка на часах), Cinematic Photography, Abstract Motion, blackout, энергоизмерения, физические ТВ. Pixel shift/dim — не «OLED-safe» и не гарантия от burn-in.
 
 ## Что сделано
 
@@ -30,6 +30,7 @@
 - Aerial делегирует в существующий `SaverScreen` — поведение, плееры, still fallback, watchdog и media session не изменены.
 - Clock: локальные часы/дата, без декодера и сети; обновление раз в минуту, а не каждый кадр.
 - Clock: системный/12-часовой/24-часовой формат; `Pixel Shift` двигает только текст часов раз в минуту (не «OLED-safe»).
+- Clock: opt-in строка погоды под датой (`Show Weather`, по умолчанию Off). Если погода в системе выключена — строка ведёт в `Settings → Weather`; если включена, показывает cached `Weather.Data` (иконка, температура, условие) и `Outdated`, когда кэш устарел. Сеть из заставки не запрашивается.
 - Clock/Minimal: опционально `Dim After` (10/20/30 мин) и `Max Session` (30/60/120 мин); по умолчанию `Never`.
 - Dim: 80% через выбранное время, 60% ещё через 5 минут; экран никогда не становится чёрным.
 - Minimal: локальный градиент без текста; медленное изменение фазы раз в 15 с, а не 60 fps.
@@ -60,6 +61,7 @@ Settings
               ├── Show During Music
               ├── Clock Format / Pixel Shift (только Clock)
               ├── Dim After / Max Session (Clock и Minimal)
+              ├── Show Weather (только Clock; Off по умолчанию)
               ├── Aerial Clips / Themes / Download Frequency (только Aerials)
               ├── System screen saver
               └── Reset
@@ -70,13 +72,13 @@ Settings
 - `PAGE_SAVER_DIM`, `PAGE_SAVER_SESSION` — radio-страницы; по умолчанию `Never`, поведение без явного выбора не меняется.
 - В Clock/Minimal Aerial-строки скрыты, чтобы не предлагать темы, которые не рисуются.
 - `Choose Screen Saver` переименован в `Aerial Clips`; тупиковый выбор с одним пунктом убран.
-- Preview в Settings: Aerial — реальный still; Clock — локальные часы; Minimal — локальный градиент. Декодер не запускается.
+- Preview в Settings: Aerial — реальный still; Clock — локальные часы и, если включено, cached погода; Minimal — локальный градиент. Декодер не запускается.
 
 ### 5. Backup
 
-- `SaverData.mode`, `clockFormat`, `pixelShift`, `dimAfter`, `maxSession` — необязательные поля; старые архивы без них восстанавливаются как `aerial`, `system`, `true`, `never`, `never`.
-- `BackupSource` читает `ambient_mode`, `ambient_clock_format`, `ambient_pixel_shift`, `ambient_dim_after`, `ambient_max_session`.
-- `BackupRestoreEngine` пишет все пять полей в том же commit, что и остальные saver-ключи.
+- `SaverData.mode`, `clockFormat`, `pixelShift`, `dimAfter`, `maxSession`, `showWeather` — необязательные поля; старые архивы без них восстанавливаются как `aerial`, `system`, `true`, `never`, `never`, `false`.
+- `BackupSource` читает `ambient_mode`, `ambient_clock_format`, `ambient_pixel_shift`, `ambient_dim_after`, `ambient_max_session`, `ambient_show_weather`.
+- `BackupRestoreEngine` пишет все шесть полей в том же commit, что и остальные saver-ключи.
 - Schema остаётся 1: поле обратно совместимо.
 
 ## Проверено
@@ -84,11 +86,11 @@ Settings
 | Проверка | Результат |
 |---|---|
 | `:app:testDebugUnitTest` | **457/457** |
-| `:app:connectedDebugAndroidTest` на AVD `hume-tv` API 34 | **240/240** |
+| `:app:connectedDebugAndroidTest` на AVD `hume-tv` API 34 | **242/242** |
 | `:app:lintDebug` | **0 errors / 18 warnings / 5 info** |
-| `:app:assembleRelease` | **Success**, APK **4 684 642 B**, подпись SHA-256 `327a5045…67d7b10` (не изменилась) |
-| AVD, визуально | Home → Personalization → Ambient Experience; Aerials/Clock; Clock Format; Dim After/Max Session; preview; full-screen clock; any key exits |
-| Backup | режим, формат, pixel shift, dim и max session входят в backup/restore; старый архив без полей → Aerial / System / On / Never |
+| `:app:assembleRelease` | **Success**, APK **4 685 502 B**, подпись SHA-256 `327a5045…67d7b10` (не изменилась) |
+| AVD, визуально | Home → Personalization → Ambient Experience; Aerials/Clock; Clock Format; Dim After/Max Session; Show Weather; preview с реальной погодой; full-screen clock; any key exits |
+| Backup | режим, формат, pixel shift, dim, max session и showWeather входят в backup/restore; старый архив без полей → Aerial / System / On / Never / Off |
 | Aerial | старый `SaverScreen` остаётся рендерером; поведение не менялось |
 
 Новые тесты:
@@ -102,8 +104,10 @@ Settings
 - `SettingsScreenTest.the_ambient_mode_page_switches_between_aerial_and_clock`
 - `SettingsScreenTest.the_clock_page_sets_a_12_24_format_and_pixel_shift`
 - `SettingsScreenTest.the_clock_page_sets_dim_and_max_session`
-- `BackupCodecTest` — mode/clockFormat/pixelShift/dim/maxSession в roundtrip
-- `BackupManagerInstrumentedTest` — Clock/24h/Off/Dim/Session сбрасываются к дефолтам при restore
+- `SettingsScreenTest.the_clock_page_offers_weather_when_the_weather_feature_is_on`
+- `SettingsScreenTest.the_clock_page_points_to_weather_settings_when_weather_is_off`
+- `BackupCodecTest` — mode/clockFormat/pixelShift/dim/maxSession/showWeather в roundtrip
+- `BackupManagerInstrumentedTest` — Clock/24h/Off/Dim/Session/Weather сбрасываются к дефолтам при restore
 
 ## Не проверено
 
@@ -116,17 +120,17 @@ Settings
 - фактический pixel shift/dim на реальной панели (только программная логика и AVD);
 - реальное закрытие по Max Session через 30/60/120 мин (unit-логика; AVD-сессия не ждалась);
 - 4K/HDR — отсутствует контент и pipeline;
-- Photos/Cinematic/Weather/Abstract — не реализованы;
+- Photos/Cinematic/Abstract — не реализованы;
+- погода на часах не проверена при stale-кэше на реальном устройстве; источник и атрибуция остаются в `Settings → Weather`;
 - SAF picker;
 - process death/reboot;
 - 24 h soak.
 
 ## Следующие шаги
 
-1. Stage 4b — Weather как opt-in режим (реальные данные, без новых permissions) и атрибуция.
-2. Blackout/расписание ночи — только после явного решения владельца; сейчас dim-ступени есть, blackout нет.
-3. Stage 5 — Photo Gallery через SAF, per-profile.
-4. Stage 6 — 4K/HDR только после лицензии и проверки декодера/панели.
-5. Физическая матрица устройств и измерения.
+1. Blackout/расписание ночи — только после явного решения владельца; сейчас dim-ступени есть, blackout нет.
+2. Stage 5 — Photo Gallery через SAF, per-profile.
+3. Stage 6 — 4K/HDR только после лицензии и проверки декодера/панели.
+4. Физическая матрица устройств и измерения.
 
 **Это не сертификация.** Всё, что не проверено на физическом устройстве, остаётся непроверенным.

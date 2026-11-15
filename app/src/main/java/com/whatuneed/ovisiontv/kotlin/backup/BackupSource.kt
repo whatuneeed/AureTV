@@ -95,6 +95,7 @@ internal class BackupSource(private val context: Context) {
                 pixelShift = AmbientSettingsStore.pixelShift(context),
                 dimAfter = AmbientSettingsStore.dimAfter(context).key,
                 maxSession = AmbientSettingsStore.maxSession(context).key,
+                showWeather = AmbientSettingsStore.showWeather(context),
             )
         } else {
             null

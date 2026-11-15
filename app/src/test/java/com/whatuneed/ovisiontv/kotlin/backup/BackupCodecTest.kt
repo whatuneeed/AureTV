@@ -91,6 +91,7 @@ class BackupCodecTest {
             pixelShift = false,
             dimAfter = "twenty",
             maxSession = "sixty",
+            showWeather = true,
         ),
         language = LanguageData("ru", showPhoneApps = false),
         content = ContentData(recommendations = true, continueWatching = false),
@@ -152,6 +153,7 @@ class BackupCodecTest {
         assertFalse(validated.data.saver?.pixelShift ?: true)
         assertEquals("twenty", validated.data.saver?.dimAfter)
         assertEquals("sixty", validated.data.saver?.maxSession)
+        assertTrue(validated.data.saver?.showWeather ?: false)
         assertEquals("app:com.example.one", validated.data.startup?.target)
     }
 

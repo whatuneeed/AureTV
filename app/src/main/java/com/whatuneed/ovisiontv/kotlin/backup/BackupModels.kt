@@ -254,6 +254,7 @@ internal data class SaverData(
     val pixelShift: Boolean = true,
     val dimAfter: String = "never",
     val maxSession: String = "never",
+    val showWeather: Boolean = false,
 )
 
 internal data class LanguageData(

@@ -517,6 +517,7 @@ internal object BackupJson {
         .put("pixelShift", data.pixelShift)
         .put("dimAfter", data.dimAfter)
         .put("maxSession", data.maxSession)
+        .put("showWeather", data.showWeather)
 
     private fun decodeSaver(json: JSONObject): SaverData {
         val themes = json.optJSONArray("themes")?.stringSet() ?: emptySet()
@@ -532,6 +533,7 @@ internal object BackupJson {
             pixelShift = json.optBoolean("pixelShift", true),
             dimAfter = json.optString("dimAfter", "never"),
             maxSession = json.optString("maxSession", "never"),
+            showWeather = json.optBoolean("showWeather", false),
         )
     }
 

@@ -811,6 +811,40 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun the_clock_page_offers_weather_when_the_weather_feature_is_on() {
+        WeatherPreferences.setEnabled(context, true)
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        click(string(R.string.saver_mode_clock))
+        press(Key.Back)
+
+        click(
+            row(
+                string(R.string.saver_show_weather),
+                string(R.string.saver_off),
+            ),
+        )
+        assertTrue(AmbientSettingsStore.showWeather(context))
+    }
+
+    @Test
+    fun the_clock_page_points_to_weather_settings_when_weather_is_off() {
+        setSettings()
+        openSaver()
+        click(row(string(R.string.saver_mode), string(R.string.saver_mode_aerial)))
+        click(string(R.string.saver_mode_clock))
+        press(Key.Back)
+
+        rule.onNodeWithContentDescription(
+            row(
+                string(R.string.saver_show_weather),
+                string(R.string.saver_weather_off),
+            ),
+        ).assertIsDisplayed()
+    }
+
+    @Test
     fun the_saver_chooser_toggles_clips_and_keeps_the_last_one() {
         setSettings()
         openSaver()

@@ -699,6 +699,9 @@ fun SettingsScreen(
     var ambientSession by remember(resumeTick) {
         mutableStateOf(AmbientSettingsStore.maxSession(context))
     }
+    var ambientShowWeather by remember(resumeTick) {
+        mutableStateOf(AmbientSettingsStore.showWeather(context))
+    }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -1103,6 +1106,7 @@ fun SettingsScreen(
         ambientPixelShift = AmbientSettingsStore.pixelShift(context)
         ambientDim = AmbientSettingsStore.dimAfter(context)
         ambientSession = AmbientSettingsStore.maxSession(context)
+        ambientShowWeather = AmbientSettingsStore.showWeather(context)
         saverMusic = SaverPreferences.music(context)
         saverRefresh = SaverPreferences.refresh(context)
         saverThemes = SaverPreferences.themes(context)
@@ -1334,6 +1338,35 @@ fun SettingsScreen(
                         },
                     ),
                 )
+            }
+            // Weather is an overlay on Clock, not a new content source. It
+            // only appears when the existing opt-in Weather setting is on;
+            // otherwise the row opens that setting instead of pretending.
+            if (ambientMode == AmbientMode.CLOCK) {
+                if (weatherEnabled) {
+                    add(
+                        SettingsRow(
+                            title = stringResource(R.string.saver_show_weather),
+                            value = stringResource(
+                                if (ambientShowWeather) R.string.saver_on else R.string.saver_off,
+                            ),
+                            toggleState = ambientShowWeather,
+                            action = {
+                                ambientShowWeather = !ambientShowWeather
+                                AmbientSettingsStore.setShowWeather(context, ambientShowWeather)
+                            },
+                        ),
+                    )
+                } else {
+                    add(
+                        SettingsRow(
+                            title = stringResource(R.string.saver_show_weather),
+                            value = stringResource(R.string.saver_weather_off),
+                            chevron = true,
+                            action = { open(PAGE_WEATHER) },
+                        ),
+                    )
+                }
             }
             // The Aerial catalogue only matters to the Aerial mode. Hiding
             // these rows in Clock/Minimal keeps the page honest instead of
@@ -3089,6 +3122,7 @@ fun SettingsScreen(
                     mode = ambientMode,
                     clockFormat = ambientClockFormat,
                     pixelShift = ambientPixelShift,
+                    showWeather = ambientShowWeather,
                 )
             }
         }

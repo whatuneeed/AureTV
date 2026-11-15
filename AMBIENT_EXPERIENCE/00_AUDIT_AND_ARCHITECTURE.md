@@ -1,12 +1,12 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
 **Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4a — 0.5.3 (`versionCode 76`), `minSdk 28`, `targetSdk 35`
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–4b — 0.5.4 (`versionCode 77`), `minSdk 28`, `targetSdk 35`
 **Дата аудита:** 2026-11-15
 **Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
-**Реализация:** Stage 2–4a проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
+**Реализация:** Stage 2–4b проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
 **Аудит выполнялся read-only;** изменения кода — отдельный этап после него.
-**Следующий шаг:** Weather как opt-in режим; blackout/ночное расписание — только после решения владельца; затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
+**Следующий шаг:** blackout/ночное расписание — только после решения владельца; затем Stage 5 — Photo Gallery. 4K/Cinematic — только после лицензионного решения.
 
 ---
 
@@ -202,7 +202,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3–4a частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session); 4K, Photos, Weather, blackout и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3–4b частично закрыты AMB-01, AMB-02, AMB-05 и AMB-11 (Aerial/Clock/Minimal + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, Photos, отдельный Weather-режим, blackout и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
@@ -216,7 +216,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 | AMB-08 | Medium (offline) | Нет проверки сети перед стартом; офлайн тратит до 20 с на попытку. | `startFromHead` |
 | AMB-09 | Medium (content) | Нет 4K-контента и лицензионного источника для «Cinematic Photography»; Apple CDN — не гарантия и не SLA. | `NOTICE:12–16` |
 | AMB-10 | Medium (privacy/profile) | Настройки заставки глобальные, не per-profile; будущие фото/погода потребуют profile scoping. | `SaverPreferences.prefs` → `LauncherPrefs.NAME` |
-| AMB-11 | Medium (UX) | Нет режимов Clock/Weather/Minimal/Photos/Abstract; нет расписания (ночь/день), нет «час/инфо». | modes matrix |
+| AMB-11 | Medium (UX) | Нет режимов Photos/Abstract и отдельного Weather; расписания (ночь/день) нет. Clock/Minimal и opt-in погода на часах реализованы. | modes matrix |
 | AMB-12 | Medium (playback) | Каждый клип всегда с головы, всегда 30 с; нет recency/no-repeat, нет вариативных фрагментов. | `startFromHead` |
 | AMB-13 | Low (accessibility) | Reduce Motion влияет на entrance и zoom, но не на 1.2 с кроссфейд и caption fade; нет отдельного caption toggle; TalkBack не проверен. | `SaverScreen.kt` |
 | AMB-14 | Low (UX) | Нет подсказки «любая кнопка — выход» на экране; только accessibility description. | `saver_screen_description` |
@@ -814,9 +814,9 @@ Settings
 
 ### Stage 4 — Weather + OLED protection
 
-- Weather only if already enabled; off by default; attribution.
-- OLED protection: pixel shift, dim, max session.
-- Acceptance: no static bright UI; session limit; energy measured.
+- Stage 4a: pixel shift, dim, max session — реализовано, по умолчанию off/on консервативно.
+- Stage 4b: погода на часах только если уже включена в `Settings → Weather`; cached данные, без сети из заставки; off by default.
+- Acceptance: no static bright UI; session limit; energy measured. Энергия и OLED на реальной панели **не измерялись**.
 
 ### Stage 5 — Photo Gallery (SAF)
 

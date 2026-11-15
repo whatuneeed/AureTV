@@ -134,6 +134,8 @@
     <string name="saver_session_60">60 min</string>
     <string name="saver_session_120">2 hours</string>
     <string name="saver_max_session_hint">Closes the ambient screen after the chosen time. Off by default.</string>
+    <string name="saver_show_weather">Show Weather</string>
+    <string name="saver_weather_off">Weather off</string>
     <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
     <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
     <string name="saver_choose">Aerial Clips</string>

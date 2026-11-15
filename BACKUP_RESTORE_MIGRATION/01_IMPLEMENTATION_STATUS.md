@@ -2,7 +2,7 @@
 
 Дата обновления: **2026-11-15 13:52 RTZ**  
 Ветка: `master`  
-**2026-11-15, 0.5.3:** добавлены `AmbientMode`, `AmbientClockFormat`, `pixelShift`, `dimAfter`, `maxSession` (все — необязательные поля `SaverData`, schema 1 остаётся обратно совместимой); см. `AMBIENT_EXPERIENCE/01_IMPLEMENTATION_STATUS.md`.
+**2026-11-15, 0.5.4:** добавлен `showWeather`; ранее в 0.5.3 — `AmbientMode`, `AmbientClockFormat`, `pixelShift`, `dimAfter`, `maxSession` (все — необязательные поля `SaverData`, schema 1 остаётся обратно совместимой); см. `AMBIENT_EXPERIENCE/01_IMPLEMENTATION_STATUS.md`.
 Статус: **Stage 0–8 реализованы; Stage 9 (устройства/физические TV) частично. Основной AVD-сценарий зелёный, release собирается.**
 
 ---

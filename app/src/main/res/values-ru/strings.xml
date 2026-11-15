@@ -136,6 +136,8 @@
     <string name="saver_session_60">60 мин</string>
     <string name="saver_session_120">2 часа</string>
     <string name="saver_max_session_hint">Закрывает заставку через выбранное время. По умолчанию выключено.</string>
+    <string name="saver_show_weather">Показывать погоду</string>
+    <string name="saver_weather_off">Погода выключена</string>
     <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="saver_choose">Ролики</string>

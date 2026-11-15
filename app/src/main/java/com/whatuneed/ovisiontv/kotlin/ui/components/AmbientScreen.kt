@@ -11,12 +11,14 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +63,8 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPixelShift
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPowerPolicy
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.Weather
+import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
 import com.whatuneed.ovisiontv.kotlin.ui.SaverExitEasing
@@ -69,7 +73,9 @@ import com.whatuneed.ovisiontv.kotlin.ui.TvRadius
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import com.whatuneed.ovisiontv.kotlin.ui.rememberTvScale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 import java.util.Locale
 
@@ -98,6 +104,7 @@ internal fun AmbientScreen(
     pixelShift: Boolean = true,
     dimAfter: AmbientDim = AmbientDim.NEVER,
     maxSession: AmbientSession = AmbientSession.NEVER,
+    showWeather: Boolean = false,
     closing: Boolean = false,
     swallowOpeningPress: Boolean = false,
     players: List<ExoPlayer>? = null,
@@ -125,6 +132,7 @@ internal fun AmbientScreen(
         pixelShift = pixelShift,
         dimAfter = dimAfter,
         maxSession = maxSession,
+        showWeather = showWeather,
         closing = closing,
         swallowOpeningPress = swallowOpeningPress,
         onCloseRequested = onCloseRequested,
@@ -140,6 +148,7 @@ private fun AmbientStillScreen(
     pixelShift: Boolean,
     dimAfter: AmbientDim,
     maxSession: AmbientSession,
+    showWeather: Boolean,
     closing: Boolean,
     swallowOpeningPress: Boolean,
     onCloseRequested: () -> Unit,
@@ -165,6 +174,7 @@ private fun AmbientStillScreen(
     } else {
         ""
     }
+    val weather = rememberAmbientWeather(context, mode, showWeather)
     val description = if (mode == AmbientMode.CLOCK) {
         stringResource(R.string.ambient_clock_description, clockTime, clockDate)
     } else {
@@ -267,6 +277,7 @@ private fun AmbientStillScreen(
                 is24Hour = is24Hour,
                 locale = locale,
                 pixelShift = pixelShift,
+                weather = weather,
             )
         }
     }
@@ -282,12 +293,14 @@ internal fun AmbientPreview(
     mode: AmbientMode,
     clockFormat: AmbientClockFormat = AmbientClockFormat.SYSTEM,
     pixelShift: Boolean = true,
+    showWeather: Boolean = false,
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     val systemIs24Hour = remember(context) { DateFormat.is24HourFormat(context) }
     val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
+    val weather = rememberAmbientWeather(context, mode, showWeather)
     val shape = RoundedCornerShape(scale.dp(TvRadius.field))
     Box(
         Modifier
@@ -304,6 +317,7 @@ internal fun AmbientPreview(
                 is24Hour = is24Hour,
                 locale = locale,
                 pixelShift = pixelShift,
+                weather = weather,
             )
         }
     }
@@ -316,6 +330,7 @@ private fun ClockFace(
     is24Hour: Boolean,
     locale: Locale,
     pixelShift: Boolean,
+    weather: AmbientWeather?,
 ) {
     var shiftStep by remember { mutableLongStateOf(0L) }
     LaunchedEffect(pixelShift) {
@@ -365,6 +380,43 @@ private fun ClockFace(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
+        if (weather != null) {
+            val data = weather.data
+            val condition = buildString {
+                if (weather.stale) {
+                    append(stringResource(R.string.weather_outdated)).append(" · ")
+                }
+                append(weatherDescription(data.code, data.day))
+            }.trim(' ', '·')
+            Row(
+                modifier = Modifier.padding(top = scale.dp(28f)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WeatherIcon(
+                    code = data.code,
+                    day = data.day,
+                    iconSize = scale.dp(38f),
+                )
+                Spacer(Modifier.width(scale.dp(12f)))
+                Text(
+                    text = "${data.temp}°",
+                    color = Color.White.copy(alpha = 0.88f),
+                    fontSize = scale.sp(TvType.title),
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                )
+                if (condition.isNotEmpty()) {
+                    Spacer(Modifier.width(scale.dp(12f)))
+                    Text(
+                        text = condition,
+                        color = Color.White.copy(alpha = 0.58f),
+                        fontSize = scale.sp(TvType.callout),
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -413,6 +465,37 @@ private fun AmbientBackdrop(mode: AmbientMode, reduceMotion: Boolean) {
                 )
             },
     )
+}
+
+/**
+ * Weather is read from the existing opt-in cache only. The ambient surface
+ * never starts a network request: if there is no cached forecast, it shows the
+ * clock alone instead of inventing a reading.
+ */
+private data class AmbientWeather(val data: Weather.Data, val stale: Boolean)
+
+@Composable
+private fun rememberAmbientWeather(
+    context: android.content.Context,
+    mode: AmbientMode,
+    showWeather: Boolean,
+): AmbientWeather? {
+    val shouldShow = showWeather && mode == AmbientMode.CLOCK
+    var weather by remember(shouldShow) { mutableStateOf<AmbientWeather?>(null) }
+    LaunchedEffect(shouldShow, context) {
+        weather = if (!shouldShow) {
+            null
+        } else {
+            withContext(Dispatchers.IO) {
+                if (!WeatherPreferences.enabled(context)) {
+                    null
+                } else {
+                    Weather.cached(context)?.let { AmbientWeather(it, Weather.stale(context)) }
+                }
+            }
+        }
+    }
+    return weather
 }
 
 /**

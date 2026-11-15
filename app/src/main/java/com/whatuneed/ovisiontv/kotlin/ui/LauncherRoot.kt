@@ -631,6 +631,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 pixelShift = ambient.pixelShift,
                 dimAfter = ambient.dimAfter,
                 maxSession = ambient.maxSession,
+                showWeather = ambient.showWeather,
                 closing = saverClosing,
                 players = saverPlayers,
                 publishMediaSession = ambient.mode == AmbientMode.AERIAL,

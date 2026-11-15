@@ -216,6 +216,7 @@ internal class BackupRestoreEngine(private val context: Context) {
                     AmbientSettingsStore.KEY_MAX_SESSION,
                     AmbientSession.fromKey(saver.maxSession).key,
                 )
+                editor.putBoolean(AmbientSettingsStore.KEY_SHOW_WEATHER, saver.showWeather)
             }
         }
 

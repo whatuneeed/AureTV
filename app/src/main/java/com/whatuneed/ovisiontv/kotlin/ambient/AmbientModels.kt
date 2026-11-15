@@ -91,6 +91,7 @@ data class AmbientSettings(
     val pixelShift: Boolean = true,
     val dimAfter: AmbientDim = AmbientDim.NEVER,
     val maxSession: AmbientSession = AmbientSession.NEVER,
+    val showWeather: Boolean = false,
 )
 
 /**
@@ -104,6 +105,7 @@ object AmbientSettingsStore {
     const val KEY_PIXEL_SHIFT = "ambient_pixel_shift"
     const val KEY_DIM_AFTER = "ambient_dim_after"
     const val KEY_MAX_SESSION = "ambient_max_session"
+    const val KEY_SHOW_WEATHER = "ambient_show_weather"
 
     fun load(context: Context): AmbientSettings = AmbientSettings(
         mode = mode(context),
@@ -116,6 +118,7 @@ object AmbientSettingsStore {
         pixelShift = pixelShift(context),
         dimAfter = dimAfter(context),
         maxSession = maxSession(context),
+        showWeather = showWeather(context),
     )
 
     fun mode(context: Context): AmbientMode =
@@ -161,6 +164,13 @@ object AmbientSettingsStore {
         prefs(context).edit().putString(KEY_MAX_SESSION, session.key).apply()
     }
 
+    fun showWeather(context: Context): Boolean =
+        SafePreferences.boolean(prefs(context), KEY_SHOW_WEATHER, false)
+
+    fun setShowWeather(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SHOW_WEATHER, enabled).apply()
+    }
+
     /** Reset is the same reset the Aerial page always did, plus ambient fields. */
     fun reset(context: Context) {
         SaverPreferences.reset(context)
@@ -169,6 +179,7 @@ object AmbientSettingsStore {
         setPixelShift(context, true)
         setDimAfter(context, AmbientDim.NEVER)
         setMaxSession(context, AmbientSession.NEVER)
+        setShowWeather(context, false)
     }
 
     internal fun prefs(context: Context) =

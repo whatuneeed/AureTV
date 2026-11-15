@@ -132,6 +132,7 @@ class BackupManagerInstrumentedTest {
         assertTrue(AmbientSettingsStore.pixelShift(context))
         assertEquals(AmbientDim.NEVER, AmbientSettingsStore.dimAfter(context))
         assertEquals(AmbientSession.NEVER, AmbientSettingsStore.maxSession(context))
+        assertFalse(AmbientSettingsStore.showWeather(context))
 
         assertTrue(WeatherPreferences.enabled(context))
         assertTrue(WeatherPreferences.manual(context))
@@ -366,6 +367,7 @@ class BackupManagerInstrumentedTest {
         AmbientSettingsStore.setPixelShift(context, false)
         AmbientSettingsStore.setDimAfter(context, AmbientDim.TWENTY)
         AmbientSettingsStore.setMaxSession(context, AmbientSession.SIXTY)
+        AmbientSettingsStore.setShowWeather(context, true)
     }
 
     private fun profile(
