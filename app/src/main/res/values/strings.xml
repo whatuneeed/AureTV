@@ -427,7 +427,7 @@
     <string name="setup_welcome_hint">Press OK on the remote to continue. Everything here can be changed later in Settings.</string>
     <string name="setup_profile_title">Your Profile</string>
     <string name="setup_profile_create">Create a Profile</string>
-    <string name="setup_profile_hint">Name and avatar. Each profile keeps its own apps, background and Home Screen. Up to three profiles; you can add more later in Settings.</string>
+    <string name="setup_profile_hint">Name and avatar. Each profile keeps its own apps and Home Screen. Up to three profiles; you can add more later in Settings.</string>
     <string name="setup_home_title">What Home Shows</string>
     <string name="setup_home_hint">The shelf above the tiles takes artwork from apps that publish it for Android TV.</string>
     <string name="setup_recommendations_detail">Film and show cards above the tiles</string>

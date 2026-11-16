@@ -64,6 +64,8 @@ import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeEdit
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
+import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
+import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.Weather
@@ -205,6 +207,14 @@ fun HomeScreen(
     val scale = rememberTvScale()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // tvOS keeps the active profile in the top-right capsule. The avatar is
+    // real state from the profile store, not a decorative placeholder.
+    val activeProfile = remember(context, profileId) {
+        runCatching {
+            ProfileStore(context).list().firstOrNull { it.id == profileId }
+        }.getOrNull()
+    }
+    val profileColor = activeProfile?.let { ProfileCatalog.color(it.color).background }
     val prefs = remember(context, prefsName) {
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
     }
@@ -2182,6 +2192,9 @@ fun HomeScreen(
                 clock = capsuleClock,
                 network = capsuleNetwork,
                 focusRequester = capsuleRequester,
+                profileEmoji = activeProfile?.emoji?.takeIf { it.isNotBlank() },
+                profileColor = profileColor,
+                profileName = activeProfile?.name,
                 onActivate = {
                     // TalkBack has no key event: take the pill and open the
                     // panel the same way OK does.

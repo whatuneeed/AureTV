@@ -441,7 +441,7 @@
     <string name="setup_welcome_hint">Нажмите OK на пульте, чтобы продолжить. Всё это можно изменить позже в Настройках.</string>
     <string name="setup_profile_title">Ваш профиль</string>
     <string name="setup_profile_create">Создайте профиль</string>
-    <string name="setup_profile_hint">Имя и аватар. У каждого профиля свои приложения, фон и главный экран. Профилей может быть до трёх — добавить их можно позже в Настройках.</string>
+    <string name="setup_profile_hint">Имя и аватар. У каждого профиля свои приложения и главный экран. Профилей может быть до трёх — добавить их можно позже в Настройках.</string>
     <string name="setup_home_title">Что показывает Главная</string>
     <string name="setup_home_hint">Полка над плитками берёт кадры у приложений, которые публикуют их для Android TV.</string>
     <string name="setup_recommendations_detail">Карточки фильмов и передач над плитками</string>

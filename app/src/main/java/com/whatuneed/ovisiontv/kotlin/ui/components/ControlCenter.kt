@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,6 +99,10 @@ internal const val CC_CAPSULE_TOP = 48f
 internal const val CC_CAPSULE_HEIGHT = 76f
 private const val CC_CAPSULE_RU_WIDTH = 216f
 private const val CC_CAPSULE_EN_WIDTH = 252f
+private const val CC_AVATAR_SIZE = 40f
+private const val CC_AVATAR_FONT = 22f
+private const val CC_AVATAR_GAP = 12f
+private const val CC_AVATAR_SPACE = CC_AVATAR_SIZE + CC_AVATAR_GAP
 private const val CC_PANEL_TOP = 144f
 private const val CC_PANEL_WIDTH = 560f
 private const val CC_TILE_WIDTH = 272f
@@ -297,16 +302,20 @@ internal fun StatusCapsule(
     focusRequester: FocusRequester,
     onActivate: () -> Unit,
     reduceMotion: Boolean = false,
+    profileEmoji: String? = null,
+    profileColor: Long? = null,
+    profileName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val russian = LocalConfiguration.current.locales[0]?.language == "ru"
+    val avatarSpace = if (profileEmoji != null) CC_AVATAR_SPACE else 0f
     val width by animateFloatAsState(
         targetValue = if (promoted) {
             CC_PANEL_WIDTH
         } else if (russian) {
-            CC_CAPSULE_RU_WIDTH
+            CC_CAPSULE_RU_WIDTH + avatarSpace
         } else {
-            CC_CAPSULE_EN_WIDTH
+            CC_CAPSULE_EN_WIDTH + avatarSpace
         },
         animationSpec = tween(motionDuration(CC_PROMOTE_MS, reduceMotion), easing = SurfaceEasing),
         label = "capsuleWidth",
@@ -357,7 +366,11 @@ internal fun StatusCapsule(
                         .focusable()
                         .clearAndSetSemantics {
                             contentDescription = title
-                            stateDescription = "$networkText, $clock"
+                            stateDescription = listOfNotNull(
+                                networkText,
+                                clock,
+                                profileName,
+                            ).joinToString(", ")
                             role = Role.Button
                             onClick(label = title) {
                                 onActivate()
@@ -392,6 +405,22 @@ internal fun StatusCapsule(
                 Color.White.copy(alpha = if (network == NetworkKind.NONE) 0.35f else 0.92f),
             ),
         )
+        if (profileEmoji != null && !promoted) {
+            Spacer(Modifier.width(scale.dp(CC_AVATAR_GAP)))
+            Box(
+                Modifier
+                    .size(scale.dp(CC_AVATAR_SIZE))
+                    .clip(CircleShape)
+                    .background(Color(profileColor ?: 0xFFD9DCE3)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = profileEmoji,
+                    fontSize = scale.sp(CC_AVATAR_FONT),
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 

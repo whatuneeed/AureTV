@@ -4,12 +4,10 @@ package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.content.ComponentCallbacks2
 import android.content.ComponentName
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,8 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -45,7 +41,6 @@ import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
-import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -139,6 +134,39 @@ class TopShelfTest {
                         rails = section,
                         selectedSection = DiscoverySection.CONTINUE,
                         selectedCard = 0,
+                        focusedCard = 0,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+
+        // The selected section is named by its bar and by the rail above the
+        // cards; the unselected section is named once, by its tab.
+        rule.onAllNodesWithText(context.getString(R.string.discovery_section_continue))
+            .assertCountEquals(2)
+        rule.onAllNodesWithText(context.getString(R.string.discovery_section_for_you))
+            .assertCountEquals(1)
+        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(1)
+    }
+
+    @Test
+    fun the_browse_home_does_not_draw_the_rail_under_the_dock() {
+        val section = rails(
+            DiscoverySection.CONTINUE to listOf(card("Первый кадр")),
+            DiscoverySection.FOR_YOU to listOf(card("Второй кадр")),
+        )
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = app("test.one", "Кинопоиск"),
+                        rails = section,
+                        selectedSection = DiscoverySection.CONTINUE,
+                        selectedCard = 0,
                         focusedCard = -1,
                         sectionFocused = false,
                         onCardActivate = {},
@@ -149,13 +177,12 @@ class TopShelfTest {
             }
         }
 
-        // The selected label is the page heading, the pill and the rail title;
-        // a rail that is not selected is named once, by its pill.
+        // Browse is just the poster, its title and the dock. The rail appears
+        // only after Up enters the shelf, when HomeScreen has moved the grid.
+        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(0)
+        rule.onAllNodesWithContentDescription("Второй кадр").assertCountEquals(0)
         rule.onAllNodesWithText(context.getString(R.string.discovery_section_continue))
-            .assertCountEquals(3)
-        rule.onAllNodesWithText(context.getString(R.string.discovery_section_for_you))
-            .assertCountEquals(1)
-        rule.onAllNodesWithContentDescription("Первый кадр").assertCountEquals(1)
+            .assertCountEquals(0)
     }
 
     @Test
@@ -227,7 +254,7 @@ class TopShelfTest {
                         rails = section,
                         selectedSection = DiscoverySection.FOR_YOU,
                         selectedCard = 0,
-                        focusedCard = -1,
+                        focusedCard = 0,
                         sectionFocused = false,
                         onCardActivate = {},
                         onSectionActivate = {},
@@ -278,7 +305,7 @@ class TopShelfTest {
                         rails = section,
                         selectedSection = DiscoverySection.FROM_APP,
                         selectedCard = 0,
-                        focusedCard = -1,
+                        focusedCard = 0,
                         sectionFocused = false,
                         onCardActivate = {},
                         onSectionActivate = {},
@@ -297,52 +324,32 @@ class TopShelfTest {
         rule.onAllNodesWithContentDescription("Второй кадр").assertCountEquals(1)
     }
 
-    // The caption comes from the launcher's locale-wrapped context, so its
-    // capitals must follow that language as well: the Turkish i/İ rule applied
-    // to the device locale would spell an English caption two different ways.
     @Test
-    fun the_shelf_caption_uppercases_in_the_launcher_language() {
-        val turkish = Configuration(context.resources.configuration).apply {
-            setLocale(Locale.forLanguageTag("tr"))
-        }
-        val wrapped = context.createConfigurationContext(turkish)
-        val caption = wrapped.getString(R.string.shelf_context)
-        val expected = caption.uppercase(Locale.forLanguageTag("tr"))
-        assertTrue(
-            "The caption has no language-dependent capitals",
-            expected != caption.uppercase(Locale.US),
+    fun the_heading_names_the_selected_card_without_an_app_category() {
+        val section = rails(
+            DiscoverySection.FROM_APP to listOf(card("Первый кадр")),
         )
-
-        val previous = Locale.getDefault()
-        try {
-            // Pin the device default: that is what the caption used before, so
-            // on an already-Turkish device the bug would hide itself.
-            Locale.setDefault(Locale.US)
-            rule.setContent {
-                OVisionTheme {
-                    CompositionLocalProvider(
-                        LocalContext provides wrapped,
-                        LocalConfiguration provides turkish,
-                    ) {
-                        Box(Modifier.fillMaxSize().background(Color.Black)) {
-                            TopShelf(
-                                app = app("test.one", "Первый"),
-                                rails = emptyList(),
-                                selectedSection = null,
-                                selectedCard = 0,
-                                focusedCard = -1,
-                                sectionFocused = false,
-                                onCardActivate = {},
-                                onSectionActivate = {},
-                                scale = TvScale(1f),
-                            )
-                        }
-                    }
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = app("test.one", "Первый"),
+                        rails = section,
+                        selectedSection = DiscoverySection.FROM_APP,
+                        selectedCard = 0,
+                        focusedCard = 0,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
                 }
             }
-            rule.onNodeWithText(expected).assertExists()
-        } finally {
-            Locale.setDefault(previous)
         }
+
+        // The heading and the fallback card both carry the same title; the
+        // point is that the heading is the content title, not the app category.
+        rule.onAllNodesWithText("Первый кадр").assertCountEquals(2)
+        rule.onAllNodesWithText(context.getString(R.string.shelf_context)).assertCountEquals(0)
     }
 }

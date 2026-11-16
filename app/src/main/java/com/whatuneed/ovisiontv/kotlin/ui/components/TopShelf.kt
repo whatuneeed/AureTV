@@ -54,7 +54,6 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -127,7 +126,7 @@ internal fun shelfCardAnchor(): Offset = Offset(
 )
 private const val INFO_BOTTOM = 340f
 private const val SECTION_BAR_TOP = 270f
-private const val SECTION_BAR_HEIGHT = 44f
+private const val SECTION_BAR_HEIGHT = 68f
 private const val SECTION_GAP = 12f
 
 /**
@@ -152,7 +151,6 @@ fun TopShelf(
     // node that no longer exists; this tick asks the shelf to restore its card.
     focusTick: Int = 0,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
     val rail = rails.firstOrNull { it.section == selectedSection } ?: rails.firstOrNull()
     val selected = rail?.items?.getOrNull(selectedCard) ?: rail?.items?.firstOrNull()
     val arts = rememberRailArts(rail?.items.orEmpty(), selected?.id)
@@ -164,7 +162,12 @@ fun TopShelf(
 
     val density = LocalDensity.current.density
     val heroPrefix = "${ArtRole.HERO}:"
-    val currentHero = selected?.let { arts["$heroPrefix${it.id}"] }
+    val cardPrefix = "${ArtRole.CARD}:"
+    // A provider may publish a card but no separate hero. Using that card's
+    // real artwork keeps the shelf from becoming a title on a black field.
+    val currentHero = selected?.let {
+        arts["$heroPrefix${it.id}"] ?: arts["$cardPrefix${it.id}"]
+    }
 
     Box(Modifier.fillMaxSize()) {
         // Backdrop: the hero when it is large enough to fill the screen, the
@@ -184,12 +187,13 @@ fun TopShelf(
             // outgoing poster is composed for the whole fade (T8).
             Crossfade(
                 targetState = selected?.id,
+                modifier = Modifier.fillMaxSize(),
                 animationSpec = tween(ART_CROSSFADE_MS, easing = ArtEasing),
                 label = "shelfHero",
             ) { id ->
                 val bitmap = id?.let { arts["$heroPrefix$it"] }
                 if (bitmap != null) {
-                    if (heroIsWide(bitmap, scale, density)) {
+                    if (heroIsWide(bitmap)) {
                         Image(
                             bitmap = bitmap,
                             contentDescription = null,
@@ -198,26 +202,40 @@ fun TopShelf(
                             filterQuality = FilterQuality.Medium,
                         )
                     } else {
-                        // A provider poster smaller than half the screen stays
-                        // a poster; a portrait source is not cropped into a
-                        // fake backdrop.
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(bottom = scale.dp(80f))
-                                .width(scale.dp(760f))
-                                .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
-                                .clip(RoundedCornerShape(scale.dp(CARD_RADIUS)))
-                                .shadow(24.dp, RoundedCornerShape(scale.dp(CARD_RADIUS)))
-                                .border(
-                                    1.dp,
-                                    Color.White.copy(alpha = 0.14f),
-                                    RoundedCornerShape(scale.dp(CARD_RADIUS)),
-                                ),
-                            contentScale = ContentScale.Fit,
-                        )
+                        // tvOS fills the shelf with the selected artwork. A
+                        // narrow provider poster cannot honestly become a 4K
+                        // backdrop, so it sits centred on a dimmed crop of the
+                        // same art. The crop supplies the colour field without
+                        // stretching the poster; the sharp 760pt card remains
+                        // the subject.
+                        Box(Modifier.fillMaxSize()) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { alpha = 0.30f },
+                                contentScale = ContentScale.Crop,
+                                filterQuality = FilterQuality.Low,
+                            )
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(bottom = scale.dp(80f))
+                                    .width(scale.dp(760f))
+                                    .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
+                                    .clip(RoundedCornerShape(scale.dp(CARD_RADIUS)))
+                                    .shadow(24.dp, RoundedCornerShape(scale.dp(CARD_RADIUS)))
+                                    .border(
+                                        1.dp,
+                                        Color.White.copy(alpha = 0.14f),
+                                        RoundedCornerShape(scale.dp(CARD_RADIUS)),
+                                    ),
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
                     }
                 }
             }
@@ -261,13 +279,16 @@ fun TopShelf(
 
         TopShelfHeading(
             app = app,
-            section = rail?.section,
             selected = selected,
-            locale = locale,
             scale = scale,
         )
 
-        if (rails.size > 1 && rail != null) {
+        // The browsing Home is a poster, a title and the dock, as on tvOS. The
+        // rail and its section bar belong to the focused shelf; drawing them
+        // behind the grid was what put cards under the dock. They appear only
+        // after Up enters the shelf, when the grid has already slid away.
+        val shelfEngaged = focusedCard >= 0 || sectionFocused
+        if (shelfEngaged && rails.size > 1 && rail != null) {
             SectionBar(
                 rails = rails,
                 selected = rail.section,
@@ -280,11 +301,11 @@ fun TopShelf(
             )
         }
 
-        if (selected != null) {
+        if (shelfEngaged && selected != null) {
             RecommendationInfo(selected, scale)
         }
 
-        if (rail != null) {
+        if (shelfEngaged && rail != null) {
             Box(
                 Modifier
                     .align(Alignment.BottomStart)
@@ -310,53 +331,33 @@ fun TopShelf(
 @Composable
 private fun TopShelfHeading(
     app: TvApp?,
-    section: DiscoverySection?,
     selected: DiscoveryItem?,
-    locale: java.util.Locale,
     scale: TvScale,
 ) {
-    val appLabel = app?.label
-    val title = when (section) {
-        DiscoverySection.FROM_APP -> appLabel ?: selected?.packageLabel ?: stringResource(R.string.shelf_context)
-        DiscoverySection.FOR_YOU -> stringResource(R.string.discovery_section_for_you)
-        DiscoverySection.CONTINUE -> stringResource(R.string.discovery_section_continue)
-        DiscoverySection.RECENT -> stringResource(R.string.discovery_section_recent)
-        DiscoverySection.FAVORITES -> stringResource(R.string.discovery_section_favorites)
-        null -> appLabel ?: selected?.packageLabel.orEmpty()
-    }
-    val subtitle = when (section) {
-        DiscoverySection.FROM_APP, null -> stringResource(R.string.shelf_context).uppercase(locale)
-        // A cross-app hero belongs to the app that published the card, not to
-        // whichever dock tile happens to be under the cursor.
-        else -> selected?.packageLabel ?: appLabel
-    }
+    // tvOS captions the shelf with the selected content, not with the app
+    // category. The old "APPLICATION" line was product metadata leaking into
+    // the most prominent corner of Home.
+    val title = selected?.title?.takeIf { it.isNotBlank() }
+        ?: app?.label
+        ?: selected?.packageLabel
+        ?: stringResource(R.string.shelf_context)
     Column(
         Modifier
-            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(150f))
-            .width(scale.dp(750f)),
+            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(57f))
+            .width(scale.dp(900f)),
     ) {
         Text(
             text = title,
             color = Color.White,
-            fontSize = scale.sp(TvType.title),
-            lineHeight = scale.sp(TvLeading.shelfTitle),
-            fontWeight = FontWeight.SemiBold,
+            fontSize = scale.sp(TvType.hero),
+            lineHeight = scale.sp(78f),
+            fontWeight = FontWeight.Medium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             style = TextStyle(
                 shadow = Shadow(color = Color.Black.copy(alpha = 0.55f), blurRadius = 30f),
             ),
         )
-        if (!subtitle.isNullOrBlank()) {
-            Spacer(Modifier.height(scale.dp(10f)))
-            Text(
-                text = subtitle.uppercase(locale),
-                color = Color.White.copy(alpha = 0.5f),
-                fontSize = scale.sp(TvType.callout),
-                letterSpacing = (23f * scale.factor * 0.08f).sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
     }
 }
 
@@ -391,36 +392,21 @@ private fun SectionBar(
             val active = rail.section == selected
             val label = sectionLabel(rail.section, appLabel)
             val alpha by animateFloatAsState(
-                targetValue = if (active) 0.92f else 0.12f,
+                targetValue = if (active) 1f else 0.52f,
                 animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
-                label = "sectionPill",
+                label = "sectionTab",
             )
             val requester = requesters.getOrPut(rail.section) { FocusRequester() }
-            Box(
+            Column(
                 modifier = Modifier
                     .focusRequester(requester)
                     .focusable()
-                    .clip(RoundedCornerShape(scale.dp(22f)))
+                    .clip(RoundedCornerShape(scale.dp(10f)))
                     .background(
-                        if (active) {
-                            Color.White.copy(alpha = alpha)
-                        } else {
-                            Color.Black.copy(alpha = 0.32f)
-                        },
-                    )
-                    .then(
-                        if (active && focused) {
-                            Modifier.border(
-                                2.dp,
-                                Color.White,
-                                RoundedCornerShape(scale.dp(22f)),
-                            )
-                        } else {
-                            Modifier
-                        },
+                        if (active && focused) Color.White.copy(alpha = 0.10f) else Color.Transparent,
                     )
                     .padding(
-                        horizontal = scale.dp(18f),
+                        horizontal = scale.dp(12f),
                         vertical = scale.dp(8f),
                     )
                     .semantics {
@@ -432,14 +418,27 @@ private fun SectionBar(
                         }
                     }
                     .testTag("shelfSection"),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // tvOS names the active page with plain type and a short rule;
+                // a white iOS pill in the middle of the poster was the loudest
+                // non-tvOS element left on Home.
                 Text(
                     text = label,
-                    color = if (active) TvInk.focusInk else Color.White.copy(alpha = 0.72f),
-                    fontSize = scale.sp(TvType.callout),
+                    color = Color.White.copy(alpha = alpha),
+                    fontSize = scale.sp(TvType.subhead),
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                 )
+                if (active) {
+                    Spacer(Modifier.height(scale.dp(5f)))
+                    Box(
+                        Modifier
+                            .width(scale.dp(34f))
+                            .height(scale.dp(2f))
+                            .background(Color.White.copy(alpha = 0.9f)),
+                    )
+                }
             }
         }
     }
@@ -707,19 +706,6 @@ private fun RecommendationInfo(card: DiscoveryItem, scale: TvScale) {
                 .width(scale.dp(900f)),
             verticalArrangement = Arrangement.Bottom,
         ) {
-            Text(
-                text = card.title,
-                modifier = Modifier.testTag("shelfInfoTitle"),
-                color = Color.White,
-                fontSize = scale.sp(TvType.subhead),
-                lineHeight = scale.sp(TvLeading.infoTitle),
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = TextStyle(
-                    shadow = Shadow(color = Color.Black.copy(alpha = 0.5f), blurRadius = 24f),
-                ),
-            )
             card.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
                 Spacer(Modifier.height(scale.dp(6f)))
                 Text(
@@ -1032,9 +1018,12 @@ private fun rememberShelfBanner(app: TvApp): ImageBitmap? {
  * before it fills it. A tall poster that happens to be high-resolution would
  * otherwise be cropped into a fake backdrop; it is shown as a card instead.
  */
-private fun heroIsWide(art: ImageBitmap, scale: TvScale, density: Float): Boolean =
-    art.width >= art.height * 1.4f &&
-        art.width * 2 >= (TvOs.SCREEN_WIDTH * scale.factor * density).roundToInt()
+private fun heroIsWide(art: ImageBitmap): Boolean =
+    // A landscape source is the normal top-shelf shape on tvOS. The previous
+    // half-screen rule rejected a perfectly usable 16:9 provider still and
+    // dropped it into a floating card; that card, not the resolution, was the
+    // visible difference from tvOS. Portrait art still keeps its card.
+    art.width >= art.height * 1.3f
 
 private const val SCRIM_MAX_WIDTH = 960
 private const val SCRIM_MAX_HEIGHT = 540
