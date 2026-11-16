@@ -446,7 +446,6 @@
     <string name="setup_saver_hint">Что показывать, когда экран простаивает. Темы, «Фото» и Reddit — в Настройках → Персонализация → Заставка.</string>
     <string name="setup_saver_delay">Запускать через</string>
     <string name="setup_saver_delay_hint">Нажмите OK, чтобы сменить интервал</string>
-    <string name="setup_saver_music">Показывать во время музыки</string>
     <string name="setup_saver_music_hint">Запускать заставку, даже когда играет музыка.</string>
     <string name="setup_access_hint">Необязательные системные настройки. Их можно изменить позже в Настройках → Система.</string>
     <string name="setup_home_app_detail">Если телевизор предложит выбор домашнего экрана</string>

@@ -565,7 +565,7 @@ fun SetupScreen(
                     },
                 ),
                 SetupRow(
-                    title = stringResource(R.string.setup_saver_music),
+                    title = stringResource(R.string.saver_during_music),
                     detail = stringResource(R.string.setup_saver_music_hint),
                     kind = RowKind.TOGGLE,
                     checked = saverMusic,
