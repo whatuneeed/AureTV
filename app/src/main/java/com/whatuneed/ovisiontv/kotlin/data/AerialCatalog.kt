@@ -22,15 +22,28 @@ data class AerialClip(
 }
 
 /**
- * Media is HTTPS-only. A saved catalogue from an older build may still carry
- * Apple's historical cleartext URLs; upgrade those to TLS instead of silently
- * downgrading secure ones. The parser below rejects any remaining cleartext
- * entry, so no media request can leave the device in the clear.
+ * Apple's public CDN answers on both schemes. Some TV trust stores do not
+ * accept the Apple certificate chain, so the video and still paths use HTTP
+ * for this one public host; every other request stays HTTPS. The exception is
+ * scoped in network_security_config.xml and covered by tests, not a global
+ * cleartext switch.
+ */
+private const val APPLE_CDN = "sylvan.apple.com"
+
+/** True for HTTPS or for the one explicitly scoped Apple CDN over HTTP. */
+internal fun isAerialMediaUrl(url: String): Boolean =
+    url.startsWith("https://") || url.startsWith("http://$APPLE_CDN/")
+
+/**
+ * Normalize both historical and current Apple URLs to HTTP. A saved catalogue
+ * from an older build may carry either scheme; external HTTPS URLs are left
+ * alone because they are not covered by the Apple cleartext exception.
  */
 internal fun aerialStreamUrl(url: String): String {
-    val insecure = "http://sylvan.apple.com/"
-    return if (url.startsWith(insecure)) {
-        "https://sylvan.apple.com/" + url.removePrefix(insecure)
+    val secure = "https://$APPLE_CDN/"
+    val cleartext = "http://$APPLE_CDN/"
+    return if (url.startsWith(secure)) {
+        cleartext + url.removePrefix(secure)
     } else {
         url
     }
@@ -51,7 +64,7 @@ internal fun preferredCatalogue(
     else -> saved
 }
 
-private fun isNetworkUrl(url: String): Boolean = url.startsWith("https://")
+private fun isNetworkUrl(url: String): Boolean = isAerialMediaUrl(url)
 
 object AerialCatalog {
     const val ASSET_NAME = "aerial_catalog.json"

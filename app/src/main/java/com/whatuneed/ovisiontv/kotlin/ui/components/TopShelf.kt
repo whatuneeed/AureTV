@@ -132,8 +132,9 @@ private const val SECTION_GAP = 12f
 /**
  * tvOS top shelf, extended into rails. The focused app still owns the screen:
  * its poster fills the display and its rows are the first section. The section
- * bar only appears when the profile has more than one non-empty rail, so a home
- * with nothing to discover looks exactly like before.
+ * bar only appears when the profile has more than one non-empty rail. A home
+ * with no banner and no published rows gets a neutral welcome, not a black
+ * field above the dock.
  */
 @Composable
 fun TopShelf(
@@ -147,6 +148,7 @@ fun TopShelf(
     onSectionActivate: (DiscoverySection) -> Unit,
     scale: TvScale,
     reduceMotion: Boolean = false,
+    headingTop: Float = 57f,
     // A resume, a closed menu or a closed search can leave Android focus on a
     // node that no longer exists; this tick asks the shelf to restore its card.
     focusTick: Int = 0,
@@ -156,9 +158,13 @@ fun TopShelf(
     val arts = rememberRailArts(rail?.items.orEmpty(), selected?.id)
     val bannerArt = app?.let { rememberShelfBanner(it) }
 
-    // An app with no banner and no published rows draws nothing at all: even a
-    // scrim would read as a band over the home backdrop.
-    if (bannerArt == null && rails.isEmpty()) return
+    // An app with no banner and no published rows still has a Home: the dock
+    // is below, so a neutral welcome state explains how to fill the shelf
+    // instead of leaving a black field above it.
+    if (bannerArt == null && rails.isEmpty()) {
+        EmptyHome(scale)
+        return
+    }
 
     val density = LocalDensity.current.density
     val heroPrefix = "${ArtRole.HERO}:"
@@ -281,6 +287,7 @@ fun TopShelf(
             app = app,
             selected = selected,
             scale = scale,
+            top = headingTop,
         )
 
         // The browsing Home is a poster, a title and the dock, as on tvOS. The
@@ -328,11 +335,41 @@ fun TopShelf(
     }
 }
 
+/** Neutral first screen when no app publishes a banner or a recommendation. */
+@Composable
+private fun EmptyHome(scale: TvScale) {
+    Column(
+        Modifier
+            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(300f))
+            .width(scale.dp(1000f)),
+    ) {
+        Text(
+            text = stringResource(R.string.home_empty_title),
+            color = Color.White,
+            fontSize = scale.sp(TvType.largeTitle),
+            lineHeight = scale.sp(64f),
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(scale.dp(18f)))
+        Text(
+            text = stringResource(R.string.home_empty_body),
+            color = Color.White.copy(alpha = 0.62f),
+            fontSize = scale.sp(TvType.subhead),
+            lineHeight = scale.sp(42f),
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @Composable
 private fun TopShelfHeading(
     app: TvApp?,
     selected: DiscoveryItem?,
     scale: TvScale,
+    top: Float,
 ) {
     // tvOS captions the shelf with the selected content, not with the app
     // category. The old "APPLICATION" line was product metadata leaking into
@@ -343,7 +380,7 @@ private fun TopShelfHeading(
         ?: stringResource(R.string.shelf_context)
     Column(
         Modifier
-            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(57f))
+            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(top))
             .width(scale.dp(900f)),
     ) {
         Text(

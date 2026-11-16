@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.isAerialMediaUrl
 import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
@@ -46,7 +47,7 @@ internal object AerialPreviewStore {
 
     /** Grid tiles draw 450×290 stills; half sampling keeps 100 of them affordable. */
     fun loadThumbnail(context: Context, url: String): Bitmap? {
-        if (!url.startsWith("https://")) return null
+        if (!isAerialMediaUrl(url)) return null
         thumbMemory.get(url)?.let { return it }
         val dir = File(context.applicationContext.cacheDir, THUMB_DIR)
         val fileName = name(url)
@@ -113,7 +114,7 @@ internal object AerialPreviewStore {
     }
 
     fun load(context: Context, url: String): Bitmap? {
-        if (!url.startsWith("https://")) return null
+        if (!isAerialMediaUrl(url)) return null
         memory.get(url)?.let { return it }
 
         val dir = File(context.applicationContext.cacheDir, DIR)
@@ -146,7 +147,7 @@ internal object AerialPreviewStore {
     }.getOrNull()
 
     private fun download(url: String): ByteArray? = runCatching {
-        if (!url.startsWith("https://")) return null
+        if (!isAerialMediaUrl(url)) return null
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS

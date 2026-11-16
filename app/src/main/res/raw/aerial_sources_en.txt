@@ -8,7 +8,7 @@ The bundled aerial_catalog.json lists 100 clips with Russian and English names, 
 
 Video and stills
 
-Videos and preview stills are not part of the APK. They are fetched over HTTPS from sylvan.apple.com and cached on the TV for repeat playback. The TLS connection is validated against the Android system trust store.
+Videos and preview stills are not part of the APK. They are fetched over HTTP from sylvan.apple.com and cached on the TV for repeat playback. The HTTP exception is scoped to this public Apple host because some TV trust stores reject Apple's certificate chain; no account, token or personal data is sent. The catalogue refresh stays on HTTPS.
 
 Rights
 

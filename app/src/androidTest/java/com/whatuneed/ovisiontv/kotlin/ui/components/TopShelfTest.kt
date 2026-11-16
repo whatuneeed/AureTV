@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -183,6 +184,31 @@ class TopShelfTest {
         rule.onAllNodesWithContentDescription("Второй кадр").assertCountEquals(0)
         rule.onAllNodesWithText(context.getString(R.string.discovery_section_continue))
             .assertCountEquals(0)
+    }
+
+    @Test
+    fun the_empty_home_explains_where_the_apps_are() {
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = null,
+                        rails = emptyList(),
+                        selectedSection = null,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithText(context.getString(R.string.home_empty_title)).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.home_empty_body)).assertIsDisplayed()
+        rule.onAllNodesWithText(context.getString(R.string.shelf_context)).assertCountEquals(0)
     }
 
     @Test

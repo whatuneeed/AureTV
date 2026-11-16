@@ -5,6 +5,8 @@
     <string name="accessibility_service_desc">Lets OVisionTV open when the Home button shows the TV\'s own home screen, and start the chosen app when the TV turns on or wakes. The service only notes which app\'s window opened; it does not read the screen and never sees what you type.</string>
     <string name="startup_home">Home Screen</string>
     <string name="shelf_context">Application</string>
+    <string name="home_empty_title">Welcome to OVisionTV</string>
+    <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings.</string>
     <string name="shelf_continue">Continue Watching</string>
     <string name="discovery_section_continue">Continue Watching</string>
     <string name="discovery_section_for_you">For You</string>

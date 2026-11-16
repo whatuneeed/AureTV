@@ -21,14 +21,14 @@ class AerialCatalogTest {
     }
 
     @Test
-    fun every_clip_streams_1080p_h264_from_the_tls_cdn_with_both_names() {
+    fun every_clip_streams_1080p_h264_from_the_apple_cdn_with_both_names() {
         clips.forEach { clip ->
             assertTrue(clip.nameEn.isNotBlank())
             assertTrue(clip.nameRu.isNotBlank())
-            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("https://sylvan.apple.com/"))
+            assertTrue(clip.videoUrl, clip.videoUrl.startsWith("http://sylvan.apple.com/"))
             assertTrue(clip.videoUrl, clip.videoUrl.endsWith(".mov"))
             assertTrue(clip.videoUrl, clip.videoUrl.contains("_AVC"))
-            assertTrue(clip.previewUrl, clip.previewUrl.startsWith("https://sylvan.apple.com/"))
+            assertTrue(clip.previewUrl, clip.previewUrl.startsWith("http://sylvan.apple.com/"))
         }
     }
 
@@ -53,19 +53,27 @@ class AerialCatalogTest {
     )
 
     @Test
-    fun an_old_apple_cleartext_url_is_upgraded_to_tls() {
+    fun apple_urls_use_the_cleartext_cdn_and_other_hosts_stay_https() {
         assertEquals(
-            "https://sylvan.apple.com/Videos/a.mov",
+            "http://sylvan.apple.com/Videos/a.mov",
+            aerialStreamUrl("https://sylvan.apple.com/Videos/a.mov"),
+        )
+        assertEquals(
+            "http://sylvan.apple.com/Videos/a.mov",
             aerialStreamUrl("http://sylvan.apple.com/Videos/a.mov"),
         )
         assertEquals(
             "https://cdn.example/b.mov",
             aerialStreamUrl("https://cdn.example/b.mov"),
         )
+        assertEquals(
+            "http://cdn.example/b.mov",
+            aerialStreamUrl("http://cdn.example/b.mov"),
+        )
     }
 
     @Test
-    fun a_saved_catalogue_upgrades_old_apple_cleartext_and_keeps_tls() {
+    fun a_saved_catalogue_uses_http_for_apple_and_keeps_external_https() {
         val json = """
             {"clips":[
               {"id":"apple","nameEn":"Apple","nameRu":"Эппл","theme":"cities",
@@ -76,8 +84,8 @@ class AerialCatalogTest {
             ]}
         """.trimIndent()
         val parsed = AerialCatalog.parse(json).associateBy { it.id }
-        assertEquals("https://sylvan.apple.com/Videos/a.mov", parsed.getValue("apple").videoUrl)
-        assertEquals("https://sylvan.apple.com/Videos/a.png", parsed.getValue("apple").previewUrl)
+        assertEquals("http://sylvan.apple.com/Videos/a.mov", parsed.getValue("apple").videoUrl)
+        assertEquals("http://sylvan.apple.com/Videos/a.png", parsed.getValue("apple").previewUrl)
         assertEquals("https://cdn.example/b.mov", parsed.getValue("other").videoUrl)
     }
 

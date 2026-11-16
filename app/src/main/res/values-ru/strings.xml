@@ -5,6 +5,8 @@
     <string name="accessibility_service_desc">Позволяет OVisionTV открываться, когда кнопка «Домой» показывает главный экран телевизора, и запускать выбранное приложение при включении и пробуждении. Служба видит только пакет открывшегося окна, не читает содержимое экрана и не видит, что вы вводите.</string>
     <string name="startup_home">Главный экран</string>
     <string name="shelf_context">Приложение</string>
+    <string name="home_empty_title">Добро пожаловать в OVisionTV</string>
+    <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в настройках.</string>
     <string name="shelf_continue">Продолжить просмотр</string>
     <string name="discovery_section_continue">Продолжить просмотр</string>
     <string name="discovery_section_for_you">Для вас</string>

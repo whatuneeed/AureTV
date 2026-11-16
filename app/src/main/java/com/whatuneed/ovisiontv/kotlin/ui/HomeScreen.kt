@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +36,7 @@ import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
@@ -52,9 +54,14 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1100,7 +1107,7 @@ fun HomeScreen(
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
         openFolder == null && launching == null && !menuOpen && !searchOpen &&
-        !controlCenterOpen && !weatherPanelOpen
+        !controlCenterOpen && !weatherPanelOpen && shelfFocus < 0 && !sectionFocused
     val gridModal = openFolder != null || launching != null || menuOpen ||
         newFolderApp != null || searchOpen || controlCenterOpen || weatherPanelOpen
     // Layout gate instead of a blind delay: once the grid is placed every tile's
@@ -1669,6 +1676,11 @@ fun HomeScreen(
                         onSectionActivate = ::selectDiscoverySection,
                         scale = scale,
                         reduceMotion = reduceMotion,
+                        // The weather pill owns the top-left corner. On the
+                        // browsing Home the title moves below it instead of
+                        // printing through the forecast; inside the shelf the
+                        // pill is hidden and the tvOS title position returns.
+                        headingTop = if (weatherVisible) 150f else 57f,
                         focusTick = focusTick + shelfFocusTick,
                     )
                 }
@@ -1774,6 +1786,24 @@ fun HomeScreen(
                         )
                     }
                 }
+            }
+
+            // tvOS keeps the app name under every tile. The card semantics
+            // already announces it; this line is for the viewer, so it is
+            // decorative to TalkBack and moves with the grid layer.
+            for ((index, item) in items.withIndex()) {
+                if (pickupActive && index == pickupOrigin) continue
+                val label = when (item) {
+                    is HomeItem.AppItem -> item.app.label
+                    is HomeItem.FolderItem -> item.name
+                }
+                TileLabel(
+                    text = label,
+                    x = TvOs.SAFE_AREA + (index % columns) * TvOs.ICON_COLUMN_PITCH,
+                    y = TvOs.ROW_TOP + (index / columns) * TvOs.ROW_PITCH +
+                        TvOs.ICON_HEIGHT + 22f,
+                    scale = scale,
+                )
             }
 
             if (pickupActive) {
@@ -2221,6 +2251,32 @@ fun HomeScreen(
             )
         }
     }
+}
+
+/**
+ * App name under a tile. tvOS puts the label on the home surface, not inside
+ * the artwork; keeping it a sibling avoids shrinking the 250×150 icon and
+ * leaves the TalkBack node on [com.whatuneed.ovisiontv.kotlin.ui.components.CardShell].
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun TileLabel(text: String, x: Float, y: Float, scale: TvScale) {
+    Text(
+        text = text,
+        color = Color.White.copy(alpha = 0.86f),
+        fontSize = scale.sp(TvType.callout),
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .offset(x = scale.dp(x), y = scale.dp(y))
+            .width(scale.dp(TvOs.ICON_WIDTH))
+            // The card already announces this label; keep the visible line out
+            // of TalkBack while leaving it inspectable for layout tests.
+            .semantics { invisibleToUser() }
+            .testTag("tile_label"),
+    )
 }
 
 /**

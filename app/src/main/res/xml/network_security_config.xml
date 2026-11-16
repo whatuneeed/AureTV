@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Every host uses TLS. The screen saver's old cleartext path to Apple's CDN
-     was removed: media is HTTPS-first and has no silent HTTP fallback, so a
-     network that blocks 443 falls back to the stills-only saver instead of
-     serving untrusted bytes. -->
+<!-- Every host uses TLS. The one exception is Apple's public Aerial CDN:
+     some TV trust stores reject Apple's certificate chain, so the clips and
+     stills are fetched over HTTP from this single host. The videos carry no
+     account, token or personal data. Do not widen this exception. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">sylvan.apple.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>

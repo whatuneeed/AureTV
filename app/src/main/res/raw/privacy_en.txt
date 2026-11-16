@@ -1,6 +1,6 @@
 Privacy
 
-Policy version 5, updated 2026-11-16.
+Policy version 6, updated 2026-11-16.
 
 The launcher needs no account and has no developer-operated server. Updates, when enabled, are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
@@ -24,7 +24,7 @@ Network requests
 
 No account, cookie, API key or advertising identifier is sent. Like any internet request, a request reveals the TV's IP address and ordinary connection details to the host that receives it.
 
-Apple's screen saver: the public Apple CDN at sylvan.apple.com, over HTTPS, supplies the aerial catalogue, still images and video clips. These requests carry no personal data beyond ordinary HTTPS connection details.
+Apple's screen saver: the public Apple CDN at sylvan.apple.com supplies the aerial catalogue, still images and video clips. The videos and stills are fetched over HTTP because some TV trust stores reject Apple's certificate chain; only this public host is allowed cleartext. These requests carry no account, token or personal data beyond ordinary connection details. The catalogue refresh remains HTTPS.
 
 Reddit (only when you choose Reddit): www.reddit.com serves a public Atom feed, and i.redd.it, preview.redd.it and external-preview.redd.it serve the images. Those requests reveal the TV's IP address and an ordinary launcher User-Agent; no Reddit account, cookie, token, vote or comment is sent. Reddit content is third-party and unmoderated: any subreddit can contain adult material. Reddit is disabled in Kids Mode.
 

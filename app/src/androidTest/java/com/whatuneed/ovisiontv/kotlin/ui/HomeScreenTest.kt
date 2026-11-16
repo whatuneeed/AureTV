@@ -20,11 +20,13 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -143,6 +145,24 @@ class HomeScreenTest {
             activity.onBackPressedDispatcher.onBackPressed()
         }
         rule.waitForIdle()
+    }
+
+    @Test
+    fun app_names_are_drawn_under_the_tiles() {
+        setHome()
+        rule.waitForIdle()
+
+        rule.onAllNodesWithTag("tile_label", useUnmergedTree = true)
+            .assertCountEquals(4)
+    }
+
+    @Test
+    fun a_home_without_recommendations_is_not_a_black_field() {
+        setHome()
+        rule.waitForIdle()
+
+        rule.onNodeWithText(context.getString(R.string.home_empty_title)).assertIsDisplayed()
+        rule.onNodeWithText(context.getString(R.string.home_empty_body)).assertIsDisplayed()
     }
 
     @Test

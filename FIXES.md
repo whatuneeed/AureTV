@@ -13,6 +13,8 @@
 
 | Симптом | Запись |
 |---|---|
+| После Setup на Home только часы, док и чёрный экран; у плиток нет подписей | #47 |
+| Aerial-превью пустое, хотя HTTPS-запросы к Apple завершаются ошибкой доверия | #48 |
 | На плитке настроек виден баннер OVISIONTV вместо значка-слайдеров | #1 |
 | В превью папки значок настроек белый на белом, штрихи не видны | #2 |
 | TalkBack двойным нажатием не открывает папку, строку настроек, клавишу | #3 |
@@ -232,6 +234,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 16.11.2026 — 0.5.9: пустой Home, подписи плиток и HTTP для Aerial
+
+- **Симптом.** После Setup Home — чёрное поле: часы, аватар и док, без hero, подписей приложений и объяснения. Aerial-превью остаётся пустым; в logcat `AerialRefresh: Trust anchor for certification path not found`.
+- **Причина.** `TopShelf` возвращался сразу при `bannerArt == null && rails.isEmpty()`, а `AppCard` не рисовал подпись; в `network_security_config` был глобальный `cleartextTrafficPermitted=false`, а `AerialPreviewStore` и каталог принимали только `https://`.
+- **Исправление.**
+  - `TopShelf` получил нейтральный `EmptyHome` («Welcome to OVisionTV» + объяснение, без выдуманного контента).
+  - Под иконками добавлена `TileLabel` — видимая подпись, скрытая от TalkBack (`invisibleToUser`), потому что карточка уже озвучивает имя.
+  - Apple Aerial переведён на HTTP **только для `sylvan.apple.com`**: `aerialStreamUrl` нормализует Apple-ссылки, `isAerialMediaUrl` разрешает HTTP лишь этому хосту, `network_security_config` содержит один `domain-config`; остальные хосты остаются HTTPS.
+  - Обновлены privacy/aerial sources, чтобы HTTP-исключение было явно описано.
+- **Файлы.** `ui/components/TopShelf.kt`, `ui/HomeScreen.kt`, `data/AerialCatalog.kt`, `ui/components/SaverPreviewImage.kt`, `res/xml/network_security_config.xml`, `res/raw/privacy_*.txt`, `res/raw/aerial_sources_*.txt`, `res/values/strings.xml`, `res/values-ru/strings.xml`, тесты `AerialCatalogTest`, `AerialCatalogBuilderTest`, `NetworkSecurityConfigTest`, `HomeScreenTest`, `TopShelfTest`.
+- **Не делать.** Не включать глобальный cleartext и не разрешать HTTP другим хостам. Не возвращать HTTPS-фильтр для Apple: на части ТВ цепочка Apple не принимается, и заставка снова станет пустой. Не подменять пустой Home выдуманным hero или фальшивыми рекомендациями.
+- **Проверка.** `HomeScreenTest` 38/38, `TopShelfTest` 10/10; Aerial-превью и сетка 100 клипов загружаются по HTTP; кадры `RELEASE_READINESS/evidence/52-fix-home-empty.png`, `53-fix-home-labels-focus.png`, `54-fix-aerial-preview-http.png`, `55-fix-aerial-thumbnails-http.png`. Полный connected-прогон и release-сборка — отдельной записью после прогона.
 
 ### 16.11.2026 — 0.5.8: Home приведён к логике tvOS (debug, без релиза)
 
