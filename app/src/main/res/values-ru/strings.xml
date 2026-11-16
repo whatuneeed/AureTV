@@ -247,7 +247,7 @@
     <string name="settings_device">Устройство</string>
     <string name="settings_storage">Хранилище</string>
     <string name="settings_system">Система</string>
-    <string name="settings_updates">Обновления</string>
+    <string name="settings_updates">Каталог заставок</string>
     <string name="settings_about_system">О системе</string>
     <string name="settings_system_info">Сведения о системе</string>
     <string name="settings_legal">Лицензии и условия</string>
@@ -258,13 +258,13 @@
     <string name="settings_aerial_sources">Источники заставок</string>
     <string name="settings_launcher_name">Лаунчер OVisionTV</string>
 
-    <string name="settings_aerial_catalog">Каталог заставок</string>
+    <string name="settings_catalogue_size">Роликов в каталоге</string>
     <string name="settings_aerial_update">Обновить каталог</string>
     <string name="settings_catalog_checking">Обновление…</string>
     <string name="settings_catalog_updated">Обновлено</string>
     <string name="settings_catalog_unchanged">Уже актуально</string>
     <string name="settings_catalog_failed">Не удалось обновить</string>
-    <string name="settings_updates_hint">Каталог заставок обновляется ниже. Обновление приложения — в разделе «Система».</string>
+    <string name="settings_updates_hint">Эта страница обновляет только каталог заставок. Обновление приложения — в «Настройки → Устройство → Система → Обновление ПО».</string>
 
     <string name="settings_software_update">Обновление ПО</string>
     <string name="settings_software_update_available">Доступно обновление</string>

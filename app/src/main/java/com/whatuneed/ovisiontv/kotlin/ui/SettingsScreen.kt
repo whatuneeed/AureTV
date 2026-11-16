@@ -2752,7 +2752,7 @@ fun SettingsScreen(
         )
 
         PAGE_ABOUT_GROUP -> aboutGroupRows(
-            version = BuildConfig.VERSION_NAME,
+            clipCount = clipList.size,
             onOpen = ::open,
             onRunSetup = {
                 context.startActivity(
@@ -4552,13 +4552,17 @@ private fun deviceGroupRows(
 
 @Composable
 private fun aboutGroupRows(
-    version: String,
+    clipCount: Int,
     onOpen: (Int) -> Unit,
     onRunSetup: () -> Unit,
 ): List<SettingsRow> = listOf(
     SettingsRow(
         title = stringResource(R.string.settings_updates),
-        value = version,
+        value = pluralStringResource(
+            R.plurals.settings_clips_count,
+            clipCount,
+            clipCount,
+        ),
         chevron = true,
         action = { onOpen(PAGE_UPDATES) },
     ),
@@ -4589,7 +4593,7 @@ private fun updatesRows(
     onRefresh: () -> Unit,
 ): List<SettingsRow> = listOf(
     SettingsRow(
-        title = stringResource(R.string.settings_aerial_catalog),
+        title = stringResource(R.string.settings_catalogue_size),
         value = pluralStringResource(R.plurals.settings_clips_count, clipCount, clipCount),
     ),
     SettingsRow(

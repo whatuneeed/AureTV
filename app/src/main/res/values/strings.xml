@@ -237,7 +237,7 @@
     <string name="settings_device">Device</string>
     <string name="settings_storage">Storage</string>
     <string name="settings_system">System</string>
-    <string name="settings_updates">Updates</string>
+    <string name="settings_updates">Aerial Catalogue</string>
     <string name="settings_about_system">About</string>
     <string name="settings_system_info">System Information</string>
     <string name="settings_legal">Legal &amp; Privacy</string>
@@ -248,13 +248,13 @@
     <string name="settings_aerial_sources">Aerial Sources</string>
     <string name="settings_launcher_name">OVisionTV Launcher</string>
 
-    <string name="settings_aerial_catalog">Aerial Catalogue</string>
+    <string name="settings_catalogue_size">Clips in catalogue</string>
     <string name="settings_aerial_update">Update Catalogue</string>
     <string name="settings_catalog_checking">Updating…</string>
     <string name="settings_catalog_updated">Updated</string>
     <string name="settings_catalog_unchanged">Already current</string>
     <string name="settings_catalog_failed">Update failed</string>
-    <string name="settings_updates_hint">The saver catalogue is updated below. App updates are in System → Software Update.</string>
+    <string name="settings_updates_hint">This page only updates the Aerial catalogue. App updates are in Settings → Device → System → Software Update.</string>
 
     <string name="settings_software_update">Software Update</string>
     <string name="settings_software_update_available">Update available</string>

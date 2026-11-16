@@ -1149,4 +1149,4 @@ Stage 1–3 выполнены, Stage 4 получен как запрос вл�
 - Приватность: `res/raw/privacy_ru.txt:5`.
 - HTTPS-only: `res/xml/network_security_config.xml`.
 - Манифест на момент аудита без install-разрешений: `AndroidManifest.xml:24-55`. После Stage 5 добавлены `REQUEST_INSTALL_PACKAGES` и non-exported `InstallResultReceiver`; см. `01_IMPLEMENTATION_STATUS.md`.
-- APK на момент аудита: `app/build/outputs/apk/release/app-release.apk`, 4 771 546 B, SHA-256 `7c590d…312e`, v2, cert `327a50…7b10`. Артефакт Stage 5: 4 863 122 B, SHA-256 `4fae4b…1170`, см. `01_IMPLEMENTATION_STATUS.md`.
+- APK на момент аудита: `app/build/outputs/apk/release/app-release.apk`, 4 771 546 B, SHA-256 `7c590d…312e`, v2, cert `327a50…7b10`. Артефакт Stage 5: 4 863 266 B, SHA-256 `c084f8…eaba`, см. `01_IMPLEMENTATION_STATUS.md`.

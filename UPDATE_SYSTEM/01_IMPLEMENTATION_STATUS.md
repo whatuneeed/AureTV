@@ -28,8 +28,8 @@ UI:
 
 - `ui/SoftwareUpdateScreen.kt` — отдельный TV-экран, D-pad-фокус, прогресс, отмена, release notes overlay;
 - `SoftwareUpdateActivity.kt` — internal, `exported=false`, landscape, `excludeFromRecents`;
-- `Settings → Device → System → Software Update` — единственная точка входа;
-- `Settings → Device → System → Updates` по-прежнему отвечает за **каталог заставок**, не за APK. Подпись страницы уточнена: обновления приложения находятся в Software Update.
+- `Settings → Device → System → Software Update` — единственная точка входа для APK;
+- старая страница «Updates» переименована в **«Aerial Catalogue» / «Каталог заставок»** и больше не выглядит как страница обновления приложения: она обновляет только каталог заставок. Строка в About показывает число роликов, а не версию APK.
 
 Манифест:
 
@@ -197,8 +197,8 @@ PYTHONIOENCODING=utf-8 python tools/release_check.py
 | `apksigner verify` | v1 false, **v2 true**, v3 false, v4 false |
 | `release_check.py` | PASS |
 | версия | `0.5.8 (81)` |
-| размер release APK | **4 863 122 B** |
-| SHA-256 release APK | `4fae4bb9ea6a5aaaf5298e923cb2de1b815b14bea7819eb2dbea7a6d5bc41170` |
+| размер release APK | **4 863 266 B** |
+| SHA-256 release APK | `c084f81b7bb965307f6999a28d752cba5a8e600cd6c80e7fad475d9a04be8aba` |
 | сертификат | `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` |
 | RU/EN resources | 637 / 637 |
 

@@ -400,7 +400,12 @@ class SettingsScreenTest {
             .assertIsDisplayed()
             .assert(isHeading())
         rule.onNodeWithContentDescription(
-            string(R.string.settings_updates) + ", " + BuildConfig.VERSION_NAME,
+            string(R.string.settings_updates) + ", " +
+                context.resources.getQuantityString(
+                    R.plurals.settings_clips_count,
+                    testClips.size,
+                    testClips.size,
+                ),
         ).assertIsDisplayed()
 
         press(Key.Back)
@@ -1757,7 +1762,7 @@ class SettingsScreenTest {
             .assert(isHeading())
         rule.onNodeWithContentDescription(
             row(
-                string(R.string.settings_aerial_catalog),
+                string(R.string.settings_catalogue_size),
                 context.resources.getQuantityString(
                     R.plurals.settings_clips_count,
                     testClips.size,
@@ -1780,7 +1785,7 @@ class SettingsScreenTest {
         val hint = rule.onNodeWithText(string(R.string.settings_updates_hint))
             .getUnclippedBoundsInRoot()
         val catalog = rule.onNodeWithContentDescription(
-            string(R.string.settings_aerial_catalog),
+            string(R.string.settings_catalogue_size),
             substring = true,
         ).getUnclippedBoundsInRoot()
         assertTrue("hint bottom ${hint.bottom} overlaps row top ${catalog.top}", hint.bottom <= catalog.top)
