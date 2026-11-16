@@ -591,6 +591,23 @@ class HomeScreenTest {
         assertEquals("test.one", launched)
     }
 
+    // A resting Home shows the dock row only. Before 0.5.9 a seventh app
+    // painted a 26 px, unlabelled white sliver at the bottom edge. DOWN still
+    // reaches the second row because the cursor moves first and the library
+    // switch composes the full grid before focus is requested.
+    @Test
+    fun a_resting_home_does_not_show_a_partial_second_row() {
+        setHome(initialItems = (1..7).map { app("test.$it", "Приложение $it") })
+        rule.waitForIdle()
+
+        rule.onNodeWithContentDescription("Приложение 7").assertDoesNotExist()
+
+        press(Key.DirectionDown)
+        rule.mainClock.advanceTimeBy(600)
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription("Приложение 7").assertExists()
+    }
+
     // 04_APP_LIBRARY: DOWN from the dock lifts the whole grid to the top and
     // BACK puts the dock back. Third-party content is never started here.
     @Test

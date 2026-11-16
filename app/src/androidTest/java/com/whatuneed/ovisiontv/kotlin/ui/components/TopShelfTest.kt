@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -98,13 +101,16 @@ class TopShelfTest {
         packageName: String,
         label: String,
         color: Int = android.graphics.Color.RED,
+        bannerWidth: Int = 16,
+        bannerHeight: Int = 9,
     ) = TvApp(
         packageName = packageName,
         activityName = "$packageName.MainActivity",
         label = label,
         banner = com.whatuneed.ovisiontv.kotlin.ui.testArtKey(
             "$packageName|$label",
-            Bitmap.createBitmap(16, 9, Bitmap.Config.ARGB_8888).apply { eraseColor(color) },
+            Bitmap.createBitmap(bannerWidth, bannerHeight, Bitmap.Config.ARGB_8888)
+                .apply { eraseColor(color) },
         ),
         icon = null,
     )
@@ -298,6 +304,34 @@ class TopShelfTest {
     fun a_shelf_without_rails_keeps_the_app_banner() {
         rule.setContent {
             OVisionTheme {
+                // The test canvas has no real panel; density 1 keeps the
+                // 960 px fixture inside bannerIsHero's 2x limit.
+                CompositionLocalProvider(LocalDensity provides Density(1f, 1f)) {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        // 960 px covers 1920 pt at the allowed 2x upscale;
+                        // a 16x9 test banner is deliberately too small.
+                        app = app("test.one", "Первый", bannerWidth = 960, bannerHeight = 540),
+                        rails = emptyList(),
+                        selectedSection = null,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        scale = TvScale(1f),
+                    )
+                }
+                }
+            }
+        }
+        rule.onAllNodesWithText("Первый").assertCountEquals(1)
+    }
+
+    @Test
+    fun a_small_banner_without_rails_does_not_leave_a_black_field() {
+        rule.setContent {
+            OVisionTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     TopShelf(
                         app = app("test.one", "Первый"),
@@ -313,7 +347,11 @@ class TopShelfTest {
                 }
             }
         }
-        rule.onAllNodesWithText("Первый").assertCountEquals(1)
+
+        // The app has a banner, but not one that can cover the shelf. A title
+        // over black was the 0.5.8 regression; the welcome state is honest.
+        rule.onNodeWithText(context.getString(R.string.home_empty_title)).assertIsDisplayed()
+        rule.onAllNodesWithText("Первый").assertCountEquals(0)
     }
 
     @Test

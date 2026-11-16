@@ -157,16 +157,22 @@ fun TopShelf(
     val selected = rail?.items?.getOrNull(selectedCard) ?: rail?.items?.firstOrNull()
     val arts = rememberRailArts(rail?.items.orEmpty(), selected?.id)
     val bannerArt = app?.let { rememberShelfBanner(it) }
+    val density = LocalDensity.current.density
+    // A banner is only drawn when it can cover the shelf without being
+    // upscaled past BANNER_MAX_UPSCALE. An app can ship a small banner and no
+    // rows; treating that banner as a hero leaves a title on a black field.
+    // Only a banner that will actually be drawn counts as content.
+    val drawableBanner = bannerArt?.takeIf {
+        bannerIsHero(it.width, scale.factor * density)
+    }
 
-    // An app with no banner and no published rows still has a Home: the dock
-    // is below, so a neutral welcome state explains how to fill the shelf
+    // An app with no usable banner and no published rows still has a Home: the
+    // dock is below, so a neutral welcome state explains how to fill the shelf
     // instead of leaving a black field above it.
-    if (bannerArt == null && rails.isEmpty()) {
+    if (drawableBanner == null && rails.isEmpty()) {
         EmptyHome(scale)
         return
     }
-
-    val density = LocalDensity.current.density
     val heroPrefix = "${ArtRole.HERO}:"
     val cardPrefix = "${ArtRole.CARD}:"
     // A provider may publish a card but no separate hero. Using that card's
@@ -249,8 +255,7 @@ fun TopShelf(
             // The dock app's banner is only honest behind its own shelf; a
             // cross-app rail with no art keeps the neutral gradient instead of
             // borrowing the wrong app's branding.
-            bannerArt
-                ?.takeIf { bannerIsHero(it.width, scale.factor * density) }
+            drawableBanner
                 ?.let { banner ->
                     Image(
                         bitmap = banner,

@@ -1733,7 +1733,14 @@ fun HomeScreen(
                     scale = scale,
                 )
             }
-            for ((index, item) in items.withIndex()) {
+            // The resting Home is the dock row only. A seventh app used to
+            // leave a 26 px white sliver at the bottom edge: a real tile, but
+            // with no room for its label or focus ring. DOWN moves the cursor
+            // into the second row first, which switches on libraryMode; the
+            // full grid is composed then, so focus never targets a missing
+            // node.
+            val visibleItems = if (libraryMode) items else items.take(columns)
+            for ((index, item) in visibleItems.withIndex()) {
                 if (pickupActive && index == pickupOrigin) continue
                 val focused = !pickupActive && index == focusIndex && shelfFocus < 0 &&
                     !capsuleFocused && !weatherFocused
@@ -1791,7 +1798,7 @@ fun HomeScreen(
             // tvOS keeps the app name under every tile. The card semantics
             // already announces it; this line is for the viewer, so it is
             // decorative to TalkBack and moves with the grid layer.
-            for ((index, item) in items.withIndex()) {
+            for ((index, item) in visibleItems.withIndex()) {
                 if (pickupActive && index == pickupOrigin) continue
                 val label = when (item) {
                     is HomeItem.AppItem -> item.app.label

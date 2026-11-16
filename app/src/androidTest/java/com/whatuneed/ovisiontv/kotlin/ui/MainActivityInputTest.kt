@@ -17,6 +17,7 @@ import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
+import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.components.SEARCH_FIELD_TAG
@@ -59,6 +60,10 @@ class MainActivityInputTest {
         override fun before() {
             savedPrefs = PrefsSnapshot.capture(context)
             savedSetup = PrefsSnapshot.captureSetup(context)
+            // Earlier classes can leave a saved shelf/focus key from their own
+            // tiles. The seed below is the only content this test intends to
+            // see; a stale key can move the initial focus off the folder.
+            PrefsSnapshot.clearPrefs(context, LauncherPrefs.NAME)
             PrefsSnapshot.markSetupDone(context)
             HomeOrderStore(context).saveOrder(
                 listOf(HomeItem.FolderItem(FOLDER_ID, FOLDER_NAME, listOf(firstApp))),
