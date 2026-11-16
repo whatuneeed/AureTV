@@ -90,6 +90,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
 import com.whatuneed.ovisiontv.kotlin.data.CityPlace
 import com.whatuneed.ovisiontv.kotlin.data.CitySearch
@@ -102,7 +104,6 @@ import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
 import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
-import com.whatuneed.ovisiontv.kotlin.data.SaverTheme
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.Wallpaper
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
@@ -209,15 +210,21 @@ private const val CITY_DEBOUNCE_MS = 350L
 private const val CITY_MIN_QUERY = 2
 
 private const val PAGE_WELCOME = 0
-private const val PAGE_LANGUAGE = 1
-private const val PAGE_PROFILE = 2
-private const val PAGE_HOME = 3
-private const val PAGE_WEATHER = 4
-private const val PAGE_SAVER = 5
-private const val PAGE_SAVER_THEMES = 6
-private const val PAGE_ACCESS = 7
-private const val PAGE_FINISH = 8
-private const val PAGE_COUNT = 9
+private const val PAGE_PERSONAL = 1
+private const val PAGE_HOME = 2
+private const val PAGE_SAVER = 3
+private const val PAGE_ACCESS = 4
+private const val PAGE_FINISH = 5
+private const val PAGE_COUNT = 6
+
+// The three ambient modes that need no extra permission or folder. Photos and
+// Reddit stay in Settings: choosing them here would hand the viewer an empty
+// or unconfigured surface at the exact moment the saver first starts.
+private val SETUP_AMBIENT_MODES = listOf(
+    AmbientMode.AERIAL,
+    AmbientMode.CLOCK,
+    AmbientMode.MINIMAL,
+)
 
 private enum class RowKind { TOGGLE, RADIO, ACTION }
 
@@ -242,26 +249,28 @@ private data class SetupPage(
     // tvOS opens with a buttonless "Hello": OK anywhere continues. Only the
     // welcome page uses it; every other page keeps its explicit buttons.
     val pressAnywhere: Boolean = false,
-    // The Java wizard put a weight-1 spacer above the pages that carry only a
-    // few rows (language, hello, finish), so the block sits in the middle of
-    // the screen instead of hanging from the top edge.
+    // A weight-1 spacer above the pages that carry only a few rows (welcome,
+    // access, finish) puts the block in the middle of the screen instead of
+    // letting it hang from the top edge.
     val centered: Boolean = false,
     // The greeting's hint is the one subtitle Java sized a step larger.
     val subtitleFont: Float = SUBTITLE_FONT,
 )
 
 /**
- * First run of OVisionTV_Kotlin. The Java launcher asked eight questions; the
- * Kotlin wizard keeps the pages that change something real: language, the
- * shelf, the weather card, the screen saver, and the Home/listings access.
- * Nothing here grants a permission by itself: the system screens open only
- * after the viewer chooses the row, and the weather needs none at all — the
- * place comes from the internet address.
+ * First run of OVisionTV_Kotlin. Six pages, each one decision: welcome,
+ * language + profile, Home + weather, screen saver, optional access, finish.
+ * The earlier wizard split language/profile and Home/weather and added a
+ * separate themes page; that made the first minute nine screens long without
+ * asking a different question. Themes, Photos, Reddit and weather units stay
+ * in Settings, where they have previews and warnings.
  *
- * The order follows the dissected tvOS TVSetup.app (TVOS27_RESEARCH/22): a
- * buttonless welcome that answers OK, then language. Resume, re-run and page
- * order follow PHASE 26: the step is saved on every page, a re-run starts from
- * the first page and keeps every current value.
+ * Nothing here grants a permission by itself: the system screens open only
+ * after the viewer chooses the row, and the weather needs no permission — the
+ * place comes from the internet address. The order keeps the dissected tvOS
+ * TVSetup.app welcome (TVOS27_RESEARCH/22) and PHASE 26 resume: the step is
+ * saved on every page, a re-run starts at the first page and keeps current
+ * values, and an old page map starts over through STEP_VERSION.
  */
 @Composable
 fun SetupScreen(
@@ -324,7 +333,8 @@ fun SetupScreen(
         mutableStateOf(ContentPreferences.continueWatching(context))
     }
     var delay by remember { mutableStateOf(SaverPreferences.delay(context)) }
-    var themes by remember { mutableStateOf(SaverPreferences.themes(context)) }
+    var ambientMode by remember(resumeTick) { mutableStateOf(AmbientSettingsStore.mode(context)) }
+    var saverMusic by remember { mutableStateOf(SaverPreferences.music(context)) }
     var listingsGranted by remember(resumeTick) {
         mutableStateOf(ContentPreferences.canReadListings(context))
     }
@@ -410,12 +420,15 @@ fun SetupScreen(
             rows = emptyList(),
         )
 
-        PAGE_LANGUAGE -> SetupPage(
-            title = stringResource(R.string.setup_language_title),
-            subtitle = stringResource(R.string.setup_language_hint),
+        PAGE_PERSONAL -> SetupPage(
+            // Language and identity are one decision: both describe the person
+            // using this TV and both are edited in the same two launcher
+            // surfaces. Separate pages made the first minute longer without
+            // asking a different question.
+            title = stringResource(R.string.setup_personal_title),
+            subtitle = stringResource(R.string.setup_personal_hint),
             primary = stringResource(R.string.setup_continue),
             onPrimary = ::next,
-            centered = true,
             rows = listOf(
                 SetupRow(
                     title = stringResource(R.string.setup_language_system),
@@ -438,19 +451,6 @@ fun SetupScreen(
                     checked = language == LocalePreference.ENGLISH,
                     action = { chooseLanguage(LocalePreference.ENGLISH) },
                 ),
-            ),
-        )
-
-        PAGE_PROFILE -> SetupPage(
-            // The Java wizard's second question: name and avatar, one profile
-            // per run. A re-run edits the existing profile instead of adding one.
-            title = stringResource(
-                if (rerun) R.string.setup_profile_title else R.string.setup_profile_create,
-            ),
-            subtitle = stringResource(R.string.setup_profile_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            rows = listOf(
                 SetupRow(
                     title = stringResource(R.string.profile_avatar),
                     detail = null,
@@ -470,8 +470,11 @@ fun SetupScreen(
         )
 
         PAGE_HOME -> SetupPage(
-            title = stringResource(R.string.setup_home_title),
-            subtitle = stringResource(R.string.setup_home_hint),
+            // One content question: what appears above the tiles. The weather
+            // radio group follows the two shelf switches, so the page reads
+            // from "what" to "where the extra card comes from".
+            title = stringResource(R.string.setup_home_weather_title),
+            subtitle = stringResource(R.string.setup_home_weather_hint),
             primary = stringResource(R.string.setup_continue),
             onPrimary = ::next,
             rows = listOf(
@@ -495,96 +498,83 @@ fun SetupScreen(
                         ContentPreferences.setContinueWatching(context, continueWatching)
                     },
                 ),
+                SetupRow(
+                    title = stringResource(R.string.setup_weather_auto),
+                    detail = null,
+                    kind = RowKind.RADIO,
+                    checked = weatherEnabled && !weatherManual,
+                    action = {
+                        WeatherPreferences.clearPlace(context)
+                        weatherEnabled = true
+                        weatherManual = false
+                        weatherPlace = ""
+                    },
+                ),
+                SetupRow(
+                    title = stringResource(R.string.setup_weather_city),
+                    detail = if (weatherManual) weatherPlace else null,
+                    kind = RowKind.RADIO,
+                    checked = weatherEnabled && weatherManual,
+                    action = { citySearchOpen = true },
+                ),
+                SetupRow(
+                    title = stringResource(R.string.setup_weather_off),
+                    detail = null,
+                    kind = RowKind.RADIO,
+                    checked = !weatherEnabled,
+                    action = {
+                        WeatherPreferences.setEnabled(context, false)
+                        weatherEnabled = false
+                    },
+                ),
             ),
         )
 
-        PAGE_WEATHER -> {
-            // The three answers of the Java wizard's weather step: the internet
-            // address, a city picked by name, or nothing. The location needs no
-            // permission — the capsule appears on Home in a later stage.
-            SetupPage(
-                title = stringResource(R.string.setup_weather_title),
-                subtitle = stringResource(R.string.setup_weather_hint),
-                primary = stringResource(R.string.setup_continue),
-                onPrimary = ::next,
-                rows = listOf(
-                    SetupRow(
-                        title = stringResource(R.string.setup_weather_auto),
-                        detail = stringResource(R.string.setup_weather_auto_detail),
-                        kind = RowKind.RADIO,
-                        checked = weatherEnabled && !weatherManual,
-                        action = {
-                            WeatherPreferences.clearPlace(context)
-                            weatherEnabled = true
-                            weatherManual = false
-                            weatherPlace = ""
-                        },
-                    ),
-                    SetupRow(
-                        title = stringResource(R.string.setup_weather_city),
-                        detail = if (weatherManual) {
-                            weatherPlace
-                        } else {
-                            stringResource(R.string.setup_weather_search)
-                        },
-                        kind = RowKind.RADIO,
-                        checked = weatherEnabled && weatherManual,
-                        action = { citySearchOpen = true },
-                    ),
-                    SetupRow(
-                        title = stringResource(R.string.setup_weather_off),
-                        detail = null,
-                        kind = RowKind.RADIO,
-                        checked = !weatherEnabled,
-                        action = {
-                            WeatherPreferences.setEnabled(context, false)
-                            weatherEnabled = false
-                        },
-                    ),
-                ),
-            )
-        }
-
         PAGE_SAVER -> SetupPage(
-            // When, not what: nine rows on one page stop fitting once the rows
-            // are the Java wizard's 92 points, so the themes get the next page
-            // — the same split Settings makes.
+            // One ambient page instead of "when" plus "themes". The mode is
+            // the decision a first run needs; the delay is a single cycling
+            // action, and themes/Photos/Reddit remain in Settings where they
+            // have their own previews and warnings.
             title = stringResource(R.string.setup_saver_title),
             subtitle = stringResource(R.string.setup_saver_hint),
             primary = stringResource(R.string.setup_continue),
             onPrimary = ::next,
-            rows = SaverDelay.entries.map { option ->
+            rows = SETUP_AMBIENT_MODES.map { mode ->
                 SetupRow(
-                    title = delayLabel(option),
+                    title = ambientModeLabel(mode),
                     detail = null,
                     kind = RowKind.RADIO,
-                    checked = delay == option,
+                    checked = ambientMode == mode,
                     action = {
-                        delay = option
-                        SaverPreferences.setDelay(context, option)
+                        ambientMode = mode
+                        AmbientSettingsStore.setMode(context, mode)
                     },
                 )
-            },
-        )
-
-        PAGE_SAVER_THEMES -> SetupPage(
-            // tvOS never lets the last aerial category go: with every theme off
-            // the saver would have nothing to play, so the row refuses the tap.
-            title = stringResource(R.string.setup_saver_themes_title),
-            subtitle = stringResource(R.string.setup_saver_themes_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            rows = SaverTheme.entries.map { theme ->
+            } + listOf(
                 SetupRow(
-                    title = themeLabel(theme),
-                    detail = null,
-                    kind = RowKind.TOGGLE,
-                    checked = theme in themes,
+                    title = stringResource(R.string.setup_saver_delay),
+                    detail = stringResource(R.string.setup_saver_delay_hint),
+                    kind = RowKind.ACTION,
+                    value = delayLabel(delay),
                     action = {
-                        themes = SaverPreferences.toggleTheme(context, theme)
+                        val next = SaverDelay.entries[
+                            (delay.ordinal + 1) % SaverDelay.entries.size
+                        ]
+                        delay = next
+                        SaverPreferences.setDelay(context, next)
                     },
-                )
-            },
+                ),
+                SetupRow(
+                    title = stringResource(R.string.setup_saver_music),
+                    detail = stringResource(R.string.setup_saver_music_hint),
+                    kind = RowKind.TOGGLE,
+                    checked = saverMusic,
+                    action = {
+                        saverMusic = !saverMusic
+                        SaverPreferences.setMusic(context, saverMusic)
+                    },
+                ),
+            ),
         )
 
         PAGE_ACCESS -> SetupPage(
@@ -592,6 +582,9 @@ fun SetupScreen(
             subtitle = stringResource(R.string.setup_access_hint),
             primary = stringResource(R.string.setup_continue),
             onPrimary = ::next,
+            // Three optional rows do not fill the canvas; centering them keeps
+            // the page from hanging from the top edge.
+            centered = true,
             rows = listOf(
                 SetupRow(
                     title = stringResource(R.string.setup_home_app),
@@ -664,12 +657,14 @@ fun SetupScreen(
                 weatherManual = weatherManual,
                 weatherPlace = weatherPlace,
                 delay = delay,
-                themes = themes.size,
+                ambientMode = ambientMode,
+                saverMusic = saverMusic,
             ),
             primary = stringResource(
                 if (rerun) R.string.setup_close else R.string.setup_open_home,
             ),
             onPrimary = { finish(context, onFinish) },
+            centered = true,
             rows = emptyList(),
         )
     }
@@ -997,7 +992,7 @@ fun SetupScreen(
             }
         }
 
-        if (page == PAGE_WEATHER && citySearchOpen) {
+        if (page == PAGE_HOME && citySearchOpen) {
             WeatherCitySearch(
                 language = language,
                 scale = scale,
@@ -1517,11 +1512,12 @@ private fun delayLabel(delay: SaverDelay): String = when (delay) {
 }
 
 @Composable
-private fun themeLabel(theme: SaverTheme): String = when (theme) {
-    SaverTheme.LANDSCAPES -> stringResource(R.string.saver_theme_landscapes)
-    SaverTheme.CITIES -> stringResource(R.string.saver_theme_cities)
-    SaverTheme.UNDERWATER -> stringResource(R.string.saver_theme_underwater)
-    SaverTheme.EARTH -> stringResource(R.string.saver_theme_earth)
+private fun ambientModeLabel(mode: AmbientMode): String = when (mode) {
+    AmbientMode.AERIAL -> stringResource(R.string.saver_mode_aerial)
+    AmbientMode.CLOCK -> stringResource(R.string.saver_mode_clock)
+    AmbientMode.MINIMAL -> stringResource(R.string.saver_mode_minimal)
+    AmbientMode.PHOTOS -> stringResource(R.string.saver_mode_photos)
+    AmbientMode.REDDIT -> stringResource(R.string.saver_mode_reddit)
 }
 
 @Composable
@@ -1533,7 +1529,8 @@ private fun finishSummary(
     weatherManual: Boolean,
     weatherPlace: String,
     delay: SaverDelay,
-    themes: Int,
+    ambientMode: AmbientMode,
+    saverMusic: Boolean,
 ): String {
     val languageText = when (language) {
         LocalePreference.RUSSIAN -> stringResource(R.string.settings_language_russian)
@@ -1556,9 +1553,9 @@ private fun finishSummary(
         ),
         stringResource(
             R.string.setup_summary_saver,
+            ambientModeLabel(ambientMode),
             delayLabel(delay),
-            themes,
-            SaverTheme.entries.size,
+            if (saverMusic) on else off,
         ),
         stringResource(R.string.setup_summary_weather, weatherText),
     )

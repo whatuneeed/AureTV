@@ -20,7 +20,10 @@ object SetupProgress {
     // question), so Home and everything after it shifted by one again.
     // 5: the screen saver step split into "when" and "themes" pages, so the
     // access and finish pages moved one further.
-    const val STEP_VERSION = 5
+    // 6: the wizard was condensed to six pages — language and profile share
+    // one page, Home and weather share one, and the separate themes page is
+    // gone. Old step numbers would open the wrong question.
+    const val STEP_VERSION = 6
 
     /**
      * A re-run from Settings starts at the first page, an update with an older

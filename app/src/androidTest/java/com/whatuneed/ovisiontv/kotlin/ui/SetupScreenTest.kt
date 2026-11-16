@@ -13,6 +13,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
@@ -20,6 +22,8 @@ import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
+import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
+import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -36,8 +40,8 @@ import org.junit.runner.RunWith
  * Back is the only way to the previous page, and the finish page is the only
  * place that marks setup done (PHASE 26). Page order follows the dissected
  * TVSetup.app with the Java wizard's profile question after language and the
- * weather page after Home: welcome, language, profile, home, weather, saver,
- * saver themes, access, finish — nine pages, so a step here is a page index.
+ * weather page after Home: welcome, language and profile, home and weather,
+ * saver, access, finish — six pages, so a step here is a page index.
  */
 @RunWith(AndroidJUnit4::class)
 class SetupScreenTest {
@@ -125,7 +129,7 @@ class SetupScreenTest {
     }
 
     @Test
-    fun okOnTheWelcomePageMovesToTheLanguagePage() {
+    fun okOnTheWelcomePageMovesToThePersonalPage() {
         setSetup()
 
         // Arrows must not scroll anywhere on the buttonless page; only OK moves.
@@ -133,7 +137,7 @@ class SetupScreenTest {
         press(Key.DirectionUp)
         press(Key.DirectionCenter)
 
-        rule.onNodeWithText(title(R.string.setup_language_title)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_personal_title)).assertExists()
         // The system row also names the current system language, so its whole
         // announcement is matched by substring, not as one fixed string.
         assertTrue(hasDescription(title(R.string.setup_language_system)))
@@ -144,21 +148,21 @@ class SetupScreenTest {
     fun okOnTheLastRowLeavesForTheNextPage() {
         setSetup(startStep = 1)
 
-        // Three language rows, then the buttons under them.
-        press(Key.DirectionDown, 3)
+        // Five rows (three languages and two profile editors), then the
+        // buttons. Down from the last row reaches Continue, not a hidden page.
+        press(Key.DirectionDown, 5)
         press(Key.DirectionCenter)
 
-        // A first run creates the profile, so the page names the create action.
-        rule.onNodeWithText(title(R.string.setup_profile_create)).assertExists()
-        assertTrue(hasDescription(title(R.string.profile_avatar)))
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
     }
 
     @Test
     fun theAvatarRowOpensTheGridAndBackReturnsToTheRows() {
         seedSingleProfile()
-        setSetup(startStep = 2)
+        setSetup(startStep = 1)
 
         assertTrue(hasDescription(title(R.string.profile_avatar)))
+        press(Key.DirectionDown, 3)
         press(Key.DirectionCenter)
 
         // The picker is a full screen whose heading carries its own name as a
@@ -166,15 +170,16 @@ class SetupScreenTest {
         assertTrue(hasDescription(title(R.string.profile_avatar_choose)))
         press(Key.Back)
 
-        rule.onNodeWithText(title(R.string.setup_profile_create)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_personal_title)).assertExists()
         assertTrue(hasDescription(title(R.string.profile_avatar)))
     }
 
     @Test
     fun pickingAnAvatarWritesTheProfile() {
         seedSingleProfile()
-        setSetup(startStep = 2)
+        setSetup(startStep = 1)
 
+        press(Key.DirectionDown, 3)
         press(Key.DirectionCenter)
         // The grid opens on the profile's own disc (index 0), so one step right
         // lands on the next free picture; OK must write the store Home reads.
@@ -188,11 +193,11 @@ class SetupScreenTest {
     @Test
     fun theNameRowOpensTheKeyboardAndBackReturns() {
         seedSingleProfile()
-        setSetup(startStep = 2)
+        setSetup(startStep = 1)
 
-        // Two rows: avatar, then name. The keyboard is the launcher's own
+        // Three language rows, then avatar, then name. The keyboard is the launcher's own
         // full screen, so it names itself while the row behind is cleared.
-        press(Key.DirectionDown)
+        press(Key.DirectionDown, 4)
         press(Key.DirectionCenter)
 
         // The overlay's title is the only "Name" on screen: the edited row
@@ -200,7 +205,7 @@ class SetupScreenTest {
         rule.onNodeWithText(title(R.string.profile_name)).assertExists()
         press(Key.Back)
 
-        rule.onNodeWithText(title(R.string.setup_profile_create)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_personal_title)).assertExists()
     }
 
     @Test
@@ -209,15 +214,16 @@ class SetupScreenTest {
         // wizard showed: the picture, then the name. Down from the last row
         // reaches the buttons, where OK continues.
         seedSingleProfile()
-        setSetup(startStep = 2)
+        setSetup(startStep = 1)
 
+        press(Key.DirectionDown, 3)
         assertTrue(hasDescription(title(R.string.profile_avatar)))
         press(Key.DirectionDown)
         assertTrue(hasDescription(title(R.string.profile_name)))
         press(Key.DirectionDown)
         press(Key.DirectionCenter)
 
-        rule.onNodeWithText(title(R.string.setup_home_title)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
     }
 
     @Test
@@ -228,20 +234,20 @@ class SetupScreenTest {
         // reached the way the viewer reaches it: OK, then past the language.
         setSetup()
         press(Key.DirectionCenter)
-        press(Key.DirectionDown, 3)
+        press(Key.DirectionDown, 4)
         press(Key.DirectionCenter)
 
-        rule.onNodeWithText(title(R.string.setup_profile_title)).assertExists()
+        rule.onNodeWithText(title(R.string.profile_name)).assertExists()
     }
 
     @Test
     fun backReturnsToThePreviousPage() {
-        setSetup(startStep = 3)
+        setSetup(startStep = 2)
 
-        rule.onNodeWithText(title(R.string.setup_home_title)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
         press(Key.Back)
 
-        rule.onNodeWithText(title(R.string.setup_profile_create)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_personal_title)).assertExists()
     }
 
     @Test
@@ -257,7 +263,7 @@ class SetupScreenTest {
 
     @Test
     fun anInterruptedRunResumesOnItsSavedPage() {
-        SetupProgress.saveStep(context, 7)
+        SetupProgress.saveStep(context, 4)
 
         setSetup()
 
@@ -294,7 +300,7 @@ class SetupScreenTest {
     @Test
     fun finishPageClosesTheWizardAndMarksSetupDone() {
         var finished = false
-        setSetup(startStep = 8, onFinish = { finished = true })
+        setSetup(startStep = 5, onFinish = { finished = true })
 
         rule.onNodeWithText(title(R.string.setup_done_title)).assertExists()
         press(Key.DirectionCenter)
@@ -306,7 +312,7 @@ class SetupScreenTest {
     @Test
     fun okOnAToggleWritesTheRealPreference() {
         ContentPreferences.setRecommendations(context, true)
-        setSetup(startStep = 3)
+        setSetup(startStep = 2)
 
         press(Key.DirectionCenter)
 
@@ -319,17 +325,19 @@ class SetupScreenTest {
         // an enabled value into this assertion.
         context.getSharedPreferences(WeatherPreferences.NAME, Context.MODE_PRIVATE)
             .edit().clear().commit()
-        setSetup(startStep = 4)
+        setSetup(startStep = 2)
 
-        rule.onNodeWithText(title(R.string.setup_weather_title)).assertExists()
-        // The first row is the internet-address answer; it starts unselected.
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
+        // The weather radio group follows the two shelf switches; the first
+        // weather row starts unselected because weather is off by default.
         assertFalse(WeatherPreferences.enabled(context))
-        // Two rows down is "No Weather": choosing it keeps the weather off.
-        press(Key.DirectionDown, 2)
+        // Four rows down is "No Weather": choosing it keeps the weather off.
+        press(Key.DirectionDown, 4)
         press(Key.DirectionCenter)
 
         assertFalse(WeatherPreferences.enabled(context))
-        // Back up to the first row turns the weather on explicitly, without a city.
+        // Back up two rows to the first weather row turns it on explicitly,
+        // without a city.
         press(Key.DirectionUp, 2)
         press(Key.DirectionCenter)
 
@@ -339,22 +347,22 @@ class SetupScreenTest {
 
     @Test
     fun theCitySearchOpensAndBackReturnsToTheRows() {
-        setSetup(startStep = 4)
+        setSetup(startStep = 2)
 
-        press(Key.DirectionDown)
+        press(Key.DirectionDown, 3)
         press(Key.DirectionCenter)
 
         rule.onNodeWithText(title(R.string.setup_city_title)).assertExists()
         press(Key.Back)
 
-        rule.onNodeWithText(title(R.string.setup_weather_title)).assertExists()
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
     }
 
     @Test
     fun pickingAPresetWritesThePlace() {
-        setSetup(startStep = 4)
+        setSetup(startStep = 2)
 
-        press(Key.DirectionDown)
+        press(Key.DirectionDown, 3)
         press(Key.DirectionCenter)
         // From the keyboard's first row, Up jumps to the results column, where
         // the presets wait; OK picks the first one.
@@ -370,7 +378,7 @@ class SetupScreenTest {
 
     @Test
     fun theAccessRowsShowTheirLiveState() {
-        setSetup(startStep = 7)
+        setSetup(startStep = 4)
 
         // Each row announces either its action or, once the value is real,
         // the done state — and which of the two follows the actual system,
@@ -389,6 +397,65 @@ class SetupScreenTest {
             AccessibilityStatus.state(context) == AccessibilityStatus.State.CONNECTED,
             hasDescription(title(R.string.setup_accessibility_on)),
         )
+    }
+
+    @Test
+    fun thePersonalPageCombinesLanguageAndProfile() {
+        seedSingleProfile()
+        setSetup(startStep = 1)
+
+        rule.onNodeWithText(title(R.string.setup_personal_title)).assertExists()
+        assertTrue(hasDescription(title(R.string.setup_language_system)))
+        assertTrue(hasDescription(title(R.string.profile_avatar)))
+        assertTrue(hasDescription(title(R.string.profile_name)))
+    }
+
+    @Test
+    fun theHomePageCombinesShelfAndWeather() {
+        setSetup(startStep = 2)
+
+        rule.onNodeWithText(title(R.string.setup_home_weather_title)).assertExists()
+        assertTrue(hasDescription(title(R.string.settings_recommendations)))
+        assertTrue(hasDescription(title(R.string.settings_continue_watching)))
+        assertTrue(hasDescription(title(R.string.setup_weather_auto)))
+        assertTrue(hasDescription(title(R.string.setup_weather_off)))
+    }
+
+    @Test
+    fun choosingAnAmbientModeWritesThePreference() {
+        AmbientSettingsStore.setMode(context, AmbientMode.AERIAL)
+        setSetup(startStep = 3)
+
+        // Aerial is first; one Down lands on Clock, and OK writes the same
+        // store the ambient surface reads.
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+
+        assertEquals(AmbientMode.CLOCK, AmbientSettingsStore.mode(context))
+    }
+
+    @Test
+    fun theMusicToggleWritesThePreference() {
+        SaverPreferences.setMusic(context, true)
+        setSetup(startStep = 3)
+
+        // Three modes, then the delay row, then Music.
+        press(Key.DirectionDown, 4)
+        press(Key.DirectionCenter)
+
+        assertFalse(SaverPreferences.music(context))
+    }
+
+    @Test
+    fun theDelayRowCyclesThroughTheIntervals() {
+        SaverPreferences.setDelay(context, SaverDelay.FIVE)
+        setSetup(startStep = 3)
+
+        // Three mode rows, then "Start After".
+        press(Key.DirectionDown, 3)
+        press(Key.DirectionCenter)
+
+        assertEquals(SaverDelay.TEN, SaverPreferences.delay(context))
     }
 
     @Test
