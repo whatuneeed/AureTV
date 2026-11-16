@@ -5,8 +5,10 @@ package com.whatuneed.ovisiontv.kotlin.ui
 import android.content.Context
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -142,6 +144,26 @@ class SetupScreenTest {
         // announcement is matched by substring, not as one fixed string.
         assertTrue(hasDescription(title(R.string.setup_language_system)))
         assertTrue(hasDescription(title(R.string.settings_language_russian)))
+    }
+
+    @Test
+    fun thePersonalPageOpensOnTheChosenLanguage() {
+        LocalePreference.set(context, LocalePreference.RUSSIAN)
+        setSetup(startStep = 1)
+
+        // The page must not open on "Same as system": one OK would otherwise
+        // change a language the viewer already chose on the previous run.
+        rule.onNodeWithContentDescription(title(R.string.settings_language_russian))
+            .assertIsFocused()
+    }
+
+    @Test
+    fun theSaverPageOpensOnTheChosenMode() {
+        AmbientSettingsStore.setMode(context, AmbientMode.CLOCK)
+        setSetup(startStep = 3)
+
+        rule.onNodeWithContentDescription(title(R.string.saver_mode_clock))
+            .assertIsFocused()
     }
 
     @Test

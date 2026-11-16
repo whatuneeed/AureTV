@@ -237,6 +237,9 @@ private data class SetupRow(
     // An ACTION row that is already done: the value turns into the green
     // check state the Java wizard painted on its permission rows.
     val ok: Boolean = false,
+    // A hairline between two questions on the same page. The Home & Weather
+    // page uses it once; it is not a second heading or another focus stop.
+    val dividerBefore: Boolean = false,
     val action: (() -> Unit)? = null,
 )
 
@@ -255,6 +258,10 @@ private data class SetupPage(
     val centered: Boolean = false,
     // The greeting's hint is the one subtitle Java sized a step larger.
     val subtitleFont: Float = SUBTITLE_FONT,
+    // The row that owns the saved value should receive focus when the page
+    // opens. Starting on row zero lets one OK press silently change a language
+    // or an ambient mode the viewer already chose.
+    val initialFocus: Int = 0,
 )
 
 /**
@@ -370,7 +377,6 @@ fun SetupScreen(
 
     LaunchedEffect(page) {
         SetupProgress.saveStep(context, page)
-        focus = 0
     }
 
     fun next() {
@@ -467,6 +473,11 @@ fun SetupScreen(
                     action = { profileNameOpen = true },
                 ),
             ),
+            initialFocus = when (language) {
+                LocalePreference.RUSSIAN -> 1
+                LocalePreference.ENGLISH -> 2
+                else -> 0
+            },
         )
 
         PAGE_HOME -> SetupPage(
@@ -502,6 +513,10 @@ fun SetupScreen(
                     title = stringResource(R.string.setup_weather_auto),
                     detail = null,
                     kind = RowKind.RADIO,
+                    // The two shelf switches and the three weather choices are
+                    // different questions; the hairline keeps them from reading
+                    // as one five-row list.
+                    dividerBefore = true,
                     checked = weatherEnabled && !weatherManual,
                     action = {
                         WeatherPreferences.clearPlace(context)
@@ -575,6 +590,7 @@ fun SetupScreen(
                     },
                 ),
             ),
+            initialFocus = SETUP_AMBIENT_MODES.indexOf(ambientMode).coerceAtLeast(0),
         )
 
         PAGE_ACCESS -> SetupPage(
@@ -678,6 +694,9 @@ fun SetupScreen(
     // buttons at all, so nothing here may steal focus from the root.
     LaunchedEffect(page, rowCount) {
         if (!current.pressAnywhere) {
+            // A page opens on the value it already holds; an unnamed first row
+            // must never be the place where OK flips that value.
+            focus = current.initialFocus.coerceIn(0, (rowCount - 1).coerceAtLeast(0))
             buttonIndex = if (rowCount == 0) 1 else 0
             inButtons = rowCount == 0
         }
@@ -933,7 +952,18 @@ fun SetupScreen(
                             focusRequester = requester,
                         )
                         if (index != current.rows.lastIndex) {
-                            Spacer(Modifier.height(scale.dp(ROW_GAP)))
+                            if (current.rows[index + 1].dividerBefore) {
+                                Spacer(Modifier.height(scale.dp(8f)))
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(scale.dp(1f))
+                                        .background(Color.White.copy(alpha = 0.14f)),
+                                )
+                                Spacer(Modifier.height(scale.dp(8f)))
+                            } else {
+                                Spacer(Modifier.height(scale.dp(ROW_GAP)))
+                            }
                         }
                     }
                 }
@@ -1688,7 +1718,23 @@ private fun SetupRowCard(
                     SelectMark(selected = row.checked, focused = focused, scale = scale)
                 }
 
-                RowKind.ACTION -> Unit
+                RowKind.ACTION -> {
+                    // The value on the left is not enough: an action row must look
+                    // like a place the remote can enter, not like a read-only stat.
+                    Spacer(Modifier.width(scale.dp(10f)))
+                    Image(
+                        imageVector = SectionGlyph.chevron,
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(
+                            lerp(
+                                Color.White.copy(alpha = 0.5f),
+                                Color.Black.copy(alpha = 0.5f),
+                                focusAmount,
+                            ),
+                        ),
+                        modifier = Modifier.size(scale.dp(22f)),
+                    )
+                }
             }
         }
     }
