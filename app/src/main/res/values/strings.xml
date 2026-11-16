@@ -429,7 +429,7 @@
     <string name="setup_personal_hint">Choose the launcher language, then the name and picture on your Home Screen. You can change both later.</string>
     <string name="setup_home_weather_title">Home &amp; Weather</string>
     <string name="setup_home_weather_hint">Choose what appears above the tiles. Weather adds a 5-day forecast in the corner.</string>
-    <string name="setup_saver_hint">What plays when the screen is idle. Themes, Photos and Reddit are in Settings → Screen Saver.</string>
+    <string name="setup_saver_hint">What plays when the screen is idle. Themes, Photos and Reddit live in Settings → Personalization → Ambient Experience.</string>
     <string name="setup_saver_delay">Start After</string>
     <string name="setup_saver_delay_hint">Press OK to change the interval</string>
     <string name="setup_saver_music">Music</string>

@@ -443,7 +443,7 @@
     <string name="setup_personal_hint">Выберите язык лаунчера, затем имя и аватар на Главной. И то и другое можно изменить позже.</string>
     <string name="setup_home_weather_title">Главная и погода</string>
     <string name="setup_home_weather_hint">Что показывать над плитками. Погода добавляет прогноз на 5 дней в углу.</string>
-    <string name="setup_saver_hint">Что показывать, когда экран простаивает. Темы, «Фото» и Reddit — в Настройках → Заставка.</string>
+    <string name="setup_saver_hint">Что показывать, когда экран простаивает. Темы, «Фото» и Reddit — в Настройках → Персонализация → Заставка.</string>
     <string name="setup_saver_delay">Запускать через</string>
     <string name="setup_saver_delay_hint">Нажмите OK, чтобы сменить интервал</string>
     <string name="setup_saver_music">Музыка</string>
