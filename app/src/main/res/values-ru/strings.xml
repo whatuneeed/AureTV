@@ -117,7 +117,8 @@
     <string name="saver_mode_clock">Часы</string>
     <string name="saver_mode_minimal">Минимализм</string>
     <string name="saver_mode_photos">Фотографии</string>
-    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально. Фотографии берутся из выбранной папки или выбранных снимков.</string>
+    <string name="saver_mode_reddit">Reddit</string>
+    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально. Фотографии берутся из выбранной папки или выбранных снимков. Reddit загружает публичную ленту сабреддита.</string>
     <string name="saver_clock_format">Формат часов</string>
     <string name="saver_clock_format_system">Системный</string>
     <string name="saver_clock_format_12">12-часовой</string>
@@ -142,6 +143,7 @@
     <string name="ambient_screen_description">Заставка, режим «%1$s». Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_clock_description">Часы, %1$s, %2$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="ambient_photos_description">Личные фотографии. Нажмите любую кнопку, чтобы выйти.</string>
+    <string name="ambient_reddit_description">Обои Reddit. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="saver_photos_folder">Папка с фотографиями</string>
     <string name="saver_photos_none">Не выбрано</string>
     <string name="saver_photos_selected_title">Выбранные фото</string>
@@ -151,6 +153,38 @@
     <string name="saver_photos_hint">Фотографии берутся только из выбранной папки или выбранных снимков. Они остаются на этом ТВ и не попадают в резервные копии.</string>
     <string name="saver_photos_unavailable">На этом ТВ нет системного выбора фотографий.</string>
     <string name="saver_photos_unavailable_short">Недоступно</string>
+    <string name="saver_reddit_subreddit">Сабреддит</string>
+    <string name="saver_reddit_refresh">Обновление</string>
+    <string name="saver_reddit_refresh_hint">Публичная лента Reddit проверяется только с этим интервалом. При ошибке сохраняется последний список, а повторная попытка откладывается.</string>
+    <string name="saver_reddit_six">Каждые 6 часов</string>
+    <string name="saver_reddit_twelve">Каждые 12 часов</string>
+    <string name="saver_reddit_twenty_four">Каждые 24 часа</string>
+    <string name="saver_reddit_catalog">Выбрать изображения</string>
+    <string name="saver_reddit_all">Использовать все изображения</string>
+    <string name="saver_reddit_loading">Загрузка…</string>
+    <string name="saver_reddit_unavailable">Reddit сейчас недоступен.</string>
+    <string name="saver_reddit_empty">В этом сабреддите не найдено постов с изображениями.</string>
+    <string name="saver_reddit_invalid">Введите имя сабреддита, например /r/TVWallpapersSFW/.</string>
+    <string name="saver_reddit_hint">Reddit — сторонний контент без модерации. В любом сабреддите может быть взрослый материал. В детском режиме Reddit отключён. Его лента и изображения никогда не попадают в резервные копии.</string>
+    <string name="saver_reddit_refresh_now">Обновить сейчас</string>
+    <string name="saver_reddit_refreshed">Лента Reddit обновлена.</string>
+    <string name="saver_reddit_stale">Показана последняя сохранённая лента Reddit.</string>
+    <string name="saver_reddit_catalog_title">Изображения Reddit</string>
+    <string name="saver_reddit_catalog_hint">Выберите изображения. Назад — возврат в Ambient Experience.</string>
+    <string name="saver_reddit_forget">Очистить источник Reddit</string>
+    <string name="saver_reddit_forgotten">Источник Reddit очищен.</string>
+    <plurals name="saver_reddit_images">
+        <item quantity="one">%1$d изображение</item>
+        <item quantity="few">%1$d изображения</item>
+        <item quantity="many">%1$d изображений</item>
+        <item quantity="other">%1$d изображений</item>
+    </plurals>
+    <plurals name="saver_reddit_selected">
+        <item quantity="one">%1$d выбрано</item>
+        <item quantity="few">%1$d выбрано</item>
+        <item quantity="many">%1$d выбрано</item>
+        <item quantity="other">%1$d выбрано</item>
+    </plurals>
     <plurals name="saver_photos_selected">
         <item quantity="one">%1$d фотография</item>
         <item quantity="few">%1$d фотографии</item>

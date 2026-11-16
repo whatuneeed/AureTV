@@ -1,6 +1,6 @@
 Privacy
 
-Policy version 3, updated 2026-11-15.
+Policy version 4, updated 2026-11-16.
 
 The launcher needs no account and has no developer-operated server. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
@@ -12,6 +12,8 @@ Weather is off until you choose it. If you turn it on, the city you pick (or an 
 
 Photos for the screen saver are separate from those settings: if you pick a folder or individual photos through the system picker, the launcher keeps only that read grant and the chosen URIs. It reads those images locally to draw the screen saver; they are never uploaded and are not included in a backup. The launcher does not request broad photo or storage permission, and removing the photo source releases the grant.
 
+If you choose Reddit, the subreddit name, refresh interval, whole-or-selected mode and selected post identifiers are stored locally. The last downloaded public feed and a cache of Reddit images are also stored; Settings → Storage → Clear cache removes those caches. Reddit preferences and identifiers are not included in a backup.
+
 Kids Mode stores a salted PBKDF2 hash of its PIN, a recovery hint and hash, the app allowlist and lockout state. The PIN itself is never stored. The recovery hint and app names are stored in plain text inside the app's private storage.
 
 The launcher reads the list of installed apps and the public TV provider rows (Watch Next / Preview Programs) to draw Home and the recommendation shelf. Those lists are not uploaded. It also keeps the last uncaught crash trace in its private cache: the thread name and stack trace, limited to 32 KiB. The trace is never uploaded and can be removed with Settings → Storage → Clear cache.
@@ -21,6 +23,8 @@ Network requests
 No account, cookie, API key or advertising identifier is sent. Like any internet request, a request reveals the TV's IP address and ordinary connection details to the host that receives it.
 
 Apple's screen saver: the public Apple CDN at sylvan.apple.com, over HTTPS, supplies the aerial catalogue, still images and video clips. These requests carry no personal data beyond ordinary HTTPS connection details.
+
+Reddit (only when you choose Reddit): www.reddit.com serves a public Atom feed, and i.redd.it, preview.redd.it and external-preview.redd.it serve the images. Those requests reveal the TV's IP address and an ordinary launcher User-Agent; no Reddit account, cookie, token, vote or comment is sent. Reddit content is third-party and unmoderated: any subreddit can contain adult material. Reddit is disabled in Kids Mode.
 
 Weather (only when you turn it on): Open-Meteo (api.open-meteo.com) supplies forecasts; MET Norway (api.met.no) and wttr.in are fallbacks. If you choose "Automatic", the launcher asks an IP-geolocation service (ipapi.co, then ipwho.is, then get.geojs.io) for an approximate city and coordinates. Those coordinates, the language and the chosen units are sent to the weather service. A city search sends the text you type to Open-Meteo's geocoding service (geocoding-api.open-meteo.com); a reverse-geocoding fallback may send coordinates to Nominatim (nominatim.openstreetmap.org). Weather is optional and can be turned off at any time.
 
@@ -50,7 +54,7 @@ Kids Mode is a local launcher filter and PIN gate. It is not Android parental co
 
 Your controls
 
-Turn weather off, clear saved weather data, hide recommendation rows, clear discovery history, delete a profile, remove the screen-saver photo source, or clear the app's cache. Deleting a profile removes its layout, discovery data, PIN, recovery data and allowlist. Clearing app data removes everything the launcher stored; Clear cache removes saved media and the local crash trace, not your settings.
+Turn weather off, clear saved weather data, hide recommendation rows, clear discovery history, delete a profile, remove the screen-saver photo source, clear the Reddit source, or clear the app's cache. Deleting a profile removes its layout, discovery data, PIN, recovery data and allowlist. Clearing app data removes everything the launcher stored; Clear cache removes saved media and the local crash trace, not your settings.
 
 Questions
 

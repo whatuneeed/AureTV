@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import org.junit.Assert.assertEquals
@@ -125,6 +126,71 @@ class AmbientScreenTest {
         rule.onNodeWithTag(AMBIENT_PHOTO_TAG, useUnmergedTree = true).assertExists()
         rule.onAllNodesWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertCountEquals(0)
     }
+
+    @Test
+    fun reddit_without_a_feed_falls_back_to_the_clock() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.REDDIT,
+                    items = emptyList(),
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertExists()
+        rule.onAllNodesWithTag(AMBIENT_REDDIT_TAG, useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun kids_get_the_clock_instead_of_reddit() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.REDDIT,
+                    items = emptyList(),
+                    reddit = listOf(redditItem()),
+                    redditAllowed = false,
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertExists()
+        rule.onAllNodesWithTag(AMBIENT_REDDIT_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun reddit_with_a_selection_shows_a_clock_until_the_first_image_arrives() {
+        rule.setContent {
+            OVisionTheme {
+                AmbientScreen(
+                    mode = AmbientMode.REDDIT,
+                    items = emptyList(),
+                    reddit = listOf(redditItem()),
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        // The surface is there, but its first remote image has not loaded, so
+        // the calm clock is what the viewer actually sees. It disappears once
+        // RedditFace has a bitmap.
+        rule.onNodeWithTag(AMBIENT_REDDIT_TAG, useUnmergedTree = true).assertExists()
+        rule.onNodeWithTag(AMBIENT_CLOCK_TAG, useUnmergedTree = true).assertExists()
+    }
+
+    private fun redditItem() = RedditWallpaper(
+        id = "t3_test",
+        title = "Test",
+        author = "tester",
+        community = "TVWallpapersSFW",
+        // Invalid host: the face must stay a surface without touching network.
+        previewUrl = "https://example.invalid/preview.png",
+        imageUrl = "https://example.invalid/image.png",
+        postUrl = "https://www.reddit.com/r/TVWallpapersSFW/comments/test/",
+    )
 
     @Test
     fun the_back_key_and_the_exit_fade_keep_their_order() {

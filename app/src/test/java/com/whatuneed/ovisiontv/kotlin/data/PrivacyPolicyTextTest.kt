@@ -18,8 +18,8 @@ class PrivacyPolicyTextTest {
     fun thePolicyCarriesAVersionAndDate() {
         assertTrue(en.contains("Policy version"))
         assertTrue(ru.contains("Версия политики"))
-        assertTrue(en.contains("2026-11-15"))
-        assertTrue(ru.contains("15.11.2026"))
+        assertTrue(en.contains("2026-11-16"))
+        assertTrue(ru.contains("16.11.2026"))
     }
 
     @Test
@@ -59,6 +59,18 @@ class PrivacyPolicyTextTest {
         assertTrue(ru.contains("системный выбор"))
         assertTrue(ru.contains("никогда не отправляются"))
         assertTrue(ru.contains("не попадают в резервную копию"))
+    }
+
+    @Test
+    fun redditIsDisclosedAsAnUnmoderatedThirdPartyFeed() {
+        assertTrue(en.contains("www.reddit.com"))
+        assertTrue(en.contains("i.redd.it"))
+        assertTrue(en.contains("unmoderated"))
+        assertTrue(en.contains("disabled in Kids Mode"))
+        assertTrue(ru.contains("www.reddit.com"))
+        assertTrue(ru.contains("i.redd.it"))
+        assertTrue(ru.contains("немодерируемый"))
+        assertTrue(ru.contains("В детском режиме Reddit отключён"))
     }
 
     @Test

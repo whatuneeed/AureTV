@@ -71,6 +71,8 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoPlaylist
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPixelShift
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPowerPolicy
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditImageStore
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.Weather
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
@@ -92,6 +94,7 @@ internal const val AMBIENT_SCREEN_TAG = "ambient_screen"
 internal const val AMBIENT_CLOCK_TAG = "ambient_clock"
 internal const val AMBIENT_PREVIEW_TAG = "ambient_preview"
 internal const val AMBIENT_PHOTO_TAG = "ambient_photo"
+internal const val AMBIENT_REDDIT_TAG = "ambient_reddit"
 
 private const val AMBIENT_ENTRY_MS = 450
 private const val AMBIENT_ALPHA_MS = 250
@@ -121,6 +124,8 @@ internal fun AmbientScreen(
     showWeather: Boolean = false,
     photos: List<Uri> = emptyList(),
     photosAllowed: Boolean = true,
+    reddit: List<RedditWallpaper> = emptyList(),
+    redditAllowed: Boolean = true,
     closing: Boolean = false,
     swallowOpeningPress: Boolean = false,
     players: List<ExoPlayer>? = null,
@@ -151,6 +156,8 @@ internal fun AmbientScreen(
         showWeather = showWeather,
         photos = photos,
         photosAllowed = photosAllowed,
+        reddit = reddit,
+        redditAllowed = redditAllowed,
         closing = closing,
         swallowOpeningPress = swallowOpeningPress,
         onCloseRequested = onCloseRequested,
@@ -169,6 +176,8 @@ private fun AmbientStillScreen(
     showWeather: Boolean,
     photos: List<Uri>,
     photosAllowed: Boolean,
+    reddit: List<RedditWallpaper>,
+    redditAllowed: Boolean,
     closing: Boolean,
     swallowOpeningPress: Boolean,
     onCloseRequested: () -> Unit,
@@ -187,7 +196,8 @@ private fun AmbientStillScreen(
     // Photos with no readable folder fall back to the clock. A screen saver
     // that silently shows an empty gradient is worse than a calm, real clock.
     val showClock = mode == AmbientMode.CLOCK ||
-        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty()))
+        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty())) ||
+        (mode == AmbientMode.REDDIT && (!redditAllowed || reddit.isEmpty()))
     val clockTime = if (showClock) {
         AmbientClock.formatTime(now, is24Hour, locale)
     } else {
@@ -206,6 +216,7 @@ private fun AmbientStillScreen(
     val description = when {
         showClock -> stringResource(R.string.ambient_clock_description, clockTime, clockDate)
         mode == AmbientMode.PHOTOS -> stringResource(R.string.ambient_photos_description)
+        mode == AmbientMode.REDDIT -> stringResource(R.string.ambient_reddit_description)
         else -> stringResource(R.string.ambient_screen_description, modeLabel)
     }
 
@@ -314,6 +325,24 @@ private fun AmbientStillScreen(
                 allowed = photosAllowed,
                 reduceMotion = reduceMotion,
             )
+
+            mode == AmbientMode.REDDIT -> RedditFace(
+                context = context,
+                items = reddit,
+                allowed = redditAllowed,
+                reduceMotion = reduceMotion,
+                scale = scale,
+                fallback = {
+                    ClockFace(
+                        scale = scale,
+                        now = now,
+                        is24Hour = is24Hour,
+                        locale = locale,
+                        pixelShift = pixelShift,
+                        weather = weather,
+                    )
+                },
+            )
         }
     }
 }
@@ -331,6 +360,8 @@ internal fun AmbientPreview(
     showWeather: Boolean = false,
     photos: List<Uri> = emptyList(),
     photosAllowed: Boolean = true,
+    reddit: List<RedditWallpaper> = emptyList(),
+    redditAllowed: Boolean = true,
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
@@ -338,7 +369,8 @@ internal fun AmbientPreview(
     val is24Hour = clockFormat.use24Hour(systemIs24Hour)
     val now = rememberAmbientNow()
     val showClock = mode == AmbientMode.CLOCK ||
-        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty()))
+        (mode == AmbientMode.PHOTOS && (!photosAllowed || photos.isEmpty())) ||
+        (mode == AmbientMode.REDDIT && (!redditAllowed || reddit.isEmpty()))
     val weather = rememberAmbientWeather(
         context,
         if (showClock) AmbientMode.CLOCK else mode,
@@ -369,6 +401,25 @@ internal fun AmbientPreview(
                 allowed = photosAllowed,
                 reduceMotion = true,
                 preview = true,
+            )
+
+            mode == AmbientMode.REDDIT -> RedditFace(
+                context = context,
+                items = reddit,
+                allowed = redditAllowed,
+                reduceMotion = true,
+                scale = TvScale(scale.factor * 0.55f),
+                preview = true,
+                fallback = {
+                    ClockFace(
+                        scale = TvScale(scale.factor * 0.55f),
+                        now = now,
+                        is24Hour = is24Hour,
+                        locale = locale,
+                        pixelShift = pixelShift,
+                        weather = weather,
+                    )
+                },
             )
         }
     }
@@ -456,6 +507,125 @@ private fun PhotoFace(
         }
     }
 }
+
+/**
+ * Reddit posts are remote images, not local files. The face keeps at most the
+ * previous and current bitmap and lets [RedditImageStore] validate every URL
+ * and redirect; a failed image is skipped. Until the first bitmap arrives, the
+ * real clock is drawn so the viewer never sees a bare gradient.
+ */
+@Composable
+private fun RedditFace(
+    context: Context,
+    items: List<RedditWallpaper>,
+    allowed: Boolean,
+    reduceMotion: Boolean,
+    scale: TvScale,
+    preview: Boolean = false,
+    fallback: @Composable () -> Unit = {},
+) {
+    val ordered = remember(items) {
+        if (items.size > 1) items.shuffled() else items
+    }
+    var current by remember(ordered) { mutableStateOf<Bitmap?>(null) }
+    var previous by remember(ordered) { mutableStateOf<Bitmap?>(null) }
+    var credit by remember(ordered) { mutableStateOf("") }
+    val progress = remember { Animatable(0f) }
+
+    LaunchedEffect(ordered, allowed, preview) {
+        current = null
+        previous = null
+        credit = ""
+        progress.snapTo(0f)
+        if (!allowed || ordered.isEmpty()) return@LaunchedEffect
+
+        if (preview) {
+            val item = ordered.first()
+            current = withContext(Dispatchers.IO) {
+                RedditImageStore.loadThumbnail(context, item.previewUrl)
+            }
+            credit = creditFor(item)
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+
+        var index = 0
+        var failures = 0
+        while (true) {
+            val item = ordered[index]
+            index = (index + 1) % ordered.size
+            val bitmap = withContext(Dispatchers.IO) {
+                RedditImageStore.loadFull(context, item.imageUrl)
+            }
+            if (bitmap == null) {
+                failures++
+                if (failures >= ordered.size) return@LaunchedEffect
+                continue
+            }
+            failures = 0
+            previous = current
+            current = bitmap
+            credit = creditFor(item)
+            progress.snapTo(0f)
+            progress.animateTo(
+                1f,
+                animationSpec = tween(
+                    durationMillis = if (reduceMotion) 1 else PHOTO_FADE_MS,
+                ),
+            )
+            previous = null
+            if (ordered.size == 1) return@LaunchedEffect
+            delay(PHOTO_HOLD_MS)
+        }
+    }
+
+    Box(Modifier.fillMaxSize().testTag(AMBIENT_REDDIT_TAG)) {
+        // The first remote image is not instant: keep a real clock on screen
+        // instead of a bare gradient until the CDN answers.
+        if (current == null) fallback()
+        previous?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 1f - progress.value },
+            )
+        }
+        current?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = progress.value },
+            )
+        }
+        if (!preview && credit.isNotBlank()) {
+            Text(
+                text = credit,
+                color = Color.White.copy(alpha = 0.72f),
+                fontSize = scale.sp(20f),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(
+                        start = scale.dp(64f),
+                        bottom = scale.dp(54f),
+                    ),
+            )
+        }
+    }
+}
+
+/** The feed's author is optional; never print a dangling separator. */
+private fun creditFor(item: RedditWallpaper): String =
+    if (item.author.isBlank()) {
+        "r/${item.community}"
+    } else {
+        "r/${item.community} · u/${item.author}"
+    }
 
 @Composable
 private fun ClockFace(

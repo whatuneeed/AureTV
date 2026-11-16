@@ -153,8 +153,16 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoStore
+import com.whatuneed.ovisiontv.kotlin.ambient.AmbientRedditStore
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.PhotoPickerContract
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeed
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeedLoader
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeedStore
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditImageStore
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditRefresh
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditSelection
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
@@ -177,6 +185,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPreviewStore
 import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.ProfileAvatarPicker
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadMode
+import com.whatuneed.ovisiontv.kotlin.ui.components.RedditCatalogOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
@@ -301,6 +310,7 @@ private const val PAGE_SAVER_MODE = 43
 private const val PAGE_SAVER_CLOCK_FORMAT = 44
 private const val PAGE_SAVER_DIM = 45
 private const val PAGE_SAVER_SESSION = 46
+private const val PAGE_SAVER_REDDIT_REFRESH = 47
 private const val PAGE_NETWORK = 8
 private const val PAGE_DEVICE = 9
 private const val PAGE_STORAGE = 10
@@ -720,6 +730,24 @@ fun SettingsScreen(
             ),
         )
     }
+    var redditSubreddit by remember(resumeTick) {
+        mutableStateOf(AmbientRedditStore.subreddit(context))
+    }
+    var redditRefresh by remember(resumeTick) {
+        mutableStateOf(AmbientRedditStore.refresh(context))
+    }
+    var redditSelection by remember(resumeTick) {
+        mutableStateOf(AmbientRedditStore.selection(context))
+    }
+    var redditSelected by remember(resumeTick) {
+        mutableStateOf(AmbientRedditStore.selectedIds(context))
+    }
+    var redditFeed by remember { mutableStateOf<RedditFeed?>(null) }
+    var redditLoading by remember { mutableStateOf(false) }
+    var redditRequest by remember { mutableIntStateOf(0) }
+    var redditForce by remember { mutableStateOf(false) }
+    var redditNameEditorOpen by remember { mutableStateOf(false) }
+    var redditCatalogOpen by remember { mutableStateOf(false) }
     var discoveryUi by remember(resumeTick, currentProfileId) {
         mutableStateOf(
             DiscoveryUi(
@@ -942,6 +970,38 @@ fun SettingsScreen(
         )
     }
 
+    // Reading the feed is deliberate: cached list first, network only when the
+    // chosen interval expired or the viewer asks for a refresh. The loader
+    // backs off after 429/403 and never retries from a recomposition.
+    LaunchedEffect(
+        ambientMode,
+        redditSubreddit,
+        redditRefresh,
+        resumeTick,
+        redditRequest,
+        currentProfile?.kids,
+    ) {
+        // A kids profile never reaches Reddit: no feed request, no cached
+        // images and no remote title in the preview.
+        if (ambientMode != AmbientMode.REDDIT || currentProfile?.kids == true) {
+            redditFeed = null
+            redditLoading = false
+            return@LaunchedEffect
+        }
+        redditLoading = true
+        val force = redditForce
+        redditForce = false
+        val loaded = withContext(Dispatchers.IO) {
+            RedditFeedLoader.load(context, redditSubreddit, redditRefresh, force)
+        }
+        redditFeed = loaded
+        redditSelected = AmbientRedditStore.selectedIds(context)
+        redditLoading = false
+        if (force && loaded.items.isNotEmpty() && !loaded.stale) {
+            Toast.makeText(context, R.string.saver_reddit_refreshed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun choosePhotoFolder() {
         if (!AmbientPhotoStore.canPickFolder(context)) {
             Toast.makeText(context, R.string.saver_photos_unavailable, Toast.LENGTH_LONG).show()
@@ -1022,7 +1082,7 @@ fun SettingsScreen(
         PAGE_SAVER -> PAGE_INTERFACE
         PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
         PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
-        PAGE_SAVER_DIM, PAGE_SAVER_SESSION,
+        PAGE_SAVER_DIM, PAGE_SAVER_SESSION, PAGE_SAVER_REDDIT_REFRESH,
         -> PAGE_SAVER
         PAGE_STORAGE_CLEAR -> PAGE_STORAGE
         PAGE_NETWORK, PAGE_DEVICE, PAGE_STORAGE, PAGE_PERMISSIONS, PAGE_SYSTEM ->
@@ -1175,6 +1235,8 @@ fun SettingsScreen(
                 AerialClipCache.cleanup(context)
                 AerialPreviewStore.clear(context)
                 AerialPosterStore.clear(context)
+                RedditImageStore.clear(context)
+                RedditFeedStore.clear(context)
                 // The last crash trace is local diagnostics, not a media cache;
                 // clearing Storage must still remove it.
                 CrashReport.clear(context)
@@ -1206,6 +1268,15 @@ fun SettingsScreen(
         // grant would survive a request to return to the defaults.
         AmbientPhotoStore.clear(context)
         photoFolder = PhotoFolderState(emptyList(), null)
+        AmbientRedditStore.clear(context)
+        RedditFeedStore.clear(context)
+        RedditFeedLoader.clearBackoff(context)
+        RedditImageStore.clear(context)
+        redditSubreddit = AmbientRedditStore.subreddit(context)
+        redditRefresh = AmbientRedditStore.refresh(context)
+        redditSelection = AmbientRedditStore.selection(context)
+        redditSelected = emptySet()
+        redditFeed = null
         saverDelay = SaverPreferences.delay(context)
         ambientMode = AmbientSettingsStore.mode(context)
         ambientClockFormat = AmbientSettingsStore.clockFormat(context)
@@ -1540,6 +1611,124 @@ fun SettingsScreen(
                     )
                 }
             }
+            if (ambientMode == AmbientMode.REDDIT) {
+                val redditItems = redditFeed?.items.orEmpty()
+                val selectedCount = redditSelected.count { id -> redditItems.any { it.id == id } }
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_subreddit),
+                        value = "r/$redditSubreddit",
+                        chevron = true,
+                        action = { redditNameEditorOpen = true },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_refresh),
+                        value = stringResource(redditRefreshRes(redditRefresh)),
+                        chevron = true,
+                        action = {
+                            open(
+                                PAGE_SAVER_REDDIT_REFRESH,
+                                focus = RedditRefresh.entries.indexOf(redditRefresh),
+                            )
+                        },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_all),
+                        value = stringResource(
+                            if (redditSelection == RedditSelection.ALL) {
+                                R.string.saver_on
+                            } else {
+                                R.string.saver_off
+                            },
+                        ),
+                        toggleState = redditSelection == RedditSelection.ALL,
+                        action = {
+                            val useAll = redditSelection != RedditSelection.ALL
+                            redditSelection = if (useAll) {
+                                RedditSelection.ALL
+                            } else {
+                                RedditSelection.SELECTED
+                            }
+                            AmbientRedditStore.setSelection(context, redditSelection)
+                            if (!useAll && redditSelected.isEmpty()) redditCatalogOpen = true
+                        },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_catalog),
+                        value = when {
+                            redditLoading -> stringResource(R.string.saver_reddit_loading)
+                            redditItems.isEmpty() -> stringResource(R.string.saver_reddit_unavailable)
+                            redditSelection == RedditSelection.ALL -> pluralStringResource(
+                                R.plurals.saver_reddit_images,
+                                redditItems.size,
+                                redditItems.size,
+                            )
+                            else -> pluralStringResource(
+                                R.plurals.saver_reddit_selected,
+                                selectedCount,
+                                selectedCount,
+                            )
+                        },
+                        chevron = true,
+                        action = { redditCatalogOpen = true },
+                    ),
+                )
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_refresh_now),
+                        value = if (redditLoading) {
+                            stringResource(R.string.saver_reddit_loading)
+                        } else {
+                            null
+                        },
+                        chevron = true,
+                        action = {
+                            if (!redditLoading) {
+                                redditForce = true
+                                redditRequest++
+                            }
+                        },
+                    ),
+                )
+                if (redditFeed?.stale == true) {
+                    add(
+                        SettingsRow(
+                            title = stringResource(R.string.saver_reddit_stale),
+                            value = null,
+                        ),
+                    )
+                }
+                add(
+                    SettingsRow(
+                        title = stringResource(R.string.saver_reddit_forget),
+                        chevron = true,
+                        action = {
+                            AmbientRedditStore.clear(context)
+                            RedditFeedStore.clear(context)
+                            RedditFeedLoader.clearBackoff(context)
+                            RedditImageStore.clear(context)
+                            redditSubreddit = AmbientRedditStore.DEFAULT_SUBREDDIT
+                            redditRefresh = AmbientRedditStore.refresh(context)
+                            redditSelection = AmbientRedditStore.selection(context)
+                            redditSelected = emptySet()
+                            redditFeed = null
+                            ambientMode = AmbientMode.AERIAL
+                            AmbientSettingsStore.setMode(context, AmbientMode.AERIAL)
+                            Toast.makeText(
+                                context,
+                                R.string.saver_reddit_forgotten,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                    ),
+                )
+            }
             // The Aerial catalogue only matters to the Aerial mode. Hiding
             // these rows in Clock/Minimal keeps the page honest instead of
             // offering themes that would never be drawn.
@@ -1612,6 +1801,18 @@ fun SettingsScreen(
                 action = {
                     ambientMode = mode
                     AmbientSettingsStore.setMode(context, mode)
+                },
+            )
+        }
+
+        PAGE_SAVER_REDDIT_REFRESH -> RedditRefresh.entries.map { refresh ->
+            SettingsRow(
+                title = stringResource(redditRefreshRes(refresh)),
+                checked = refresh == redditRefresh,
+                choice = true,
+                action = {
+                    redditRefresh = refresh
+                    AmbientRedditStore.setRefresh(context, refresh)
                 },
             )
         }
@@ -2637,6 +2838,7 @@ fun SettingsScreen(
                 PAGE_KIDS_APPS -> R.string.kids_allowed
                 PAGE_SAVER -> R.string.settings_saver
                 PAGE_SAVER_MODE -> R.string.saver_mode
+                PAGE_SAVER_REDDIT_REFRESH -> R.string.saver_reddit_refresh
                 PAGE_SAVER_CLOCK_FORMAT -> R.string.saver_clock_format
                 PAGE_SAVER_DIM -> R.string.saver_dim_after
                 PAGE_SAVER_SESSION -> R.string.saver_max_session
@@ -2750,9 +2952,11 @@ fun SettingsScreen(
         PAGE_SAVER -> when (ambientMode) {
             AmbientMode.CLOCK -> stringResource(R.string.saver_pixel_shift_hint)
             AmbientMode.PHOTOS -> stringResource(R.string.saver_photos_hint)
+            AmbientMode.REDDIT -> stringResource(R.string.saver_reddit_hint)
             else -> null
         }
         PAGE_SAVER_MODE -> stringResource(R.string.saver_mode_hint)
+        PAGE_SAVER_REDDIT_REFRESH -> stringResource(R.string.saver_reddit_refresh_hint)
         PAGE_SAVER_CLOCK_FORMAT -> stringResource(R.string.saver_clock_format_hint)
         PAGE_SAVER_DIM -> stringResource(R.string.saver_dim_hint)
         PAGE_SAVER_SESSION -> stringResource(R.string.saver_max_session_hint)
@@ -2857,6 +3061,7 @@ fun SettingsScreen(
     val emptyRequester = remember { FocusRequester() }
     val gridState = rememberLazyListState()
     val modalOpen = citySearchOpen || previewClip != null || nameEditorOpen ||
+        redditNameEditorOpen || redditCatalogOpen ||
         avatarPickerOpen || kidsPadFor != null || kidsLeaveFor != null ||
         recoveryStep != null || kidsEntryLocked
 
@@ -3061,6 +3266,7 @@ fun SettingsScreen(
 
     BackHandler(
         enabled = page != PAGE_ROOT && !citySearchOpen && !nameEditorOpen && !avatarPickerOpen &&
+            !redditNameEditorOpen && !redditCatalogOpen &&
             kidsPadFor == null && recoveryStep == null && !kidsEntryLocked,
     ) { backFromSidebarOrPage() }
 
@@ -3297,6 +3503,17 @@ fun SettingsScreen(
                     pixelShift = ambientPixelShift,
                     showWeather = ambientShowWeather,
                     photos = photoFolder.uris,
+                    reddit = if (ambientMode == AmbientMode.REDDIT) {
+                        val all = redditFeed?.items.orEmpty()
+                        if (redditSelection == RedditSelection.SELECTED) {
+                            all.filter { it.id in redditSelected }
+                        } else {
+                            all
+                        }
+                    } else {
+                        emptyList()
+                    },
+                    redditAllowed = !profileStore.current().kids,
                 )
             }
         }
@@ -3489,7 +3706,7 @@ fun SettingsScreen(
                             if (page == PAGE_LANGUAGE || page == PAGE_SAVER_DELAY ||
                                 page == PAGE_SAVER_REFRESH || page == PAGE_SAVER_MODE ||
                                 page == PAGE_SAVER_CLOCK_FORMAT || page == PAGE_SAVER_DIM ||
-                                page == PAGE_SAVER_SESSION ||
+                                page == PAGE_SAVER_SESSION || page == PAGE_SAVER_REDDIT_REFRESH ||
                                 page == PAGE_WEATHER_LOCATION ||
                                 page == PAGE_WEATHER_UNITS || page == PAGE_WEATHER_SOURCE ||
                                 page == PAGE_WEATHER_REFRESH
@@ -3604,6 +3821,54 @@ fun SettingsScreen(
                 citySearchOpen = false
                 reloadWeather()
             },
+        )
+    }
+
+    if (redditNameEditorOpen) {
+        RenameKeyboardOverlay(
+            title = stringResource(R.string.saver_reddit_subreddit),
+            initial = redditSubreddit,
+            scale = scale,
+            onDone = { raw ->
+                val normalized = AmbientRedditStore.normalizeSubreddit(raw)
+                if (normalized == null) {
+                    Toast.makeText(
+                        context,
+                        R.string.saver_reddit_invalid,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                } else {
+                    AmbientRedditStore.setSubreddit(context, normalized)
+                    redditSubreddit = AmbientRedditStore.subreddit(context)
+                    redditSelected = AmbientRedditStore.selectedIds(context)
+                    redditSelection = RedditSelection.ALL
+                    AmbientRedditStore.setSelection(context, RedditSelection.ALL)
+                    redditFeed = null
+                    redditNameEditorOpen = false
+                    ambientMode = AmbientMode.REDDIT
+                    AmbientSettingsStore.setMode(context, AmbientMode.REDDIT)
+                    redditRequest++
+                }
+            },
+            onCancel = { redditNameEditorOpen = false },
+            placeholder = "/r/TVWallpapersSFW/",
+        )
+    }
+
+    if (redditCatalogOpen) {
+        RedditCatalogOverlay(
+            items = redditFeed?.items.orEmpty(),
+            selected = redditSelected,
+            loading = redditLoading,
+            onToggle = { item ->
+                val next = redditSelected.toMutableSet()
+                if (!next.add(item.id)) next.remove(item.id)
+                redditSelected = next
+                redditSelection = RedditSelection.SELECTED
+                AmbientRedditStore.setSelection(context, RedditSelection.SELECTED)
+                AmbientRedditStore.setSelectedIds(context, next)
+            },
+            onClose = { redditCatalogOpen = false },
         )
     }
 
@@ -4368,6 +4633,12 @@ private fun legalRows(onOpen: (Int) -> Unit): List<SettingsRow> = listOf(
     ),
 )
 
+private fun redditRefreshRes(refresh: RedditRefresh): Int = when (refresh) {
+    RedditRefresh.SIX -> R.string.saver_reddit_six
+    RedditRefresh.TWELVE -> R.string.saver_reddit_twelve
+    RedditRefresh.TWENTY_FOUR -> R.string.saver_reddit_twenty_four
+}
+
 private fun pageOf(section: Section): Int = when (section) {    Section.INTERFACE -> PAGE_INTERFACE
     Section.HOME_SCREEN -> PAGE_HOME_SCREEN
     Section.PROFILES -> PAGE_PROFILES
@@ -4380,7 +4651,7 @@ private fun sectionOf(page: Int): Section? = when (page) {
     PAGE_INTERFACE, PAGE_LANGUAGE,
     PAGE_SAVER, PAGE_SAVER_CHOOSER, PAGE_SAVER_DELAY, PAGE_SAVER_THEMES, PAGE_SAVER_REFRESH,
     PAGE_SAVER_RESET, PAGE_SAVER_MODE, PAGE_SAVER_CLOCK_FORMAT,
-    PAGE_SAVER_DIM, PAGE_SAVER_SESSION,
+    PAGE_SAVER_DIM, PAGE_SAVER_SESSION, PAGE_SAVER_REDDIT_REFRESH,
     -> Section.INTERFACE
     PAGE_HOME_SCREEN, PAGE_HIDDEN, PAGE_RESET, PAGE_DISCOVERY,
     PAGE_DISCOVERY_HIDDEN, PAGE_DISCOVERY_CLEAR ->

@@ -22,6 +22,9 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeedLoader
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditSelection
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
@@ -119,6 +122,32 @@ private fun DreamSaver(onFinished: () -> Unit) {
             emptyList()
         }
     }
+    var redditItems by remember { mutableStateOf<List<RedditWallpaper>>(emptyList()) }
+    LaunchedEffect(
+        settings.mode,
+        photosAllowed,
+        settings.redditSubreddit,
+        settings.redditRefresh,
+        settings.redditSelection,
+        settings.redditSelected,
+    ) {
+        redditItems = if (settings.mode == AmbientMode.REDDIT && photosAllowed) {
+            val feed = withContext(Dispatchers.IO) {
+                RedditFeedLoader.load(
+                    context,
+                    settings.redditSubreddit,
+                    settings.redditRefresh,
+                )
+            }
+            if (settings.redditSelection == RedditSelection.SELECTED) {
+                feed.items.filter { it.id in settings.redditSelected }
+            } else {
+                feed.items
+            }
+        } else {
+            emptyList()
+        }
+    }
     var catalogue by remember(settings.mode) {
         mutableStateOf<List<AerialClip>?>(
             if (settings.mode == AmbientMode.AERIAL) null else emptyList(),
@@ -147,6 +176,8 @@ private fun DreamSaver(onFinished: () -> Unit) {
         showWeather = settings.showWeather,
         photos = photoUris,
         photosAllowed = photosAllowed,
+        reddit = redditItems,
+        redditAllowed = photosAllowed,
         onCloseRequested = onFinished,
         onDismissed = onFinished,
         publishMediaSession = settings.mode == AmbientMode.AERIAL,

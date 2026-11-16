@@ -115,7 +115,8 @@
     <string name="saver_mode_clock">Clock</string>
     <string name="saver_mode_minimal">Minimal</string>
     <string name="saver_mode_photos">Photos</string>
-    <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally. Photos come from the folder or photos you choose.</string>
+    <string name="saver_mode_reddit">Reddit</string>
+    <string name="saver_mode_hint">Aerials stream Apple\'s real clips. Clock and Minimal are drawn locally. Photos come from the folder or photos you choose. Reddit loads a public subreddit feed.</string>
     <string name="saver_clock_format">Clock Format</string>
     <string name="saver_clock_format_system">System</string>
     <string name="saver_clock_format_12">12-hour</string>
@@ -140,6 +141,7 @@
     <string name="ambient_screen_description">Ambient mode, %1$s. Press any button to exit.</string>
     <string name="ambient_clock_description">Clock, %1$s, %2$s. Press any button to exit.</string>
     <string name="ambient_photos_description">Personal photos. Press any button to exit.</string>
+    <string name="ambient_reddit_description">Reddit wallpapers. Press any button to exit.</string>
     <string name="saver_photos_folder">Photos Folder</string>
     <string name="saver_photos_none">Not selected</string>
     <string name="saver_photos_selected_title">Selected Photos</string>
@@ -149,6 +151,34 @@
     <string name="saver_photos_hint">Photos come only from the folder or photos you choose. They stay on this TV and are not included in backups.</string>
     <string name="saver_photos_unavailable">This TV has no system photo picker.</string>
     <string name="saver_photos_unavailable_short">Unavailable</string>
+    <string name="saver_reddit_subreddit">Subreddit</string>
+    <string name="saver_reddit_refresh">Refresh</string>
+    <string name="saver_reddit_refresh_hint">The public Reddit feed is checked only at this interval. A failed check keeps the last downloaded list and backs off before trying again.</string>
+    <string name="saver_reddit_six">Every 6 hours</string>
+    <string name="saver_reddit_twelve">Every 12 hours</string>
+    <string name="saver_reddit_twenty_four">Every 24 hours</string>
+    <string name="saver_reddit_catalog">Choose Images</string>
+    <string name="saver_reddit_all">Use all images</string>
+    <string name="saver_reddit_loading">Loading…</string>
+    <string name="saver_reddit_unavailable">Reddit is unavailable right now.</string>
+    <string name="saver_reddit_empty">No image posts found in this subreddit.</string>
+    <string name="saver_reddit_invalid">Enter a subreddit name, for example /r/TVWallpapersSFW/.</string>
+    <string name="saver_reddit_hint">Reddit is unmoderated third-party content. Any subreddit can contain adult material. Reddit is disabled in Kids Mode. Its feed and images are never included in backups.</string>
+    <string name="saver_reddit_refresh_now">Refresh Now</string>
+    <string name="saver_reddit_refreshed">Reddit feed updated.</string>
+    <string name="saver_reddit_stale">Showing the last saved Reddit feed.</string>
+    <string name="saver_reddit_catalog_title">Reddit Images</string>
+    <string name="saver_reddit_catalog_hint">Choose the images to include. Back returns to Ambient Experience.</string>
+    <string name="saver_reddit_forget">Clear Reddit Source</string>
+    <string name="saver_reddit_forgotten">Reddit source cleared.</string>
+    <plurals name="saver_reddit_images">
+        <item quantity="one">%1$d image</item>
+        <item quantity="other">%1$d images</item>
+    </plurals>
+    <plurals name="saver_reddit_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
     <plurals name="saver_photos_selected">
         <item quantity="one">%1$d photo</item>
         <item quantity="other">%1$d photos</item>

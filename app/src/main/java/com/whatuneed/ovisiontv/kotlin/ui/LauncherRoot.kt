@@ -64,6 +64,9 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPhotoLibrary
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientPlaylist
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientScheduler
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeedLoader
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditSelection
+import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
@@ -193,6 +196,33 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     LaunchedEffect(saverVisible, ambient.mode, kidsActive) {
         photoUris = if (saverVisible && ambient.mode == AmbientMode.PHOTOS && !kidsActive) {
             withContext(Dispatchers.IO) { AmbientPhotoLibrary.load(context) }
+        } else {
+            emptyList()
+        }
+    }
+    var redditItems by remember { mutableStateOf<List<RedditWallpaper>>(emptyList()) }
+    LaunchedEffect(
+        saverVisible,
+        ambient.mode,
+        kidsActive,
+        ambient.redditSubreddit,
+        ambient.redditRefresh,
+        ambient.redditSelection,
+        ambient.redditSelected,
+    ) {
+        redditItems = if (saverVisible && ambient.mode == AmbientMode.REDDIT && !kidsActive) {
+            val feed = withContext(Dispatchers.IO) {
+                RedditFeedLoader.load(
+                    context,
+                    ambient.redditSubreddit,
+                    ambient.redditRefresh,
+                )
+            }
+            if (ambient.redditSelection == RedditSelection.SELECTED) {
+                feed.items.filter { it.id in ambient.redditSelected }
+            } else {
+                feed.items
+            }
         } else {
             emptyList()
         }
@@ -646,6 +676,8 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 showWeather = ambient.showWeather,
                 photos = photoUris,
                 photosAllowed = !kidsActive,
+                reddit = redditItems,
+                redditAllowed = !kidsActive,
                 closing = saverClosing,
                 players = saverPlayers,
                 publishMediaSession = ambient.mode == AmbientMode.AERIAL,

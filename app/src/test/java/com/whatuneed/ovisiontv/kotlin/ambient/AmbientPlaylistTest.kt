@@ -49,6 +49,9 @@ class AmbientPlaylistTest {
         assertTrue(
             AmbientPlaylist.scenes(clips, settings(AmbientMode.PHOTOS)).isEmpty(),
         )
+        assertTrue(
+            AmbientPlaylist.scenes(clips, settings(AmbientMode.REDDIT)).isEmpty(),
+        )
     }
 
     @Test
@@ -56,6 +59,7 @@ class AmbientPlaylistTest {
         assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.CLOCK)))
         assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.MINIMAL)))
         assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.PHOTOS)))
+        assertTrue(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.REDDIT)))
         assertFalse(AmbientPlaylist.hasContent(emptyList(), settings(AmbientMode.AERIAL)))
     }
 

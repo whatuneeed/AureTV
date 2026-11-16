@@ -18,6 +18,7 @@ enum class AmbientMode(val key: String) {
     CLOCK("clock"),
     MINIMAL("minimal"),
     PHOTOS("photos"),
+    REDDIT("reddit"),
     ;
 
     companion object {
@@ -93,6 +94,10 @@ data class AmbientSettings(
     val dimAfter: AmbientDim = AmbientDim.NEVER,
     val maxSession: AmbientSession = AmbientSession.NEVER,
     val showWeather: Boolean = false,
+    val redditSubreddit: String = AmbientRedditStore.DEFAULT_SUBREDDIT,
+    val redditRefresh: RedditRefresh = RedditRefresh.TWELVE,
+    val redditSelection: RedditSelection = RedditSelection.ALL,
+    val redditSelected: Set<String> = emptySet(),
 )
 
 /**
@@ -120,6 +125,10 @@ object AmbientSettingsStore {
         dimAfter = dimAfter(context),
         maxSession = maxSession(context),
         showWeather = showWeather(context),
+        redditSubreddit = AmbientRedditStore.subreddit(context),
+        redditRefresh = AmbientRedditStore.refresh(context),
+        redditSelection = AmbientRedditStore.selection(context),
+        redditSelected = AmbientRedditStore.selectedIds(context),
     )
 
     fun mode(context: Context): AmbientMode =

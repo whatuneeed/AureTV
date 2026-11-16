@@ -42,7 +42,7 @@ object AmbientPlaylist {
         random: Random? = null,
     ): List<AerialClip> = when (settings.mode) {
         AmbientMode.AERIAL -> aerial(clips, settings, random)
-        AmbientMode.CLOCK, AmbientMode.MINIMAL, AmbientMode.PHOTOS -> emptyList()
+        AmbientMode.CLOCK, AmbientMode.MINIMAL, AmbientMode.PHOTOS, AmbientMode.REDDIT -> emptyList()
     }
 
     fun hasContent(
@@ -50,6 +50,6 @@ object AmbientPlaylist {
         settings: AmbientSettings,
     ): Boolean = when (settings.mode) {
         AmbientMode.AERIAL -> scenes.isNotEmpty()
-        AmbientMode.CLOCK, AmbientMode.MINIMAL, AmbientMode.PHOTOS -> true
+        AmbientMode.CLOCK, AmbientMode.MINIMAL, AmbientMode.PHOTOS, AmbientMode.REDDIT -> true
     }
 }

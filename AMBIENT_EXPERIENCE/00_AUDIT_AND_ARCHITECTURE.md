@@ -1,10 +1,10 @@
 # Ambient Experience / Screensaver — аудит и архитектура
 
 **Проект:** OVisionTV Launcher (Kotlin, Android TV / Google TV)
-**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–5 — 0.5.6 (`versionCode 79`), `minSdk 28`, `targetSdk 35`
+**Версия:** 0.5.0 (`versionCode 73`) на момент аудита; реализация Stage 2–6 — 0.5.7 (`versionCode 80`), `minSdk 28`, `targetSdk 35`
 **Дата аудита:** 2026-11-15
 **Статус аудита:** Stage 1–3 выполнены: аудит, архитектура, UX-спецификация.
-**Реализация:** Stage 2–5 проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal/Photos, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), Photos через системный выбор (SAF/Photo Picker, без broad permissions), IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
+**Реализация:** Stage 2–6 проверены на AVD: `ambient`-слой, режимы Aerial/Clock/Minimal/Photos/Reddit, Clock Format (System/12/24), Pixel Shift, optional Dim/Max Session, opt-in Weather на часах (только cached данные), Photos через системный выбор (SAF/Photo Picker, без broad permissions), Reddit через публичную ленту с произвольным сабреддитом, IA `Personalization → Ambient Experience`, backup-совместимость. См. `01_IMPLEMENTATION_STATUS.md`.
 **Аудит выполнялся read-only;** изменения кода — отдельный этап после него.
 **Следующий шаг:** blackout/ночное расписание — только после решения владельца; Photos требуют проверки D-pad в системном picker на реальном Google TV. 4K/Cinematic — только после лицензионного решения.
 
@@ -17,7 +17,7 @@
 3. Контент — **100 реальных роликов Apple Aerial** в четырёх темах, с реальными still-кадрами и реальными названиями. Никаких фейковых изображений нет.
 4. Качество — **1080p H.264 SDR**. 4K, HEVC, HDR, 10-bit и выбор display mode **не реализованы**; на 4K-панели это апскейл 1080p.
 5. Настройка **Download Frequency** сейчас фактически **не даёт обновлений**: публичный tar Apple — старая плоская схема, а `AerialCatalogBuilder.supports()` принимает только category schema. Код честно возвращает `UNCHANGED` и сохраняет встроенный каталог, но пользователь видит настройку, которая ничего не меняет.
-6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal, включая формат часов и Pixel Shift; Stage 5 добавил Photos через системный выбор.**
+6. UX на момент аудита: путь `Settings → Interface → Screen Saver`; строка «Choose Screen Saver» — **тупиковый выбор с одним пунктом** «Aerials». Нет режимов, нет «Personalization → Ambient Experience», нет выбора «Clock», «Weather», «Photos», «Minimal», «Abstract», «Cinematic Photography». **Stage 3 исправил это для Aerial/Clock/Minimal, включая формат часов и Pixel Shift; Stage 5 добавил Photos через системный выбор; Stage 6 добавил Reddit с произвольным сабреддитом.**
 7. OLED-защита отсутствует: статический нижний градиент, статичная подпись, нет pixel shift, нет dim/blackout, нет ограничения сессии. `keepScreenOn` держит экран включённым, пока оверлей виден.
 8. Энергопотребление не измерялось. В активной заставке работают **два ExoPlayer-декодера** (один играет, второй префетчит), плюс `TextureView`-композиция и still-битмап.
 9. Надёжность — сильная сторона: таймауты старта/стопа, 3 последовательных отказа → stills-only, backoff 15/30/60/120 с, отсутствие «чёрного экрана» при отсутствии картинки, отказ от HTTP-даунгрейда.
@@ -202,7 +202,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 
 ### A.10. Ограничения (findings)
 
-Таблица фиксирует состояние **на момент аудита**. После Stage 3–5 частично закрыты AMB-01, AMB-02, AMB-04, AMB-05 и AMB-11 (Aerial/Clock/Minimal/Photos + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, отдельный Weather-режим, blackout и энергия остаются открытыми.
+Таблица фиксирует состояние **на момент аудита**. После Stage 3–6 частично закрыты AMB-01, AMB-02, AMB-04, AMB-05 и AMB-11 (Aerial/Clock/Minimal/Photos/Reddit + IA + Pixel Shift + optional Dim/Max Session + Weather-строка на часах); 4K, отдельный Weather-режим, blackout и энергия остаются открытыми.
 
 | ID | Severity | Finding | Evidence |
 |---|---|---|---|
@@ -224,6 +224,7 @@ Chooser: grid 3 колонки, боковая панель категорий, 
 | AMB-16 | Low (legal) | Нет юридического подтверждения права стримить Apple Aerial в стороннем лаунчере; каталог — GPL-3.0 derived data. | `NOTICE` |
 | AMB-17 | Low (quality) | Stills 900×580 апскейлятся до 1920×1080 до первого проигрывания; после — 1080p poster. | `AerialPreviewStore`, `AerialPosterStore` |
 | AMB-18 | Low (settings) | «Show During Music» default On; нужно подтвердить, что это ожидаемое поведение, а не наследие. | `SaverPreferences.music` |
+| AMB-19 | Medium (third-party) | Reddit RSS не является стабильным API и не содержит `over_18`; фильтра NSFW нет по решению владельца. Любой сабреддит разрешён, поэтому контент может быть взрослым. | `RedditFeed.kt`, `saver_reddit_hint` |
 
 ### A.11. Чего аудит **не** проверял
 
@@ -826,12 +827,20 @@ Settings
 - Kids profile: фото не читаются, Clock-fallback.
 - Acceptance: AVD photo picker + 2 фото + preview + full-screen + rotate + BACK + force-stop проверены; **D-pad-only вход в системный picker не подтверждён** (AOSP-образ требует Tab/касания); real vendor DocumentsUI — не проверено.
 
-### Stage 6 — 4K/HDR pipeline + content licensing
+### Stage 6 — Reddit (реализовано)
+
+- Любой публичный сабреддит: имя, `r/name`, `/r/name/` или полный Reddit URL; **без allowlist**. Интервал только 6/12/24 ч, default 12.
+- Публичная Atom-лента `https://www.reddit.com/r/<name>/hot.rss?limit=100`; без аккаунта, cookie, токена и OAuth-секрета в APK.
+- Строгий XML-парсер без DTD/внешних сущностей; только HTTPS и только хосты Reddit; лимит 4 МБ, 100 постов, backoff на 429/403.
+- Весь список или индивидуальный выбор; 3-колоночная D-pad сетка; атрибуция; Kids-режим никогда не читает Reddit; feed/image cache не входит в backup.
+- Acceptance: AVD с реальной лентой 100 постов, preview, full-screen, Clock-fallback до первого кадра, toggle/Back проверены; **стабильность RSS, rate limits, NSFW-контент, реальный Google TV и физический пульт не проверены**.
+
+### Stage 7 — 4K/HDR pipeline + content licensing
 
 - Capability negotiation; 4K only with licensed content and supported decoder/panel.
 - Acceptance: on 1080p panel never selects 4K; on 4K panel actual 4K playback verified; no false “4K” label.
 
-### Stage 7 — Device matrix + soak
+### Stage 8 — Device matrix + soak
 
 - API 28–35, 720p/1080p/4K, LCD/OLED, 1 GB, ARM32/64.
 - 24 h soak, offline, 443-blocked, process death.
@@ -846,6 +855,7 @@ Settings
 | P1 | Clock/Minimal + OLED protection | максимальный эффект при низком риске |
 | P1 | Weather (opt-in) | использует уже существующие данные |
 | P2 | Photo Gallery | приватность/SAF/профили |
+| P2 | Reddit | сторонний немодерируемый источник; реализован без allowlist |
 | P2 | 4K/Cinematic | лицензия и железо |
 | P2 | Abstract | процедурный, но OLED/GPU |
 
@@ -858,13 +868,13 @@ Settings
 | Область | Оценка | Почему |
 |---|---:|---|
 | Aerial как screensaver | **8/10** | реальный контент, кроссфейд, fallback, тесты, аккуратная интеграция |
-| Ambient как продукт | **3/10** | один режим, нет часов/погоды/фото/minimal, нет OLED |
+| Ambient как продукт | **6/10** | Aerial + Clock + Minimal + Photos + Reddit; нет 4K/HDR, отдельного Weather и blackout |
 | Архитектура | **5/10** | хорошие чистые слои есть, но `SaverScreen` — монолит 922 строки |
 | Качество изображения | **6/10** | 100 реальных 1080p клипов; 4K/HDR нет |
 | UX / discoverability | **5/10** | спрятано в Interface, «Choose» с одним пунктом |
-| Надёжность | **8/10** | таймауты, backoff, stills-only, no black screen |
+| Надёжность | **7/10** | таймауты, backoff, stills-only, no black screen; Reddit RSS и rate limits не проверены на реальной сети |
 | OLED / энергия | **3/10** | нет защиты, нет измерений |
-| Совместимость | **3/10** | проверен только AVD API 34 |
+| Совместимость | **3/10** | проверен только AVD API 34; Reddit — только через AVD |
 | Тесты | **7/10** | хорошие unit/Compose; нет Dream/E2E/4K/OLED |
 
 **Итог:** это **хорошая Aerial-заставка**, а не Ambient Experience. Не переписывать. Выделить движок, сохранить Aerial, затем добавлять режимы по одному, с реальными источниками и без новых permissions.
@@ -883,6 +893,7 @@ Settings
 - «4K» — пока нет 4K-контента и подтверждённого 4K pipeline.
 - «Cinematic Photography» — пока нет лицензированного контента.
 - «Photo Gallery» — реализована только через системный выбор; нельзя обещать полную галерею, D-pad-only picker или работу без DocumentsUI/Photo Picker.
+- «Reddit всегда работает» — публичный RSS не имеет SLA; возможны 403/429/пустая лента, и в ленте нет метаданных `over_18`. NSFW не фильтруется по решению владельца.
 - «OLED-safe» — без pixel shift/dim/session и проверки на панели.
 - «Энергоэффективно» — без измерений.
 - «Совместимо со всеми Android TV» — проверен только AVD.
@@ -893,6 +904,7 @@ Settings
 - [ ] Решено, нужен ли 4K/HDR и есть ли лицензированный источник.
 - [x] Решено, как Photo Gallery получает доступ: SAF/Photo Picker, device-local, без broad permissions.
 - [x] Photos не попадают в backup и не читаются в Kids-профиле.
+- [x] Reddit: любой сабреддит без allowlist; интервал 6/12/24 ч; в Kids-профиле отключён.
 - [ ] Решены defaults OLED: dim/blackout/max session.
 - [ ] Согласовано переименование `Interface → Personalization`.
 - [ ] Согласован список v1-режимов (Aerial + Clock + Minimal).
@@ -931,6 +943,8 @@ Settings
 - реальный пульт;
 - `DreamService` в системном chooser;
 - SAF picker на TV;
+- Reddit RSS на реальной сети (403/429, смена ленты, NSFW-сабреддиты);
+- Reddit D-pad и реальный пульт на Google TV;
 - port 443 blocked;
 - process death во время saver;
 - 24 h soak;
