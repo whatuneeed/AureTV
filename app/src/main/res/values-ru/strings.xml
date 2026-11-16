@@ -14,6 +14,7 @@
     <string name="discovery_section_from_current">Из приложения</string>
     <string name="discovery_section_recent">Недавние</string>
     <string name="discovery_section_favorites">Избранное</string>
+    <string name="discovery_reason_trending">В топе</string>
     <string name="discovery_reason_continue">Продолжить просмотр</string>
     <string name="discovery_reason_recent">Недавно открывали</string>
     <string name="discovery_reason_favorite">В избранном</string>
@@ -23,6 +24,13 @@
     <string name="discovery_reason_diverse">Попробуйте что-то новое</string>
     <string name="discovery_settings_title">Рекомендации</string>
     <string name="discovery_personalization">Персонализация</string>
+    <string name="discovery_section_online">Фильмы</string>
+    <string name="online_source_label">Apple iTunes</string>
+    <string name="discovery_online">Онлайн-фильмы</string>
+    <string name="trailer_preview">Официальный трейлер</string>
+    <string name="trailer_unavailable">Трейлер недоступен</string>
+    <string name="trailer_exit_hint">Нажмите «Назад», чтобы закрыть</string>
+    <string name="trailer_description">Трейлер: %1$s</string>
     <string name="discovery_hidden">Скрытые рекомендации</string>
     <string name="discovery_hidden_hint">Скрытые карточки не показываются. Выберите карточку, чтобы вернуть её.</string>
     <string name="discovery_hidden_empty">Скрытых рекомендаций нет</string>
@@ -31,7 +39,7 @@
     <string name="discovery_clear_confirm">Очистить историю</string>
     <string name="discovery_clear_hint">Удаляет историю запусков и недавние. Избранное и скрытые карточки сохраняются.</string>
     <string name="discovery_clear_done">История рекомендаций очищена</string>
-    <string name="discovery_source_note">Карточки приходят от приложений, которые публикуют рекомендации для Android TV.</string>
+    <string name="discovery_source_note">Карточки приходят от приложений, которые публикуют рекомендации для Android TV. Онлайн-фильмы берутся из публичной ленты Apple iTunes RSS, а официальные трейлеры играют внутри лаунчера.</string>
     <string name="menu_add_favorite">В избранное</string>
     <string name="menu_remove_favorite">Убрать из избранного</string>
     <string name="library_favorites">Избранное</string>

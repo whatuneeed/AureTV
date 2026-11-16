@@ -1,6 +1,6 @@
 Privacy
 
-Policy version 6, updated 2026-11-16.
+Policy version 7, updated 2026-11-16.
 
 The launcher needs no account and has no developer-operated server. Updates, when enabled, are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
@@ -26,13 +26,15 @@ No account, cookie, API key or advertising identifier is sent. Like any internet
 
 Apple's screen saver: the public Apple CDN at sylvan.apple.com supplies the aerial catalogue, still images and video clips. The videos and stills are fetched over HTTP because some TV trust stores reject Apple's certificate chain; only this public host is allowed cleartext. These requests carry no account, token or personal data beyond ordinary connection details. The catalogue refresh remains HTTPS.
 
+Online Top Movies (only when you turn them on in Settings → Recommendations): itunes.apple.com serves Apple's public Top Movies RSS chart; is1-ssl.mzstatic.com serves the poster images; video-ssl.itunes.apple.com serves the official preview videos. Those requests reveal the TV IP address and an ordinary launcher User-Agent; no account, API key, cookie or persistent identifier is sent. The chart is cached locally for six hours; turning online recommendations off stops further requests, and Settings → Storage → Clear cache removes the cache. Previews play inside the launcher.
+
 Reddit (only when you choose Reddit): www.reddit.com serves a public Atom feed, and i.redd.it, preview.redd.it and external-preview.redd.it serve the images. Those requests reveal the TV's IP address and an ordinary launcher User-Agent; no Reddit account, cookie, token, vote or comment is sent. Reddit content is third-party and unmoderated: any subreddit can contain adult material. Reddit is disabled in Kids Mode.
 
 Weather (only when you turn it on): Open-Meteo (api.open-meteo.com) supplies forecasts; MET Norway (api.met.no) and wttr.in are fallbacks. If you choose "Automatic", the launcher asks an IP-geolocation service (ipapi.co, then ipwho.is, then get.geojs.io) for an approximate city and coordinates. Those coordinates, the language and the chosen units are sent to the weather service. A city search sends the text you type to Open-Meteo's geocoding service (geocoding-api.open-meteo.com); a reverse-geocoding fallback may send coordinates to Nominatim (nominatim.openstreetmap.org). Weather is optional and can be turned off at any time.
 
 Permissions
 
-Internet access is used for Apple's screen saver and, if enabled, weather.
+Internet access is used for Apple's screen saver, online Top Movies and, if enabled, weather.
 
 Network state access is used to show the connection type and the local IP address on the Network page.
 

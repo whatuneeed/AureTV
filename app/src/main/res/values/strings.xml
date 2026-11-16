@@ -14,6 +14,7 @@
     <string name="discovery_section_from_current">From this app</string>
     <string name="discovery_section_recent">Recently Used</string>
     <string name="discovery_section_favorites">Favorites</string>
+    <string name="discovery_reason_trending">Top movie</string>
     <string name="discovery_reason_continue">Continue watching</string>
     <string name="discovery_reason_recent">Recently opened</string>
     <string name="discovery_reason_favorite">In Favorites</string>
@@ -23,6 +24,13 @@
     <string name="discovery_reason_diverse">Try something new</string>
     <string name="discovery_settings_title">Recommendations</string>
     <string name="discovery_personalization">Personalization</string>
+    <string name="discovery_section_online">Top Movies</string>
+    <string name="online_source_label">Apple iTunes</string>
+    <string name="discovery_online">Online Top Movies</string>
+    <string name="trailer_preview">Official preview</string>
+    <string name="trailer_unavailable">Preview unavailable</string>
+    <string name="trailer_exit_hint">Press BACK to close</string>
+    <string name="trailer_description">Preview: %1$s</string>
     <string name="discovery_hidden">Hidden recommendations</string>
     <string name="discovery_hidden_hint">Hidden cards are not shown. Select one to bring it back.</string>
     <string name="discovery_hidden_empty">No hidden recommendations</string>
@@ -31,7 +39,7 @@
     <string name="discovery_clear_confirm">Clear history</string>
     <string name="discovery_clear_hint">Removes the launcher\'s launch history and recency. Favorites and hidden cards stay.</string>
     <string name="discovery_clear_done">Recommendation history cleared</string>
-    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV.</string>
+    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. Online Top Movies use the public Apple iTunes RSS and play official previews inside the launcher.</string>
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="library_favorites">Favorites</string>

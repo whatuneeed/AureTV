@@ -28,6 +28,13 @@ class DiscoverySettings(context: Context, prefsName: String) {
         prefs.edit().putBoolean(DiscoveryKeys.CONTINUE, enabled).apply()
     }
 
+    fun online(): Boolean =
+        SafePreferences.boolean(prefs, DiscoveryKeys.ONLINE, false)
+
+    fun setOnline(enabled: Boolean) {
+        prefs.edit().putBoolean(DiscoveryKeys.ONLINE, enabled).apply()
+    }
+
     fun personalization(): Boolean =
         SafePreferences.boolean(prefs, DiscoveryKeys.PERSONALIZATION, true)
 

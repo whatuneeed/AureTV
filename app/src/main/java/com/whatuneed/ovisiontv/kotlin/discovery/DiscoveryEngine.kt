@@ -2,10 +2,15 @@ package com.whatuneed.ovisiontv.kotlin.discovery
 
 import android.content.Context
 import android.content.Intent
+import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
+import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.WatchNextRow
 import com.whatuneed.ovisiontv.kotlin.data.WatchNextSource
+import com.whatuneed.ovisiontv.kotlin.online.OnlineRepository
+import com.whatuneed.ovisiontv.kotlin.online.toDiscoveryItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -27,6 +32,10 @@ internal data class DiscoveryInputs(
     val includeContinue: Boolean,
     val personalization: Boolean,
     val providerState: DiscoverySourceState,
+    // Real chart entries from the optional public online source. They bypass
+    // the TV provider filter because they are not published by an installed
+    // app, but never bypass Kids mode or the hidden list.
+    val onlineItems: List<DiscoveryItem> = emptyList(),
 )
 
 /**
@@ -101,6 +110,20 @@ internal fun buildSnapshot(inputs: DiscoveryInputs): DiscoverySnapshot {
             maxPerPackage = 2,
         )
         if (forYou.size >= 3) rails += DiscoveryRail(DiscoverySection.FOR_YOU, forYou)
+    }
+
+    // Online Top Movies are opt-in and never appear for a Kids profile. The
+    // rail is used exactly as published, without ranking across providers.
+    if (!inputs.kidsMode) {
+        val online = inputs.onlineItems
+            .asSequence()
+            .filter { it.id !in hidden }
+            .filter { !it.intentUri.isNullOrBlank() }
+            .take(SECTION_LIMIT)
+            .toList()
+        if (online.isNotEmpty()) {
+            rails += DiscoveryRail(DiscoverySection.ONLINE, online)
+        }
     }
 
     // From this app: the old tvOS top shelf, kept as one rail among the others.
@@ -191,6 +214,7 @@ internal const val MAX_SECTIONS = 4
 private val SECTION_ORDER = listOf(
     DiscoverySection.FROM_APP,
     DiscoverySection.CONTINUE,
+    DiscoverySection.ONLINE,
     DiscoverySection.FOR_YOU,
     DiscoverySection.RECENT,
     DiscoverySection.FAVORITES,
@@ -286,6 +310,7 @@ class DiscoveryEngine(
     private val appContext = context.applicationContext
     private val store = DiscoveryStore(appContext, prefsName)
     private val settings = DiscoverySettings(appContext, prefsName)
+    private val online = OnlineRepository(java.io.File(appContext.cacheDir, "online-top-movies.json"))
 
     fun recordLaunch(packageName: String) = store.recordLaunch(packageName)
 
@@ -352,6 +377,24 @@ class DiscoveryEngine(
             }
         }
 
+        val onlineItems = if (settings.online() && !kidsMode) {
+            try {
+                online.topMovies(chartCountry()).map { movie ->
+                    movie.toDiscoveryItem(
+                        ownPackage = appContext.packageName,
+                        sourceLabel = appContext.getString(R.string.online_source_label),
+                        previewLabel = appContext.getString(R.string.trailer_preview),
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
         val personalization = settings.personalization()
         val snapshot = buildSnapshot(
             DiscoveryInputs(
@@ -370,8 +413,20 @@ class DiscoveryEngine(
                 includeContinue = settings.continueWatching(),
                 personalization = personalization,
                 providerState = providerState,
+                onlineItems = onlineItems,
             ),
         )
         snapshot
+    }
+
+    /**
+     * The public chart is localized by storefront, not by the UI language
+     * alone. Russian UI asks the Russian store; otherwise the system country
+     * is used, with the US chart as the honest fallback.
+     */
+    private fun chartCountry(): String {
+        if (LocalePreference.get(appContext) == LocalePreference.RUSSIAN) return "ru"
+        val country = java.util.Locale.getDefault().country.lowercase(java.util.Locale.ROOT)
+        return country.takeIf { it.length == 2 } ?: "us"
     }
 }

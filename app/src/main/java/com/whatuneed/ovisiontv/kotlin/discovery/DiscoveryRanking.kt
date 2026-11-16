@@ -69,6 +69,7 @@ internal fun sourceConfidence(source: DiscoverySource): Double = when (source) {
     DiscoverySource.TV_PROVIDER -> 1.0
     DiscoverySource.LAUNCHER -> 0.8
     DiscoverySource.PACKAGE_MANAGER -> 0.7
+    DiscoverySource.ONLINE -> 0.8
 }
 
 internal fun reasonFor(item: DiscoveryItem, context: RankingContext): DiscoveryReason {
@@ -82,6 +83,7 @@ internal fun reasonFor(item: DiscoveryItem, context: RankingContext): DiscoveryR
         usage != null && isRecent(usage.lastUtc, context.nowUtc) -> DiscoveryReason.RECENTLY_LAUNCHED
         usage != null && usage.count >= 3 -> DiscoveryReason.OFTEN_USED
         item.source == DiscoverySource.TV_PROVIDER -> DiscoveryReason.NEW_FROM_APP
+        item.source == DiscoverySource.ONLINE -> DiscoveryReason.TRENDING
         else -> DiscoveryReason.RECENTLY_LAUNCHED
     }
 }

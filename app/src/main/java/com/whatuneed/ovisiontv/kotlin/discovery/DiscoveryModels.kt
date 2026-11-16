@@ -6,6 +6,7 @@ package com.whatuneed.ovisiontv.kotlin.discovery
  */
 enum class DiscoverySection {
     CONTINUE,
+    ONLINE,
     FOR_YOU,
     FROM_APP,
     RECENT,
@@ -27,11 +28,12 @@ enum class DiscoveryReason {
     NEW_FROM_APP,
     OFTEN_USED,
     FROM_CURRENT_APP,
+    TRENDING,
     DIVERSE_PICK,
 }
 
 /** Where the card came from. No source is ever invented. */
-enum class DiscoverySource { TV_PROVIDER, LAUNCHER, PACKAGE_MANAGER }
+enum class DiscoverySource { TV_PROVIDER, LAUNCHER, PACKAGE_MANAGER, ONLINE }
 
 /** Health of the provider read; a failure degrades to local rails, never fake content. */
 enum class DiscoverySourceState { OK, EMPTY, NO_PERMISSION, DISABLED, FAILED }
@@ -95,6 +97,7 @@ internal fun defaultDiscoverySection(rails: List<DiscoveryRail>): DiscoverySecti
     val order = listOf(
         DiscoverySection.FROM_APP,
         DiscoverySection.CONTINUE,
+        DiscoverySection.ONLINE,
         DiscoverySection.FOR_YOU,
         DiscoverySection.RECENT,
         DiscoverySection.FAVORITES,

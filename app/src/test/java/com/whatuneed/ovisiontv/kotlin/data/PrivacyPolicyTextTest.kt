@@ -16,8 +16,8 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version 6"))
-        assertTrue(ru.contains("Версия политики 6"))
+        assertTrue(en.contains("Policy version 7"))
+        assertTrue(ru.contains("Версия политики 7"))
         assertTrue(en.contains("2026-11-16"))
         assertTrue(ru.contains("16.11.2026"))
     }
@@ -26,6 +26,9 @@ class PrivacyPolicyTextTest {
     fun everyNetworkHostIsNamedInBothLanguages() {
         val hosts = listOf(
             "sylvan.apple.com",
+            "itunes.apple.com",
+            "is1-ssl.mzstatic.com",
+            "video-ssl.itunes.apple.com",
             "api.open-meteo.com",
             "geocoding-api.open-meteo.com",
             "api.met.no",
@@ -52,6 +55,16 @@ class PrivacyPolicyTextTest {
         assertTrue(ru.contains("след сбоя"))
         assertFalse(en.contains("does not request location"))
         assertFalse(ru.contains("не запрашивает местоположение"))
+    }
+
+    @Test
+    fun onlineTopMoviesAreDisclosedAsAnOptInPublicAppleFeed() {
+        assertTrue(en.contains("Online Top Movies"))
+        assertTrue(en.contains("no account, API key"))
+        assertTrue(en.contains("six hours"))
+        assertTrue(ru.contains("Онлайн-фильмы"))
+        assertTrue(ru.contains("API-ключ"))
+        assertTrue(ru.contains("шесть часов"))
     }
 
     @Test

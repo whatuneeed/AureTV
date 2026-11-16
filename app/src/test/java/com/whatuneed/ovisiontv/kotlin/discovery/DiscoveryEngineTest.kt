@@ -70,6 +70,7 @@ class DiscoveryEngineTest {
         kidsMode: Boolean = false,
         ownPackage: String = "me",
         providerState: DiscoverySourceState = DiscoverySourceState.OK,
+        onlineItems: List<DiscoveryItem> = emptyList(),
     ) = DiscoveryInputs(
         profileId = "p1",
         nowUtc = now,
@@ -86,10 +87,59 @@ class DiscoveryEngineTest {
         includeContinue = includeContinue,
         personalization = personalization,
         providerState = providerState,
+        onlineItems = onlineItems,
     )
 
     private fun DiscoverySnapshot.rail(section: DiscoverySection) =
         rails.firstOrNull { it.section == section }
+
+    private fun online(id: String) = DiscoveryItem(
+        id = id,
+        source = DiscoverySource.ONLINE,
+        kind = DiscoveryKind.VIDEO,
+        packageName = "me",
+        packageLabel = "Apple iTunes",
+        title = id,
+        intentUri = "https://video-ssl.itunes.apple.com/$id.m4v",
+        reason = DiscoveryReason.TRENDING,
+    )
+
+    @Test
+    fun onlineTopMoviesBecomeTheirOwnRailAndTheDefaultWhenNothingElseExists() {
+        val snapshot = buildSnapshot(
+            inputs(onlineItems = listOf(online("apple|1"), online("apple|2"))),
+        )
+
+        assertEquals(
+            listOf("apple|1", "apple|2"),
+            snapshot.rail(DiscoverySection.ONLINE)?.items?.map { it.id },
+        )
+        assertEquals(DiscoverySection.ONLINE, defaultDiscoverySection(snapshot.rails))
+    }
+
+    @Test
+    fun kidsModeNeverShowsOnlineTopMovies() {
+        val snapshot = buildSnapshot(
+            inputs(
+                kidsMode = true,
+                onlineItems = listOf(online("apple|1"), online("apple|2")),
+            ),
+        )
+
+        assertTrue(snapshot.rail(DiscoverySection.ONLINE) == null)
+    }
+
+    @Test
+    fun aHiddenOnlineCardIsDropped() {
+        val snapshot = buildSnapshot(
+            inputs(
+                onlineItems = listOf(online("apple|1"), online("apple|2")),
+                hidden = setOf("apple|1"),
+            ),
+        )
+
+        assertEquals(listOf("apple|2"), snapshot.rail(DiscoverySection.ONLINE)?.items?.map { it.id })
+    }
 
     @Test
     fun the_launcher_never_recommends_itself() {

@@ -424,6 +424,7 @@ private data class SettingsRow(
  */
 private data class DiscoveryUi(
     val recommendations: Boolean,
+    val online: Boolean,
     val continueWatching: Boolean,
     val personalization: Boolean,
     val hidden: List<DiscoveryItem>,
@@ -445,6 +446,16 @@ private fun discoverySettingsRows(
             val next = ui.copy(recommendations = !ui.recommendations)
             onUiChange(next)
             settings.setRecommendations(next.recommendations)
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.discovery_online),
+        value = stringResource(if (ui.online) R.string.saver_on else R.string.saver_off),
+        toggleState = ui.online,
+        action = {
+            val next = ui.copy(online = !ui.online)
+            onUiChange(next)
+            settings.setOnline(next.online)
         },
     ),
     SettingsRow(
@@ -755,6 +766,7 @@ fun SettingsScreen(
         mutableStateOf(
             DiscoveryUi(
                 recommendations = discoverySettings.recommendations(),
+                online = discoverySettings.online(),
                 continueWatching = discoverySettings.continueWatching(),
                 personalization = discoverySettings.personalization(),
                 hidden = discoveryStore.hidden(),

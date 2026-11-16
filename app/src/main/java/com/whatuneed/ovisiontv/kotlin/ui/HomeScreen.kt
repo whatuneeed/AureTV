@@ -100,6 +100,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.TopShelf
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenu
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenuEntry
+import com.whatuneed.ovisiontv.kotlin.ui.components.TrailerOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_LEFT
 import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_TOP
 import com.whatuneed.ovisiontv.kotlin.ui.components.WeatherCapsule
@@ -112,6 +113,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryEngine
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySnapshot
 import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
 import kotlinx.coroutines.Job
@@ -126,6 +128,8 @@ import kotlin.math.min
 // with releases that can land near 430 ms, so 350 ms is a safe project value.
 private const val TAG = "OVisionHome"
 private const val MENU_HOLD_MS = 350L
+
+private data class PlayingTrailer(val title: String, val url: String)
 
 // Phase 08: only a resting cursor is remembered; a 400 ms pause reads as an
 // intentional stop and is shorter than the time it takes to leave the room.
@@ -277,6 +281,7 @@ fun HomeScreen(
     var sectionFocused by remember { mutableStateOf(false) }
     var discoveryRevision by remember { mutableIntStateOf(0) }
     var shelfMenu by remember { mutableStateOf<DiscoveryItem?>(null) }
+    var playingTrailer by remember { mutableStateOf<PlayingTrailer?>(null) }
     val sectionCardMemory = remember { mutableStateMapOf<String, Int>() }
     var lastShelfPackage by remember { mutableStateOf<String?>(null) }
     val rails = discoverySnapshot.rails
@@ -567,11 +572,12 @@ fun HomeScreen(
         searchOpen,
         controlCenterOpen,
         weatherPanelOpen,
+        playingTrailer,
     ) {
         if (editing || openFolder != null || launching != null ||
             menuFolderId != null || folderDeleteId != null || menuApp != null ||
             moveToFolderApp != null || newFolderApp != null || searchOpen ||
-            controlCenterOpen || weatherPanelOpen
+            controlCenterOpen || weatherPanelOpen || playingTrailer != null
         ) {
             shelfFocus = -1
             sectionFocused = false
@@ -603,13 +609,14 @@ fun HomeScreen(
         capsuleFocused,
         weatherFocused,
         weatherPanelOpen,
+        playingTrailer,
     ) {
         if (shelfCards.size <= 1 || sectionFocused || shelfFocus >= 0 ||
             shelfMenu != null || libraryMode || editing || openFolder != null ||
             launching != null || menuFolderId != null || folderDeleteId != null ||
             menuApp != null || moveToFolderApp != null || newFolderApp != null ||
             searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
-            weatherPanelOpen
+            weatherPanelOpen || playingTrailer != null
         ) {
             return@LaunchedEffect
         }
@@ -904,6 +911,18 @@ fun HomeScreen(
     }
 
     fun activateShelfCard(card: DiscoveryItem) {
+        // An online card is a real official preview, not a package launch. It
+        // is played by the launcher itself, so no foreign app is started and
+        // no browser is needed on the TV.
+        if (card.source == DiscoverySource.ONLINE) {
+            val url = card.intentUri
+            if (url != null && url.startsWith("https://")) {
+                playingTrailer = PlayingTrailer(card.title, url)
+            } else {
+                Toast.makeText(context, R.string.trailer_unavailable, Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
         // The rail is refreshed after a profile/allowlist change, but a press
         // in that gap must not open an app the kids profile no longer allows.
         if (kidsMode && !KidsMode.allowed(context, card.packageName)) {
@@ -1642,7 +1661,8 @@ fun HomeScreen(
                 // offering the tiles it covers.
                 .then(
                     if (openFolder != null || launching != null || menuOpen || searchOpen ||
-                        controlCenterOpen || weatherPanelOpen || shelfMenu != null
+                        controlCenterOpen || weatherPanelOpen || shelfMenu != null ||
+                        playingTrailer != null
                     ) {
                         Modifier.clearAndSetSemantics {}
                     } else {
@@ -2245,6 +2265,24 @@ fun HomeScreen(
                         x = -scale.dp(CC_CAPSULE_SIDE),
                         y = scale.dp(CC_CAPSULE_TOP),
                     ),
+            )
+        }
+
+        playingTrailer?.let { trailer ->
+            TrailerOverlay(
+                title = trailer.title,
+                url = trailer.url,
+                onDismiss = {
+                    playingTrailer = null
+                    // Closing the preview returns to the card that opened it,
+                    // not to the dock: the modal effect lowered the shelf while
+                    // the preview played, so put its cursor back before asking
+                    // TopShelf for Android focus again.
+                    if (shelfCards.isNotEmpty()) {
+                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                    }
+                    shelfFocusTick++
+                },
             )
         }
 

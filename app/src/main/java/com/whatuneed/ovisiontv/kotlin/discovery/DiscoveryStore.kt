@@ -29,6 +29,7 @@ internal object DiscoveryKeys {
     const val HIDDEN = "discovery_hidden"
     const val SHOWN = "discovery_shown"
     const val PERSONALIZATION = "discovery_personalization"
+    const val ONLINE = "discovery_online"
 
     // p1 shares this file with the rest of the launcher, so these two keys stay
     // byte-identical to ContentPreferences and the wizard keeps working.
@@ -123,6 +124,7 @@ class DiscoveryStore(context: Context, prefsName: String) {
             .remove(DiscoveryKeys.HIDDEN)
             .remove(DiscoveryKeys.SHOWN)
             .remove(DiscoveryKeys.PERSONALIZATION)
+            .remove(DiscoveryKeys.ONLINE)
             .remove(DiscoveryKeys.RECOMMENDATIONS)
             .remove(DiscoveryKeys.CONTINUE)
             .apply()

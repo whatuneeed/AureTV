@@ -13,6 +13,9 @@
 
 | Симптом | Запись |
 |---|---|
+| В полке нет онлайн-фильмов, хотя в Настройках включены «Онлайн-фильмы» | 0.5.12 (онлайн-полка) |
+| OK на онлайн-фильме открывает чужое приложение или браузер вместо трейлера | 0.5.12 (трейлер) |
+| BACK в полноэкранном трейлере не закрывает его или вместе с ним выкидывает из полки в док | 0.5.12 (трейлер/фокус) |
 | Setup открывается на первой строке: выбран русский, а фокус на «Как в системе» | 0.5.11 (Setup focus) |
 | Строки «Аватар», «Имя», «Start After» выглядят как статичные значения | 0.5.11 (Setup chevrons) |
 | «Главная и погода» читается как один список из пяти переключателей | 0.5.11 (Setup divider) |
@@ -237,6 +240,15 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 16.11.2026 — 0.5.12: Онлайн-фильмы Apple Top Movies и официальные трейлеры
+
+- **Симптом.** В полке нет реальных фильмов; карточки приложений не дают посмотреть официальный трейлер; переход по онлайн-карточке не должен запускать чужое приложение или браузер. После OK на карточке трейлер должен играть внутри лаунчера, а BACK — закрывать только трейлер и возвращать фокус на ту же карточку.
+- **Причина.** У лаунчера не было источника онлайн-фильмов и плеера внутри Home. Просто добавить карточку с `intentUri` было нельзя: это открыло бы внешний плеер/браузер. Обычный оверлей внутри Home не получал фокус — BACK перехватывал grid key handler, поэтому трейлер не закрывался, а после закрытия полка теряла курсор.
+- **Что сделано.** Новый пакет `online/`: `OnlineModels` (чистый разбор публичного Apple iTunes Top Movies RSS, HTTPS-only allowlist `apple.com`/`mzstatic.com`, отбрасывание cleartext и чужих хостов, дедупликация, лимит 12, портретный постер `600x900bb`), `OnlineClient` (таймауты 8 с, лимит ответа, кэш `online-top-movies.json` на 6 часов, stale fallback только при ошибке сети), `OnlineDiscovery` (карточка `DiscoverySource.ONLINE`, `DiscoveryReason.TRENDING`; `landscapeUri` намеренно `null`, потому что Apple отдаёт только портрет). `DiscoveryEngine` строит отдельную полку `ONLINE` только при включённом переключателе, вне Kids Mode и с учётом скрытых; `chartCountry()` — ru для русского UI, иначе страна системы, иначе us. `Settings → Рекомендации → Онлайн-фильмы` по умолчанию **выключено**. `TrailerOverlay` — один ExoPlayer в `Dialog`-окне, без внешнего плеера; любой ключ/BACK закрывает; при ошибке честный текст «Трейлер недоступен»; после закрытия `HomeScreen` возвращает `shelfFocus` на выбранную карточку. Политика приватности — v7, EN/RU, с `itunes.apple.com`, `is1-ssl.mzstatic.com`, `video-ssl.itunes.apple.com`, 6-часовым кэшем и отсутствием аккаунта/API-ключа.
+- **Файлы.** `online/OnlineModels.kt`, `online/OnlineClient.kt`, `online/OnlineDiscovery.kt`; `discovery/DiscoveryModels.kt`, `DiscoveryEngine.kt`, `DiscoveryRanking.kt`, `DiscoverySettings.kt`, `DiscoveryStore.kt`; `ui/HomeScreen.kt`, `ui/SettingsScreen.kt`, `ui/components/TopShelf.kt`, `ui/components/TrailerOverlay.kt`; `res/raw/privacy_en.txt`, `privacy_ru.txt`, `values/strings.xml`, `values-ru/strings.xml`; тесты `OnlineModelsTest`, `DiscoveryEngineTest`, `PrivacyPolicyTextTest`, `TrailerOverlayTest`.
+- **Чего не делать.** Не включать онлайн-полку по умолчанию и не показывать её в Kids Mode. Не подменять портретный постер выдуманным landscape-героем и не растягивать его. Не возвращать запуск внешнего приложения/браузера для онлайн-карточки. Не убирать `Dialog`-окно трейлера: обычный оверлей внутри Home снова отдаст BACK сетке. Не увеличивать TTL кэша без причины и не отправлять ключи/аккаунты; источник — публичный RSS Apple. Не удалять пользовательские данные при сетевой ошибке: при неудаче остаётся stale-кэш или пустая полка.
+- **Проверка.** Unit — **494 debug + 494 release**; connected — **280/280** (0 fail, 10m51s); lint — **0 Error / 19 Warning / 5 Information**; `TrailerOverlayTest` — BACK закрывает оверлей; `OnlineModelsTest` — 9 тестов (реальный entry, single-object, cleartext, чужой хост, дубли, malformed JSON, cache round-trip, cleartext cache, маппинг без фейкового landscape); `DiscoveryEngineTest` — 3 онлайн-теста (своя полка, Kids Mode, скрытые). Ручная проверка на `hume-tv`: полка «Фильмы», постер «Крестный отец», трейлер играет через ExoPlayer, BACK закрывает. Артефакт: **4 898 814 B**, SHA-256 **`cb756fa5d23689464e2dd362fb479296f042c872df542b0a4f438a1fde1728e3`**, версия **0.5.12 / vc85**, `release_check.py` EXIT=0.
 
 ### 16.11.2026 — 0.5.11: Setup — фокус на сохранённом выборе и видимые действия
 

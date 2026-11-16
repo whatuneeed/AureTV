@@ -489,6 +489,7 @@ private fun SectionBar(
 @Composable
 private fun sectionLabel(section: DiscoverySection, appLabel: String?): String = when (section) {
     DiscoverySection.CONTINUE -> stringResource(R.string.discovery_section_continue)
+    DiscoverySection.ONLINE -> stringResource(R.string.discovery_section_online)
     DiscoverySection.FOR_YOU -> stringResource(R.string.discovery_section_for_you)
     DiscoverySection.FROM_APP -> if (appLabel.isNullOrBlank()) {
         stringResource(R.string.discovery_section_from_current)
@@ -796,6 +797,7 @@ private fun reasonLabel(reason: DiscoveryReason): String = when (reason) {
     DiscoveryReason.NEW_FROM_APP -> stringResource(R.string.discovery_reason_new)
     DiscoveryReason.OFTEN_USED -> stringResource(R.string.discovery_reason_often)
     DiscoveryReason.FROM_CURRENT_APP -> stringResource(R.string.discovery_reason_from_app)
+    DiscoveryReason.TRENDING -> stringResource(R.string.discovery_reason_trending)
     DiscoveryReason.DIVERSE_PICK -> stringResource(R.string.discovery_reason_diverse)
 }
 
