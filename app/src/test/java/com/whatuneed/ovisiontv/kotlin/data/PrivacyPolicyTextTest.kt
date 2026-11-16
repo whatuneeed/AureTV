@@ -16,8 +16,8 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version"))
-        assertTrue(ru.contains("Версия политики"))
+        assertTrue(en.contains("Policy version 5"))
+        assertTrue(ru.contains("Версия политики 5"))
         assertTrue(en.contains("2026-11-16"))
         assertTrue(ru.contains("16.11.2026"))
     }
@@ -34,6 +34,9 @@ class PrivacyPolicyTextTest {
             "ipwho.is",
             "get.geojs.io",
             "nominatim.openstreetmap.org",
+            "github.com",
+            "objects.githubusercontent.com",
+            "release-assets.githubusercontent.com",
         )
         hosts.forEach { host ->
             assertTrue("EN policy omits $host", en.contains(host))

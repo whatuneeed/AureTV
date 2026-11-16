@@ -86,6 +86,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.SleepControls
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
+import com.whatuneed.ovisiontv.kotlin.update.UpdateAutoCheck
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
 import com.whatuneed.ovisiontv.kotlin.data.kidsFilter
@@ -159,6 +160,12 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         KidsStore(context).allowlist(profile.id)
     }
     val kidsActive = profile.kids
+
+    // The release check runs after Home's first frame, never in onCreate. It
+    // is throttled by UpdateStateStore and never runs in a kids profile.
+    LaunchedEffect(kidsActive) {
+        if (!kidsActive) UpdateAutoCheck.maybeCheck(context.applicationContext, false)
+    }
 
     var saverVisible by remember { mutableStateOf(false) }
     var saverClosing by remember { mutableStateOf(false) }

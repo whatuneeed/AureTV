@@ -227,8 +227,22 @@
 | Up на финише мастера уводит фокус в пустую область | 0.4.48 (AQ-29) |
 | После permanent denial строка разрешения снова и снова просит систему | 0.4.48 (AQ-30) |
 | В сетке нет способа отличить или скрыть приложения без ТВ-версии | 0.4.51 (SI-01) |
+| После «Install update» экран навсегда остаётся в «Waiting for the system installer» | 0.5.8 |
+| «Try again» после готового APK снова скачивает файл, а не устанавливает его | 0.5.8 |
+| После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 16.11.2026 — 0.5.8: встроенная система обновлений
+
+Статус: `versionCode 81` / `versionName 0.5.8`, APK **4 862 594 B**, SHA-256 **`4a3a74482d81c214dc3844652fc9e8bd6a45acb44e466a7a62e8747ae5f6b1c4`**, подпись v2, прежний сертификат.
+
+- **Что добавлено.** Пакет `update/`: строгий JSON schema 1, HTTPS/allowlist, ETag/304, каналы stable/beta, manual/daily/weekly, загрузка с SHA-256 и Range, `PackageInstaller` + preflight signer-check, `InstallResultReceiver`, `update_state`, кэш в `cacheDir`, pre-update backup. UI: `Settings → Device → System → Software Update`, D-pad, прогресс, отмена, notes. Пустой `OVISIONTV_UPDATE_URL` = `NOT_CONFIGURED`, сеть не вызывается. Privacy v5.
+- **Найденный дефект.** `PendingIntent` для `PackageInstaller` был `FLAG_IMMUTABLE`; система не могла добавить `EXTRA_STATUS`/`EXTRA_INTENT`, callback приходил с `Integer.MIN_VALUE`, установка зависала. Исправлено на `FLAG_MUTABLE` с explicit non-exported receiver; после этого системный prompt и установка работают.
+- **Проверка.** Юнит **480/480**, инструментальные **261/261** на AVD API 34, lint **0 Error / 19 Warning**, `assembleRelease` PASS, `release_check.py` PASS. Вручную на AVD: пустой URL, D-pad, `READY`, системный prompt, подтверждение, фактическая установка (82→83), callback. Тестовые APK подкладывались в `cacheDir`; реальный GitHub download не проверялся.
+- **Граница.** Реальный GitHub/Pages, сеть, физический ТВ, API 28–33/35, ARM, TalkBack, OEM-installer, Play, metadata signature, v3, CI — NOT TESTED. Silent install и автоматический rollback не обещаются. Публикация не выполнялась.
+- **Не делать.** Не менять `applicationId`/ключ/`versionCode` без решения владельца; не включать `REQUEST_INSTALL_PACKAGES` шире; не заменять системный prompt на скрытую установку; не считать SHA-256 подписью; не включать v3 без проверки release gate; не публиковать без отдельного разрешения.
+- **Доказательства.** `UPDATE_SYSTEM/00_AUDIT_AND_ARCHITECTURE.md`, `UPDATE_SYSTEM/01_IMPLEMENTATION_STATUS.md`, `app/build/reports/lint-results-debug.xml`, `app/build/outputs/apk/release/app-release.apk`.
 
 ### 14.11.2026 — 0.5.0: MediaSession и системная заставка (SI-02/SI-03)
 

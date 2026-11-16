@@ -24,6 +24,9 @@
     <!-- Aerial clips are streamed from Apple's public CDN. Nothing is uploaded;
          the permission exists only for the saver's video requests. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- In-app updates use PackageInstaller. Android still requires the user to
+         allow installs for this app and to confirm every update in system UI. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Settings reports the active connection and its IPv4 address; the
          permission grants no data access and no location. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -123,6 +126,12 @@
             android:name=".backup.BackupAlarmReceiver"
             android:exported="false" />
 
+        <!-- PackageInstaller result callback. Explicit PendingIntent only; no
+             intent filter and not exported. -->
+        <receiver
+            android:name=".update.InstallResultReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".SettingsActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
@@ -143,6 +152,16 @@
              reads no intent data and only the launcher can open it. -->
         <activity
             android:name=".BackupActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true" />
+
+        <!-- A sub-screen of Settings. No intent filter and not exported: the
+             system installer is opened from here only after user action. -->
+        <activity
+            android:name=".SoftwareUpdateActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
             android:excludeFromRecents="true"
             android:exported="false"

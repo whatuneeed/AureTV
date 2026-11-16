@@ -1,12 +1,14 @@
 Privacy
 
-Policy version 4, updated 2026-11-16.
+Policy version 5, updated 2026-11-16.
 
-The launcher needs no account and has no developer-operated server. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
+The launcher needs no account and has no developer-operated server. Updates, when enabled, are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
 Stored on the device
 
 Tile order, folders, hidden apps, profiles, the selected profile, screen-saver settings, language and content preferences are kept locally in app storage. The launcher also keeps a small amount of local discovery data: which apps you launched, favorite and hidden recommendation cards, and which cards were already shown. That data is used only to arrange this launcher.
+
+App updates (only when the release page is configured and checks are enabled): GitHub hosts (github.com, objects.githubusercontent.com, release-assets.githubusercontent.com) serve the release metadata and the APK. The request reveals the TV IP address and the launcher User-Agent; no GitHub account, cookie or token is sent. Automatic checks can be changed to Manual in Settings → Device → System → Software Update, and they never run in Kids Mode. The APK is checked against its SHA-256 and the installed signing certificate; installation always uses the Android system installer.
 
 Weather is off until you choose it. If you turn it on, the city you pick (or an approximate location derived from the internet address), the last forecast, units and source are kept locally. Turning weather off stops further weather refreshes. Settings → Weather → Clear Weather Data deletes the saved city, coordinates and last forecast immediately; otherwise the last forecast remains until it is overwritten or the app data is cleared.
 

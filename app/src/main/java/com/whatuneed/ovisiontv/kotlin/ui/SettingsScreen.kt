@@ -118,6 +118,7 @@ import com.whatuneed.ovisiontv.kotlin.BackupActivity
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SetupActivity
+import com.whatuneed.ovisiontv.kotlin.SoftwareUpdateActivity
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClipCache
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
@@ -138,6 +139,7 @@ import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.setShowPhoneApps
+import com.whatuneed.ovisiontv.kotlin.update.UpdateStateStore
 import com.whatuneed.ovisiontv.kotlin.data.showPhoneApps
 import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.isWifiNamePermanentDenial
@@ -2505,6 +2507,9 @@ fun SettingsScreen(
 
         PAGE_SYSTEM -> {
             val defaultHome = facts?.defaultHome == true
+            val updateSummary = remember(context, resumeTick) {
+                UpdateStateStore(context).summary()
+            }
             // Two steps, as in Java: the row turns the preference on, and the
             // next press sends the user to the switch it still needs.
             val homeAction: (() -> Unit)? = when {
@@ -2517,6 +2522,19 @@ fun SettingsScreen(
                     ({ homeOverride = false; StartupPreferences.setHomeOverride(context, false) })
             }
             listOfNotNull(
+                SettingsRow(
+                    title = stringResource(R.string.settings_software_update),
+                    value = updateSummary?.let {
+                        stringResource(R.string.settings_software_update_available)
+                    } ?: stringResource(R.string.settings_software_update_manual),
+                    chevron = true,
+                    action = {
+                        context.startActivity(
+                            Intent(context, SoftwareUpdateActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    },
+                ),
                 SettingsRow(
                     title = stringResource(R.string.settings_system_home),
                     value = facts?.let {

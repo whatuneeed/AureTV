@@ -18,6 +18,11 @@ val signingProperties = Properties().apply {
     if (signingPropertiesFile.isFile) signingPropertiesFile.inputStream().use { load(it) }
 }
 
+// Empty means the in-app updater is honestly disabled until the owner
+// publishes the GitHub metadata page. The value must be HTTPS; the code
+// revalidates it before every request.
+val updateMetadataUrl = System.getenv("OVISIONTV_UPDATE_URL")?.trim().orEmpty()
+
 android {
     namespace = "com.whatuneed.ovisiontv.kotlin"
     compileSdk = 35
@@ -28,8 +33,13 @@ android {
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;
         // versionName names the batch of changes the build contains.
-        versionCode = 80
-        versionName = "0.5.7"
+        versionCode = 81
+        versionName = "0.5.8"
+        buildConfigField(
+            "String",
+            "UPDATE_METADATA_URL",
+            "\"${updateMetadataUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -40,6 +50,8 @@ android {
                 storePassword = signingProperties.getProperty("storePassword")
                 keyAlias = signingProperties.getProperty("keyAlias")
                 keyPassword = signingProperties.getProperty("keyPassword")
+                // v2 is the scheme the release gate and minSdk 28 expect.
+                enableV2Signing = true
             }
         }
     }

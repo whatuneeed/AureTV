@@ -18,6 +18,13 @@ class ManifestPermissionTest {
     }
 
     @Test
+    fun theInAppInstallerUsesTheNarrowInstallPermission() {
+        assertTrue(manifest.contains("android.permission.REQUEST_INSTALL_PACKAGES"))
+        assertFalse(manifest.contains("android.permission.QUERY_ALL_PACKAGES"))
+        assertFalse(manifest.contains("android.permission.REQUEST_DELETE_PACKAGES"))
+    }
+
+    @Test
     fun coarseLocationIsLimitedToTheReleasesThatRequireIt() {
         val coarse = manifest.lines().indexOfFirst {
             it.contains("android.permission.ACCESS_COARSE_LOCATION")
