@@ -446,8 +446,8 @@
     <string name="setup_saver_hint">Что показывать, когда экран простаивает. Темы, «Фото» и Reddit — в Настройках → Персонализация → Заставка.</string>
     <string name="setup_saver_delay">Запускать через</string>
     <string name="setup_saver_delay_hint">Нажмите OK, чтобы сменить интервал</string>
-    <string name="setup_saver_music">Музыка</string>
-    <string name="setup_saver_music_hint">Играть музыку во время заставки</string>
+    <string name="setup_saver_music">Показывать во время музыки</string>
+    <string name="setup_saver_music_hint">Запускать заставку, даже когда играет музыка.</string>
     <string name="setup_access_hint">Необязательные системные настройки. Их можно изменить позже в Настройках → Система.</string>
     <string name="setup_home_app_detail">Если телевизор предложит выбор домашнего экрана</string>
     <string name="setup_recommendations_detail">Карточки фильмов и передач над плитками</string>
@@ -471,7 +471,7 @@
     <string name="setup_state_done">Готово</string>
     <string name="setup_summary_language">Язык: %1$s</string>
     <string name="setup_summary_shelf">Полка: рекомендации — %1$s, продолжение просмотра — %2$s</string>
-    <string name="setup_summary_saver">Заставка: %1$s · %2$s · музыка %3$s</string>
+    <string name="setup_summary_saver">Заставка: %1$s · %2$s · во время музыки: %3$s</string>
     <string name="setup_summary_weather">Погода: %1$s</string>
     <string name="setup_summary_weather_auto">по интернет-соединению</string>
     <string name="setup_hello">Добро пожаловать</string>

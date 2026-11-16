@@ -432,8 +432,8 @@
     <string name="setup_saver_hint">What plays when the screen is idle. Themes, Photos and Reddit live in Settings → Personalization → Ambient Experience.</string>
     <string name="setup_saver_delay">Start After</string>
     <string name="setup_saver_delay_hint">Press OK to change the interval</string>
-    <string name="setup_saver_music">Music</string>
-    <string name="setup_saver_music_hint">Play music with the screen saver</string>
+    <string name="setup_saver_music">Show During Music</string>
+    <string name="setup_saver_music_hint">Start the screen saver even while music is playing.</string>
     <string name="setup_access_hint">Optional system settings. You can change them later in Settings → System.</string>
     <string name="setup_home_app_detail">If your TV offers a Home app choice</string>
     <string name="setup_recommendations_detail">Film and show cards above the tiles</string>
@@ -457,7 +457,7 @@
     <string name="setup_state_done">Done</string>
     <string name="setup_summary_language">Language: %1$s</string>
     <string name="setup_summary_shelf">Shelf: recommendations %1$s, continue watching %2$s</string>
-    <string name="setup_summary_saver">Screen saver: %1$s · %2$s · music %3$s</string>
+    <string name="setup_summary_saver">Screen saver: %1$s · %2$s · during music: %3$s</string>
     <string name="setup_summary_weather">Weather: %1$s</string>
     <string name="setup_summary_weather_auto">over the internet</string>
     <string name="setup_hello">Welcome</string>
