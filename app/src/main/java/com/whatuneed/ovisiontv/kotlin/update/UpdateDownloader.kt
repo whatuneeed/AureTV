@@ -34,6 +34,7 @@ internal sealed interface UpdateDownloadResult {
 internal class UpdateDownloader(
     context: Context,
     metadataUrl: String = com.whatuneed.ovisiontv.kotlin.BuildConfig.UPDATE_METADATA_URL,
+    private val openConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection },
 ) {
     private val dir = File(context.applicationContext.cacheDir, DIR)
     private val allowedHosts = UpdateUrlPolicy.allowedAssetHosts(metadataUrl)
@@ -127,7 +128,7 @@ internal class UpdateDownloader(
         if (!UpdateUrlPolicy.isAllowed(url, allowedHosts)) {
             return UpdateDownloadResult.Failure(UpdateError.NETWORK, "untrusted asset host")
         }
-        val connection = runCatching { URL(url).openConnection() as HttpURLConnection }.getOrNull()
+        val connection = runCatching { openConnection(URL(url)) }.getOrNull()
             ?: return UpdateDownloadResult.Failure(UpdateError.NETWORK)
         connection.connectTimeout = CONNECT_TIMEOUT_MS
         connection.readTimeout = READ_TIMEOUT_MS

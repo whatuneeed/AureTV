@@ -12,6 +12,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SoftwareUpdateActivity
+import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.update.UpdateStateStore
 import org.junit.Rule
 import org.junit.Test
@@ -37,6 +38,28 @@ class SoftwareUpdateScreenTest {
             .assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.update_source_missing_hint))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun kidsModeHidesEveryUpdateAction() {
+        val store = ProfileStore(compose.activity)
+        val before = store.current()
+        try {
+            store.update(before.copy(kids = true))
+            store.setCurrent(before.id)
+            compose.activityRule.scenario.recreate()
+            compose.waitForIdle()
+
+            compose.onNodeWithText(compose.activity.getString(R.string.update_kids_blocked))
+                .assertIsDisplayed()
+            compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
+                .assertDoesNotExist()
+            compose.onNodeWithText(compose.activity.getString(R.string.update_install))
+                .assertDoesNotExist()
+        } finally {
+            store.update(before)
+            store.setCurrent(before.id)
+        }
     }
 
     @Test

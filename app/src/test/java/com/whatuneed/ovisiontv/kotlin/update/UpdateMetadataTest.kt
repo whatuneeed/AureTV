@@ -20,6 +20,7 @@ class UpdateMetadataTest {
         notesEn: String = "[\"Fixed focus restoration.\"]",
         notesRu: String = "[\"Исправлено восстановление фокуса.\"]",
         expires: String = "2026-12-16T12:00:00Z",
+        minimumSupported: Int = 60,
     ): String = """
         {
           "schema": 1,
@@ -32,7 +33,7 @@ class UpdateMetadataTest {
             "channel": "$channel",
             "releaseDate": "2026-11-15T00:00:00Z",
             "minimumAndroidApi": 28,
-            "minimumSupportedVersionCode": 60,
+            "minimumSupportedVersionCode": $minimumSupported,
             "mandatory": false,
             "notes": { "en": $notesEn, "ru": $notesRu },
             "assets": [{
@@ -103,6 +104,18 @@ class UpdateMetadataTest {
             hosts,
             now,
         ) is UpdateMetadataResult.Failure)
+    }
+
+    @Test
+    fun zeroMinimumSupportedVersionMeansNoEndOfLifeBoundary() {
+        val parsed = UpdateMetadataParser.parse(
+            json(minimumSupported = 0),
+            UpdateChannel.STABLE,
+            hosts,
+            now,
+        )
+        assertTrue(parsed is UpdateMetadataResult.Success)
+        assertEquals(0, (parsed as UpdateMetadataResult.Success).releases.single().minSupportedVersionCode)
     }
 
     @Test

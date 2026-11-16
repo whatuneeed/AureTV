@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.update.UpdateChannel
 import com.whatuneed.ovisiontv.kotlin.update.UpdateCheckMode
 import com.whatuneed.ovisiontv.kotlin.update.UpdateError
@@ -78,11 +79,14 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var focusIndex by rememberSaveable { mutableIntStateOf(0) }
     var notesOpen by rememberSaveable { mutableStateOf(false) }
     var downloadJob by remember { mutableStateOf<Job?>(null) }
+    val kidsActive = remember(context) { KidsMode.isKids(context) }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            manager.restore()
-            manager.cleanup()
+        if (!kidsActive) {
+            withContext(Dispatchers.IO) {
+                manager.restore()
+                manager.cleanup()
+            }
         }
     }
     DisposableEffect(manager) {
@@ -109,16 +113,20 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
     val release = state.available
     val rows = buildList {
-        add(
-            UpdateRow(
-                title = stringResource(R.string.update_current),
-                value = stringResource(
-                    R.string.update_version_value,
-                    state.installedVersionName.ifBlank { BuildConfig.VERSION_NAME },
-                    state.installedVersionCode.takeIf { it > 0 } ?: BuildConfig.VERSION_CODE,
-                ),
+        val currentRow = UpdateRow(
+            title = stringResource(R.string.update_current),
+            value = stringResource(
+                R.string.update_version_value,
+                state.installedVersionName.ifBlank { BuildConfig.VERSION_NAME },
+                state.installedVersionCode.takeIf { it > 0 } ?: BuildConfig.VERSION_CODE,
             ),
         )
+        if (kidsActive) {
+            add(currentRow)
+            add(UpdateRow(stringResource(R.string.update_kids_blocked)))
+            return@buildList
+        }
+        add(currentRow)
         add(
             UpdateRow(
                 title = stringResource(R.string.update_channel),

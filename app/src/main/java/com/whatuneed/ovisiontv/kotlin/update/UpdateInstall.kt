@@ -208,7 +208,14 @@ class InstallResultReceiver : BroadcastReceiver() {
                 store.clearPending()
             }
 
-            else -> Log.w(TAG, "package install returned status $status")
+            else -> {
+                // An unknown or empty result must not leave the UI waiting for
+                // an installer callback forever. The next app start reconciles
+                // the installed version; until then the user can retry.
+                Log.w(TAG, "package install returned status $status")
+                store.setPhase(UpdatePhase.FAILED)
+                store.clearPending()
+            }
         }
     }
 

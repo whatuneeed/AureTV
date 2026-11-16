@@ -190,17 +190,17 @@ PYTHONIOENCODING=utf-8 python tools/release_check.py
 
 | Проверка | Результат |
 |---|---|
-| `testDebugUnitTest` | **480 / 480**, 0 failures |
-| `connectedDebugAndroidTest` на AVD `hume-tv` (API 34, x86) | **261 / 261**, 0 failures |
+| `testDebugUnitTest` | **481 / 481**, 0 failures |
+| `connectedDebugAndroidTest` на AVD `hume-tv` (API 34, x86) | **266 / 266**, 0 failures |
 | `lintDebug` | **0 errors**, 19 warnings (включая общие `GradleDependency`, `DiscouragedApi`) |
 | `assembleRelease` | PASS |
 | `apksigner verify` | v1 false, **v2 true**, v3 false, v4 false |
 | `release_check.py` | PASS |
 | версия | `0.5.8 (81)` |
-| размер release APK | **4 862 594 B** |
-| SHA-256 release APK | `4a3a74482d81c214dc3844652fc9e8bd6a45acb44e466a7a62e8747ae5f6b1c4` |
+| размер release APK | **4 863 122 B** |
+| SHA-256 release APK | `4fae4bb9ea6a5aaaf5298e923cb2de1b815b14bea7819eb2dbea7a6d5bc41170` |
 | сертификат | `327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10` |
-| RU/EN resources | 636 / 636 |
+| RU/EN resources | 637 / 637 |
 
 ### 4.2 Проверено на AVD вручную
 
@@ -213,6 +213,8 @@ PYTHONIOENCODING=utf-8 python tools/release_check.py
 - `InstallResultReceiver` получает extras и сохраняет результат;
 - **важный найденный дефект:** исходный `PendingIntent` был `FLAG_IMMUTABLE`; `PackageInstaller` не мог заполнить `EXTRA_STATUS`/`EXTRA_INTENT`, callback приходил с `Integer.MIN_VALUE`. Исправлено на `FLAG_MUTABLE`; после этого системный prompt и установка работают;
 - повторная установка после выдачи `REQUEST_INSTALL_PACKAGES` проверена;
+- **Kids Mode:** `SoftwareUpdateScreen` не делает restore/check и показывает только текущую версию и сообщение о недоступности; строка Software Update скрыта в System. Проверено Compose-тестом.
+- **Downloader:** `UpdateDownloaderTest` проверяет успешную запись, несовпадение SHA-256, запрет чужого хоста и повторное использование уже проверенного файла через fake `HttpURLConnection` (без сети).
 - исправлена ветка retry: если APK уже готов, «Try again» устанавливает его, а не скачивает заново; в состоянии `PERMISSION` после выдачи разрешения появляется «Install update»;
 - проверка SHA-256 добавлена и в preflight установки, не только в downloader.
 
@@ -221,7 +223,7 @@ PYTHONIOENCODING=utf-8 python tools/release_check.py
 ### 4.3 НЕ проверено
 
 - реальный GitHub Releases/Pages URL, редиректы GitHub CDN, ETag/304 на реальном сервере;
-- реальная загрузка APK по сети и Range/resume на GitHub;
+- реальная загрузка APK по сети и Range/resume на GitHub; тест downloader использует fake connection, не сеть;
 - реальный 403/429/5xx от GitHub;
 - физический Android TV / Google TV, ARM32/ARM64, API 28–33/35, 1 ГБ RAM;
 - OEM-установщик, Play Protect, Google TV против Android TV;
