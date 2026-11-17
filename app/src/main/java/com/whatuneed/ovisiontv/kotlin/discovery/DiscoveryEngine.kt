@@ -314,6 +314,9 @@ class DiscoveryEngine(
 
     fun recordLaunch(packageName: String) = store.recordLaunch(packageName)
 
+    /** Home combines this with its Kids Mode and Reduce Motion gates. */
+    fun previewAutoplay(): Boolean = settings.previewAutoplay()
+
     /** Only the hero the viewer actually saw is penalised, never an unseen rail. */
     fun markShown(section: DiscoverySection, item: DiscoveryItem) {
         if (!settings.personalization()) return

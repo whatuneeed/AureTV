@@ -116,6 +116,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySnapshot
 import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
+import com.whatuneed.ovisiontv.kotlin.online.onlinePreviewUri
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -198,6 +199,9 @@ fun HomeScreen(
     onUserActivity: () -> Unit = {},
     onStartSaver: () -> Unit = {},
     reduceMotion: Boolean = false,
+    // The saver draws over Home; stop the muted hero there so only the
+    // saver's own video decodes.
+    saverVisible: Boolean = false,
     // The weather loop belongs to the visible Home: a paused launcher must not
     // keep refreshing an invisible capsule (AQ-21).
     foreground: Boolean = true,
@@ -272,6 +276,10 @@ fun HomeScreen(
     // profiles never share usage, favorites or hidden cards.
     val discovery = remember(context, prefsName, profileId) {
         DiscoveryEngine(context.applicationContext, prefsName, profileId)
+    }
+    // Read again on every resume: Settings writes this in another activity.
+    val previewAutoplay = remember(prefsName, resumeTick) {
+        discovery.previewAutoplay()
     }
     var discoverySnapshot by remember { mutableStateOf(DiscoverySnapshot.EMPTY) }
     // The dock app's own rail is the tvOS default; every other rail is one Up
@@ -1696,6 +1704,20 @@ fun HomeScreen(
                         onSectionActivate = ::selectDiscoverySection,
                         scale = scale,
                         reduceMotion = reduceMotion,
+                        // The online card's official preview becomes the
+                        // motion hero. It is not tied to the shelf cursor:
+                        // Home, the shelf and the section bar share the same
+                        // selected title. Every modal and Kids Mode removes
+                        // the URL so no video plays underneath a panel.
+                        heroPreviewUri = onlinePreviewUri(
+                            item = shelfCards.getOrNull(shelfSelected),
+                            enabled = previewAutoplay && !kidsMode && !reduceMotion &&
+                                !libraryMode && !editing && !pickupActive &&
+                                !saverVisible && openFolder == null && launching == null &&
+                                !menuOpen && newFolderApp == null && !searchOpen &&
+                                !controlCenterOpen && !weatherPanelOpen && shelfMenu == null &&
+                                playingTrailer == null,
+                        ),
                         // The weather pill owns the top-left corner. On the
                         // browsing Home the title moves below it instead of
                         // printing through the forecast; inside the shelf the

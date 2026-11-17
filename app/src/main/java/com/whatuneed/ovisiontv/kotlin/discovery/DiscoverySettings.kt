@@ -35,6 +35,18 @@ class DiscoverySettings(context: Context, prefsName: String) {
         prefs.edit().putBoolean(DiscoveryKeys.ONLINE, enabled).apply()
     }
 
+    /**
+     * tvOS starts a muted preview when the eye rests on a card. The setting
+     * only matters while [online] is on; Kids Mode and Reduce Motion still
+     * disable it regardless of this value.
+     */
+    fun previewAutoplay(): Boolean =
+        SafePreferences.boolean(prefs, DiscoveryKeys.PREVIEW_AUTOPLAY, true)
+
+    fun setPreviewAutoplay(enabled: Boolean) {
+        prefs.edit().putBoolean(DiscoveryKeys.PREVIEW_AUTOPLAY, enabled).apply()
+    }
+
     fun personalization(): Boolean =
         SafePreferences.boolean(prefs, DiscoveryKeys.PERSONALIZATION, true)
 

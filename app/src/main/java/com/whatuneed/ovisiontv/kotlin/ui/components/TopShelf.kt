@@ -148,6 +148,9 @@ fun TopShelf(
     onSectionActivate: (DiscoverySection) -> Unit,
     scale: TvScale,
     reduceMotion: Boolean = false,
+    // Only the selected online card has an official preview URL. Home owns the
+    // opt-in, Reduce Motion and modal gates; null means "show the poster".
+    heroPreviewUri: String? = null,
     headingTop: Float = 57f,
     // A resume, a closed menu or a closed search can leave Android focus on a
     // node that no longer exists; this tick asks the shelf to restore its card.
@@ -265,6 +268,16 @@ fun TopShelf(
                         filterQuality = FilterQuality.Low,
                     )
                 }
+        }
+
+        // tvOS-style motion hero. The player is transparent until the first
+        // frame, so the poster above remains the loading and failure state.
+        // It is deliberately behind the same scrim, title and dock as a still.
+        if (heroPreviewUri != null && !reduceMotion) {
+            HeroPreview(
+                uri = heroPreviewUri,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         // Readability veil; the hero is never darkened into mud.

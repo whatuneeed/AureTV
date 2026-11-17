@@ -27,6 +27,7 @@
     <string name="discovery_section_online">Top Movies</string>
     <string name="online_source_label">Apple iTunes</string>
     <string name="discovery_online">Online Top Movies</string>
+    <string name="discovery_preview_autoplay">Autoplay previews</string>
     <string name="trailer_preview">Official preview</string>
     <string name="trailer_unavailable">Preview unavailable</string>
     <string name="trailer_exit_hint">Press BACK to close</string>
@@ -39,7 +40,7 @@
     <string name="discovery_clear_confirm">Clear history</string>
     <string name="discovery_clear_hint">Removes the launcher\'s launch history and recency. Favorites and hidden cards stay.</string>
     <string name="discovery_clear_done">Recommendation history cleared</string>
-    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. Online Top Movies use the public Apple iTunes RSS and play official previews inside the launcher.</string>
+    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. Online Top Movies use the public Apple iTunes RSS and play official previews inside the launcher; a muted preview can autoplay on the selected card.</string>
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="library_favorites">Favorites</string>

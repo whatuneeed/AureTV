@@ -625,6 +625,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                         resumeTick = resumeTick,
                         reduceMotion = reduceMotion,
                         foreground = foreground,
+                        saverVisible = saverVisible,
                         prefsName = ProfileStore.homePrefsName(profile.id),
                         profileId = profile.id,
                         kidsMode = kidsActive,

@@ -425,6 +425,7 @@ private data class SettingsRow(
 private data class DiscoveryUi(
     val recommendations: Boolean,
     val online: Boolean,
+    val previewAutoplay: Boolean,
     val continueWatching: Boolean,
     val personalization: Boolean,
     val hidden: List<DiscoveryItem>,
@@ -456,6 +457,16 @@ private fun discoverySettingsRows(
             val next = ui.copy(online = !ui.online)
             onUiChange(next)
             settings.setOnline(next.online)
+        },
+    ),
+    SettingsRow(
+        title = stringResource(R.string.discovery_preview_autoplay),
+        value = stringResource(if (ui.previewAutoplay) R.string.saver_on else R.string.saver_off),
+        toggleState = ui.previewAutoplay,
+        action = {
+            val next = ui.copy(previewAutoplay = !ui.previewAutoplay)
+            onUiChange(next)
+            settings.setPreviewAutoplay(next.previewAutoplay)
         },
     ),
     SettingsRow(
@@ -767,6 +778,7 @@ fun SettingsScreen(
             DiscoveryUi(
                 recommendations = discoverySettings.recommendations(),
                 online = discoverySettings.online(),
+                previewAutoplay = discoverySettings.previewAutoplay(),
                 continueWatching = discoverySettings.continueWatching(),
                 personalization = discoverySettings.personalization(),
                 hidden = discoveryStore.hidden(),

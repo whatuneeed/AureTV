@@ -16,10 +16,10 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version 7"))
-        assertTrue(ru.contains("Версия политики 7"))
-        assertTrue(en.contains("2026-11-16"))
-        assertTrue(ru.contains("16.11.2026"))
+        assertTrue(en.contains("Policy version 8"))
+        assertTrue(ru.contains("Версия политики 8"))
+        assertTrue(en.contains("2026-11-17"))
+        assertTrue(ru.contains("17.11.2026"))
     }
 
     @Test
@@ -45,6 +45,14 @@ class PrivacyPolicyTextTest {
             assertTrue("EN policy omits $host", en.contains(host))
             assertTrue("RU policy omits $host", ru.contains(host))
         }
+    }
+
+    @Test
+    fun autoplayIsDisclosedInBothLanguages() {
+        assertTrue(en.contains("Autoplay previews"))
+        assertTrue(ru.contains("Автовоспроизведение превью"))
+        assertTrue(en.contains("muted preview", ignoreCase = true))
+        assertTrue(ru.contains("беззвучн", ignoreCase = true))
     }
 
     @Test
