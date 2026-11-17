@@ -24,11 +24,29 @@ internal data class WatchNextRow(
     val progress: Float?,
     val engagement: Long,
     val continueRow: Boolean,
+    /** Minutes left at the last save; null for a not-started or finished row. */
+    val remainingMinutes: Int? = null,
+    /** 0/1/2 = wide, 3 = square, 4/5 = portrait; null when the app did not say. */
+    val posterArtAspect: Int? = null,
+    /** The provider says this row may be launched by another app. */
+    val browsable: Boolean = true,
+    /**
+     * A real preview clip published by the provider for this row. Android TV
+     * exposes this as `preview_video_uri`; it is optional and stays null when
+     * the app has no trailer. It is never synthesized from the title.
+     */
+    val previewVideoUri: String? = null,
 )
 
 internal fun watchNextProgress(positionMs: Long, durationMs: Long): Float? {
     if (positionMs <= 0L || durationMs <= 0L) return null
     return (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+}
+
+/** Whole minutes left, rounded up; null when the row has no real resume point. */
+internal fun watchNextRemainingMinutes(positionMs: Long, durationMs: Long): Int? {
+    if (positionMs <= 0L || durationMs <= positionMs) return null
+    return ((durationMs - positionMs + 59_999L) / 60_000L).toInt().coerceAtLeast(1)
 }
 
 /**
@@ -45,6 +63,7 @@ internal fun rankWatchNext(
     val seen = HashSet<String>()
     return rows.asSequence()
         .filter { it.packageName == packageName }
+        .filter { it.browsable }
         .filter { it.title.isNotBlank() && !it.intentUri.isNullOrBlank() }
         .filter { includeContinue || !it.continueRow }
         .sortedByDescending { it.engagement }
@@ -97,6 +116,9 @@ object WatchNextSource {
             TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
             TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS,
             TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE,
+            TvContract.WatchNextPrograms.COLUMN_POSTER_ART_ASPECT_RATIO,
+            TvContract.WatchNextPrograms.COLUMN_BROWSABLE,
+            TvContract.WatchNextPrograms.COLUMN_PREVIEW_VIDEO_URI,
         ),
         titleColumn = TvContract.WatchNextPrograms.COLUMN_TITLE,
         subtitleColumn = TvContract.WatchNextPrograms.COLUMN_EPISODE_TITLE,
@@ -104,6 +126,9 @@ object WatchNextSource {
         positionColumn = TvContract.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
         engagementColumn = TvContract.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS,
         typeColumn = TvContract.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE,
+        posterArtAspectColumn = TvContract.WatchNextPrograms.COLUMN_POSTER_ART_ASPECT_RATIO,
+        browsableColumn = TvContract.WatchNextPrograms.COLUMN_BROWSABLE,
+        previewVideoColumn = TvContract.WatchNextPrograms.COLUMN_PREVIEW_VIDEO_URI,
         packageName = packageName,
     )
 
@@ -122,6 +147,7 @@ object WatchNextSource {
             TvContract.PreviewPrograms.COLUMN_INTENT_URI,
             TvContract.PreviewPrograms.COLUMN_DURATION_MILLIS,
             TvContract.PreviewPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
+            TvContract.PreviewPrograms.COLUMN_PREVIEW_VIDEO_URI,
         ),
         titleColumn = TvContract.PreviewPrograms.COLUMN_TITLE,
         subtitleColumn = null,
@@ -129,6 +155,9 @@ object WatchNextSource {
         positionColumn = TvContract.PreviewPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS,
         engagementColumn = null,
         typeColumn = null,
+        posterArtAspectColumn = TvContract.WatchNextPrograms.COLUMN_POSTER_ART_ASPECT_RATIO,
+        browsableColumn = null,
+        previewVideoColumn = TvContract.PreviewPrograms.COLUMN_PREVIEW_VIDEO_URI,
         packageName = packageName,
     )
 
@@ -142,6 +171,9 @@ object WatchNextSource {
         positionColumn: String,
         engagementColumn: String?,
         typeColumn: String?,
+        posterArtAspectColumn: String?,
+        browsableColumn: String?,
+        previewVideoColumn: String?,
         packageName: String?,
     ): List<WatchNextRow> {
         val selection = packageName?.let { "${TvContract.BaseTvColumns.COLUMN_PACKAGE_NAME} = ?" }
@@ -160,6 +192,9 @@ object WatchNextSource {
             val positionIndex = it.getColumnIndex(positionColumn)
             val engagementIndex = engagementColumn?.let(it::getColumnIndex) ?: -1
             val typeIndex = typeColumn?.let(it::getColumnIndex) ?: -1
+            val posterAspectIndex = posterArtAspectColumn?.let(it::getColumnIndex) ?: -1
+            val browsableIndex = browsableColumn?.let(it::getColumnIndex) ?: -1
+            val previewVideoIndex = previewVideoColumn?.let(it::getColumnIndex) ?: -1
             if (packageIndex < 0 || titleIndex < 0) return@use emptyList()
 
             runCatching {
@@ -175,6 +210,10 @@ object WatchNextSource {
                         val duration = it.longOrZero(durationIndex)
                         val position = it.longOrZero(positionIndex)
                         val type = if (typeIndex < 0) -1 else it.getInt(typeIndex)
+                        val browsable = browsableIndex < 0 || it.isNull(browsableIndex) ||
+                            it.getInt(browsableIndex) != 0
+                        if (!browsable) continue
+                        val remaining = watchNextRemainingMinutes(position, duration)
                         add(
                             WatchNextRow(
                                 packageName = rowPackage,
@@ -193,6 +232,17 @@ object WatchNextSource {
                                 engagement = it.longOrZero(engagementIndex),
                                 continueRow = type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE ||
                                     type == TvContract.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT,
+                                remainingMinutes = remaining,
+                                posterArtAspect = if (posterAspectIndex >= 0 && !it.isNull(posterAspectIndex)) {
+                                    it.getInt(posterAspectIndex)
+                                } else {
+                                    null
+                                },
+                                browsable = browsable,
+                                previewVideoUri = boundedWatchUri(
+                                    it.stringOrNull(previewVideoIndex),
+                                    MAX_URI_CHARS,
+                                ),
                             ),
                         )
                     }

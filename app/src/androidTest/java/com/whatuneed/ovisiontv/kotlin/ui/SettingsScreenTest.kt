@@ -54,6 +54,7 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefreshResult
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
@@ -881,6 +882,18 @@ class SettingsScreenTest {
                 string(R.string.saver_weather_off),
             ),
         ).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_aerial_quality_row_toggles_and_is_stored() {
+        setSettings()
+        openSaver()
+
+        val title = string(R.string.saver_aerial_quality)
+        clickRow(title)
+        assertEquals(AerialQuality.BEST, AmbientSettingsStore.aerialQuality(context))
+        clickRow(title)
+        assertEquals(AerialQuality.COMPATIBLE, AmbientSettingsStore.aerialQuality(context))
     }
 
     @Test

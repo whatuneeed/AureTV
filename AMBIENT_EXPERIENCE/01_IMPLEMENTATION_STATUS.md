@@ -3,7 +3,7 @@
 **Дата:** 2026-11-16
 **База:** OVisionTV Launcher 0.5.7, `versionCode 80`
 **Статус:** Stage 2–3 реализованы; Stage 4a — опциональные Dim After и Max Session; Stage 4b — opt-in погода на часах (только из кэша); Stage 5 — Photos через системный выбор (SAF/Photo Picker); Stage 6 — Reddit: любой публичный сабреддит, интервал 6/12/24 ч, весь список или выбранные изображения.
-**Не реализовано и не обещается:** 4K/HDR, отдельный Weather-режим (погода — только строка на часах), Cinematic Photography, Abstract Motion, blackout, энергоизмерения, физические ТВ. Photos работают только из выбранной папки/снимков; системный photo picker на AOSP-образе требует Tab/касания для входа в сетку — D-pad-only выбор не подтверждён. Pixel shift/dim — не «OLED-safe» и не гарантия от burn-in.
+**Не реализовано и не обещается:** физически проверенный pipeline 4K/HDR (варианты и выбор реализованы, контент проверен в `02_AERIAL_QUALITY_AUDIT.md`, но декодер/панель не проверены; HDR-бейдж не показывается), отдельный Weather-режим (погода — только строка на часах), Cinematic Photography, Abstract Motion, blackout, энергоизмерения, физические ТВ. Photos работают только из выбранной папки/снимков; системный photo picker на AOSP-образе требует Tab/касания для входа в сетку — D-pad-only выбор не подтверждён. Pixel shift/dim — не «OLED-safe» и не гарантия от burn-in.
 
 ## Что сделано
 
@@ -107,6 +107,7 @@ Settings
 - Photos: строка источника показывает «Selected Photos → N photos» для photo picker или имя папки для дерева; «Not selected» / «Unavailable», если источника нет; «Forget» освобождает grant и возвращает режим в `Aerials`.
 - `Reset Screen Saver` сбрасывает режим и **освобождает** photo grant: после сброса личные снимки больше не доступны приложению.
 - Preview в Settings: Aerial — реальный still; Clock — локальные часы и, если включено, cached погода; Minimal — локальный градиент; Photos — первый выбранный снимок (off-main decode), при отсутствии источника — Clock-fallback; Reddit — первый thumbnail, при отсутствии/во время загрузки — Clock-fallback. Декодер не запускается для Aerial/Clock/Minimal.
+- Picker: кольцо фокуса рисуется по внутреннему контуру плитки, поэтому scale больше не сдвигает его относительно картинки; thumbnail сначала берётся из memory-cache, соседние 18 плиток прогреваются в фоне, диск хранит 450×290 JPEG вместо 0.5–1 МБ PNG. Постер для следующего входа снимается через 3 с после первого кадра, а не на чёрном lead-in.
 
 ### 5. Backup
 
@@ -125,14 +126,17 @@ Settings
 | `:app:connectedDebugAndroidTest` на AVD `hume-tv` API 34 | **255/255** |
 | `:app:lintDebug` | **0 errors / 18 warnings** |
 | `:app:assembleRelease` | **Success**, APK **4 771 546 B**, подпись SHA-256 `327a5045…67d7b10` (не изменилась) |
-| AVD, визуально | Home → Personalization → Ambient Experience; Aerials/Clock; Clock Format; Dim After/Max Session; Show Weather; preview с реальной погодой; full-screen clock; any key exits |
+| AVD, визуально | Home → Personalization → Ambient Experience; Aerials/Clock; Clock Format; Dim After/Max Session; Show Weather; preview с реальной погодой; full-screen clock; any key exits; «Ролики» показывает 117 из 117 |
 | AVD, Photos | photo picker → 2 снимка → «2 photos» → preview и full-screen реальные фото → ротация → BACK; выбор сохраняется после force-stop |
 | AVD, Reddit | 100 реальных постов r/TVWallpapersSFW; 3-колоночная сетка, D-pad, toggle, Back; preview thumbnail; full-screen реальное изображение с атрибуцией; Clock-fallback до первого кадра; release 0.5.7/80 установлен |
 | Privacy policy | версия 4 (2026-11-16): Photos — локальный grant системного выбора; Reddit — публичная лента и изображения Reddit, без аккаунта/cookie/token, кэши не в backup; Kids-режим отключён |
-| Backup | режим, формат, pixel shift, dim, max session и showWeather входят в backup/restore; старый архив без полей → Aerial / System / On / Never / Off |
-| Aerial | старый `SaverScreen` остаётся рендерером; поведение не менялось |
+| Backup | режим, формат, pixel shift, dim, max session, showWeather и aerialQuality входят в backup/restore; старый архив без полей → Aerial / System / On / Never / Off / Compatible |
+| Aerial | `SaverScreen` остаётся рендерером; по умолчанию 1080p H264, 4K/HDR — только явный `best` и только при поддержке панели/декодера; один проход fallback; 117 клипов |
 
 Новые тесты:
+
+- `data/AerialQualityTest` — compatible не просит HEVC/HDR; best выбирает 4K HDR только при UHD+HEVC+HDR; 1080p HDR; fallback без HEVC; цепочка всегда заканчивается H264; клип без вариантов сохраняет старый URL
+- `data/AerialCatalogTest` — 117 клипов, 92 с вариантами; refresh сохраняет варианты из bundled-каталога; 17 legacy-клипов используют реальные кадры из собственных видео
 
 - `ambient/AmbientModelsTest` — режимы и `AmbientClockFormat` (system/12/24, fallback, стабильные ключи)
 - `ambient/AmbientClockTest` — 12/24-форматирование и локализованная дата
@@ -165,7 +169,7 @@ Settings
 - OLED burn-in, энергия, нагрев;
 - фактический pixel shift/dim на реальной панели (только программная логика и AVD);
 - реальное закрытие по Max Session через 30/60/120 мин (unit-логика; AVD-сессия не ждалась);
-- 4K/HDR — отсутствует контент и pipeline;
+- 4K/HDR — выбор вариантов реализован и покрыт unit-тестами; контент/ссылки аудированы в `02_AERIAL_QUALITY_AUDIT.md`, но реальный декодер, панель и формат HDR не проверены;
 - Photos: **D-pad-only** выбор в системном photo picker (AOSP-образ требует Tab/касания); реальный SAF-folder picker на vendor TV; фото на физической панели;
 - Cinematic/Abstract — не реализованы;
 - погода на часах не проверена при stale-кэше на реальном устройстве; источник и атрибуция остаются в `Settings → Weather`;
@@ -179,7 +183,7 @@ Settings
 1. Blackout/расписание ночи — только после явного решения владельца; сейчас dim-ступени есть, blackout нет.
 2. Photos: проверить D-pad в photo picker на реальном Google TV; если он недоступен, решить, оставлять ли режим только для пультов с Tab/указателем.
 3. Reddit: проверить RSS/rate limits и D-pad на реальном Google TV; RSS не имеет SLA, NSFW не фильтруется по решению владельца.
-4. Stage 7 — 4K/HDR только после лицензии и проверки декодера/панели.
+4. Stage 7 — 4K/HDR: аудит контента и выбор вариантов реализованы; осталось физическое подтверждение декодера/панели и формата HDR. До этого HDR-бейдж не показывается.
 5. Физическая матрица устройств и измерения.
 
 **Это не сертификация.** Всё, что не проверено на физическом устройстве, остаётся непроверенным.

@@ -55,6 +55,7 @@ class BackupCodecTest {
                     HomeOrderEntry.App("com.example.one"),
                     HomeOrderEntry.Folder("f1", "Кино", listOf("com.example.two", "com.example.gone")),
                 ),
+                labels = mapOf("com.example.one" to "Моё кино"),
             ),
             "p2" to HomeData(listOf(HomeOrderEntry.App("com.example.two"))),
         ),
@@ -92,6 +93,7 @@ class BackupCodecTest {
             dimAfter = "twenty",
             maxSession = "sixty",
             showWeather = true,
+            aerialQuality = "best",
         ),
         language = LanguageData("ru", showPhoneApps = false),
         content = ContentData(recommendations = true, continueWatching = false),
@@ -145,6 +147,10 @@ class BackupCodecTest {
         assertEquals(2, validated.data.profiles?.profiles?.size)
         assertEquals(2, validated.data.homes.size)
         assertEquals("Кино", (validated.data.homes["p1"]?.order?.get(1) as HomeOrderEntry.Folder).name)
+        assertEquals(
+            mapOf("com.example.one" to "Моё кино"),
+            validated.data.homes["p1"]?.labels,
+        )
         assertEquals(1, validated.data.discovery["p1"]?.favorites?.size)
         assertEquals(2, validated.data.discovery["p1"]?.usage?.get("com.example.one")?.count)
         assertEquals(setOf("com.example.two"), validated.data.kids["p2"]?.allowlist)
@@ -154,6 +160,7 @@ class BackupCodecTest {
         assertEquals("twenty", validated.data.saver?.dimAfter)
         assertEquals("sixty", validated.data.saver?.maxSession)
         assertTrue(validated.data.saver?.showWeather ?: false)
+        assertEquals("best", validated.data.saver?.aerialQuality)
         assertEquals("app:com.example.one", validated.data.startup?.target)
     }
 

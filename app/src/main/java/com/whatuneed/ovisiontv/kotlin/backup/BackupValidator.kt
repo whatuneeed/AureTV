@@ -198,6 +198,15 @@ internal object BackupValidator {
             if (home.order.size > BackupContract.MAX_ORDER_ENTRIES) {
                 throw BackupException(BackupStage.SCHEMA, "home order is too long")
             }
+            if (home.labels.size > BackupContract.MAX_APP_LABELS) {
+                throw BackupException(BackupStage.SCHEMA, "too many app labels")
+            }
+            home.labels.forEach { (packageName, label) ->
+                requirePackage(packageName)
+                if (label.isBlank() || label.length > BackupContract.MAX_APP_LABEL_CHARS) {
+                    throw BackupException(BackupStage.SCHEMA, "invalid app label")
+                }
+            }
             val folderIds = HashSet<String>()
             home.order.forEach { entry ->
                 when (entry) {

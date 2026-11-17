@@ -7,6 +7,7 @@
     <string name="shelf_context">Приложение</string>
     <string name="home_empty_title">Добро пожаловать в OVisionTV</string>
     <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в настройках.</string>
+    <string name="shelf_listings_denied">Рекомендации приложений отключены. Разрешите «Доступ к рекомендациям» в настройках.</string>
     <string name="shelf_continue">Продолжить просмотр</string>
     <string name="discovery_section_continue">Продолжить просмотр</string>
     <string name="discovery_section_for_you">Для вас</string>
@@ -15,6 +16,7 @@
     <string name="discovery_section_recent">Недавние</string>
     <string name="discovery_section_favorites">Избранное</string>
     <string name="discovery_reason_trending">В топе</string>
+    <string name="watch_next_minutes_left">Осталось %1$d мин</string>
     <string name="discovery_reason_continue">Продолжить просмотр</string>
     <string name="discovery_reason_recent">Недавно открывали</string>
     <string name="discovery_reason_favorite">В избранном</string>
@@ -25,11 +27,17 @@
     <string name="discovery_settings_title">Рекомендации</string>
     <string name="discovery_personalization">Персонализация</string>
     <string name="discovery_section_online">Фильмы</string>
-    <string name="online_source_label">Apple iTunes</string>
-    <string name="discovery_online">Онлайн-фильмы</string>
+    <string name="online_source_label">JustWatch</string>
+    <string name="discovery_online">Онлайн-трейлеры и описания</string>
     <string name="discovery_preview_autoplay">Автовоспроизведение превью</string>
+    <string name="online_info_label">Описание</string>
+    <string name="discovery_trailer_badge">Трейлер</string>
+    <string name="online_info_no_synopsis">Описание недоступно</string>
+    <string name="online_info_about">О фильме</string>
     <string name="trailer_preview">Официальный трейлер</string>
     <string name="trailer_unavailable">Трейлер недоступен</string>
+    <string name="trailer_open_in">Смотреть в %1$s</string>
+    <string name="trailer_action_hint">OK — открыть · Назад — закрыть</string>
     <string name="trailer_exit_hint">Нажмите «Назад», чтобы закрыть</string>
     <string name="trailer_description">Трейлер: %1$s</string>
     <string name="discovery_hidden">Скрытые рекомендации</string>
@@ -40,7 +48,7 @@
     <string name="discovery_clear_confirm">Очистить историю</string>
     <string name="discovery_clear_hint">Удаляет историю запусков и недавние. Избранное и скрытые карточки сохраняются.</string>
     <string name="discovery_clear_done">История рекомендаций очищена</string>
-    <string name="discovery_source_note">Карточки приходят от приложений, которые публикуют рекомендации для Android TV. Онлайн-фильмы берутся из публичной ленты Apple iTunes RSS, а официальные трейлеры играют внутри лаунчера; беззвучное превью может запускаться автоматически на выбранной карточке.</string>
+    <string name="discovery_source_note">Карточки берутся из приложений, которые публикуют рекомендации для Android TV. Если установлен Flux, фильмы с официальным трейлером из публичного чарта показываются в «Для вас» как карточки Flux: OK запускает трейлер, затем открывает фильм во Flux. Беззвучное превью может воспроизводиться автоматически на выбранной карточке.</string>
     <string name="menu_add_favorite">В избранное</string>
     <string name="menu_remove_favorite">Убрать из избранного</string>
     <string name="library_favorites">Избранное</string>
@@ -233,6 +241,13 @@
     <string name="saver_refresh_monthly">Ежемесячно</string>
     <string name="saver_refresh_never">Никогда</string>
     <string name="saver_refresh_hint">Публичный каталог Apple сегодня старее встроенного, поэтому проверка обычно оставляет встроенные ролики.</string>
+    <string name="saver_aerial_quality">Качество заставки</string>
+    <string name="saver_aerial_quality_1080">1080p (совместимо)</string>
+    <string name="saver_aerial_quality_4k">4K</string>
+    <string name="saver_aerial_quality_hdr">HDR</string>
+    <string name="saver_aerial_quality_best">4K/HDR</string>
+    <string name="saver_aerial_quality_limited">1080p (ТВ без 4K/HDR)</string>
+    <string name="saver_aerial_quality_hint">4K/HDR включается только при поддержке телевизора и расходует больше трафика; иначе используется 1080p.</string>
     <string name="saver_screen_description">Заставка, %1$s. Нажмите любую кнопку, чтобы выйти.</string>
     <string name="aerial_dream_label">OVisionTV: заставка</string>
     <string name="saver_system_title">Системная заставка</string>
@@ -714,4 +729,8 @@
     <string name="backup_password_mismatch">Пароли не совпадают</string>
     <string name="backup_category_content">Источники контента</string>
     <string name="backup_password_too_short">Используйте не меньше 8 символов</string>
+    <string name="menu_rename_app">Переименовать</string>
+    <string name="rename_app_title">Переименовать приложение</string>
+    <string name="menu_reset_app_name">Сбросить название</string>
+    <string name="rename_app_note">Это название видно только в OVisionTV.</string>
 </resources>

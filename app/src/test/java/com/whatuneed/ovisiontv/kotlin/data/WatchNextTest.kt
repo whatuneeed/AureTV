@@ -12,6 +12,7 @@ class WatchNextTest {
         intent: String? = "intent://watch#Intent;package=ru.kino;end",
         engagement: Long = 0L,
         continueRow: Boolean = true,
+        browsable: Boolean = true,
     ) = WatchNextRow(
         packageName = packageName,
         title = title,
@@ -22,6 +23,7 @@ class WatchNextTest {
         progress = null,
         engagement = engagement,
         continueRow = continueRow,
+        browsable = browsable,
     )
 
     @Test
@@ -34,6 +36,15 @@ class WatchNextTest {
     }
 
     @Test
+    fun remainingMinutesAreRoundedUpAndNeedAResumePoint() {
+        assertEquals(2, watchNextRemainingMinutes(60_000, 180_000))
+        assertEquals(1, watchNextRemainingMinutes(179_000, 180_000))
+        assertNull(watchNextRemainingMinutes(0, 180_000))
+        assertNull(watchNextRemainingMinutes(180_000, 180_000))
+        assertNull(watchNextRemainingMinutes(180_001, 180_000))
+    }
+
+    @Test
     fun onlyFocusedPackageRowsAreKept() {
         val ranked = rankWatchNext(
             listOf(
@@ -43,6 +54,18 @@ class WatchNextTest {
             packageName = "ru.kino",
         )
         assertEquals(listOf("Kino"), ranked.map { it.title })
+    }
+
+    @Test
+    fun nonBrowsableRowsAreNotOfferedAsCards() {
+        val ranked = rankWatchNext(
+            listOf(
+                row(title = "Private", browsable = false),
+                row(title = "Public"),
+            ),
+            packageName = "ru.kino",
+        )
+        assertEquals(listOf("Public"), ranked.map { it.title })
     }
 
     @Test

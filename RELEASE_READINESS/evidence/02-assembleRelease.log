@@ -1,0 +1,79 @@
+Starting a Gradle Daemon, 1 stopped Daemon could not be reused, use --status for details
+> Task :app:buildKotlinToolingMetadata
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:generateReleaseBuildConfig FROM-CACHE
+> Task :app:generateReleaseResValues FROM-CACHE
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:parseReleaseLocalResources FROM-CACHE
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease FROM-CACHE
+> Task :app:processReleaseMainManifest FROM-CACHE
+> Task :app:processReleaseManifest FROM-CACHE
+> Task :app:processReleaseManifestForPackage FROM-CACHE
+> Task :app:javaPreCompileRelease FROM-CACHE
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:checkReleaseDuplicateClasses
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
+
+> Task :app:mergeReleaseAssets
+> Task :app:extractReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:compressReleaseAssets FROM-CACHE
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeReleaseResources
+11-16 15:56:03.462  6044 19464 W aapt2.exe: AssetsProvider.cpp:114 Failed to stat file 'C:\Users\Никита Скуратов\AppData\Local\Android\Sdk\platforms\android-35\android.jar': No such file or directory
+
+> Task :app:processReleaseResources
+> Task :app:convertLinkedResourcesToProtoRelease
+> Task :app:compileReleaseKotlin
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/MainActivity.kt:159:49 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/OVisionApp.kt:35:49 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/data/DeviceFacts.kt:167:50 'val connectionInfo: WifiInfo!' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:34:29 'static field TRIM_MEMORY_RUNNING_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:35:29 'static field TRIM_MEMORY_RUNNING_LOW: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:36:29 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:42:29 'static field TRIM_MEMORY_MODERATE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/MemoryPressure.kt:43:29 'static field TRIM_MEMORY_COMPLETE: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/SettingsScreen.kt:834:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/SaverScreen.kt:221:26 'static field FLAG_HANDLES_MEDIA_BUTTONS: Int' is deprecated. Deprecated in Java.
+w: file:///C:/OpenCode%20Project/OVisionTV/OVisionTV_Kotlin/app/src/main/java/com/whatuneed/ovisiontv/kotlin/ui/components/SaverScreen.kt:222:30 'static field FLAG_HANDLES_TRANSPORT_CONTROLS: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processReleaseJavaRes
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:minifyReleaseWithR8
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:shrinkReleaseRes
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+
+BUILD SUCCESSFUL in 1m 51s
+51 actionable tasks: 39 executed, 10 from cache, 2 up-to-date

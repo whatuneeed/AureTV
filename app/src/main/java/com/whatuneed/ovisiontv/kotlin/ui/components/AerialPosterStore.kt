@@ -12,10 +12,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Full-resolution first frames seen by the saver. Apple's catalogue only ships
- * a 900×580 still, which is soft on a TV; after a clip has played once, the
- * entry still is the decoder's own frame, so the next entrance starts from the
- * exact picture the video begins with. The cache is disposable.
+ * Full-resolution frames seen by the saver after the clip has settled. Apple's
+ * catalogue only ships a 900×580 still, which is soft on a TV; after a clip has
+ * played once, the entry still is a real decoder frame close to the part the
+ * saver reveals, so the next entrance is much closer to the video. Captured
+ * after the entrance crossfade, not on the black lead-in. The cache is
+ * disposable.
  */
 internal object AerialPosterStore {
     private const val DIR = "aerial_posters"

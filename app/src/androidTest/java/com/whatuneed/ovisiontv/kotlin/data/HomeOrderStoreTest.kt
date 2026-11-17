@@ -191,6 +191,19 @@ class HomeOrderStoreTest {
         assertFalse(missing.available)
     }
 
+    @Test
+    fun a_missing_built_in_is_dropped_while_a_missing_user_app_keeps_its_placeholder() {
+        val repaired = buildHomeOrderRepair(
+            saved = """["sys.gone","user.gone","a.one"]""",
+            apps = listOf(app("a.one")),
+            defaultFolderName = "Папка",
+            keepMissing = { it == "user.gone" },
+        )
+
+        assertEquals(listOf("user.gone", "a.one"), repaired.items.map { it.key })
+        assertFalse((repaired.items[0] as HomeItem.AppItem).app.available)
+    }
+
     private fun savedPackages(store: HomeOrderStore): List<String> {
         val entries = JSONArray(store.savedOrder())
         return (0 until entries.length()).map { entries.getString(it) }

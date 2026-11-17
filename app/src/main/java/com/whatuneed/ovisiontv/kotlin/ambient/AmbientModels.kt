@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ambient
 
 import android.content.Context
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
 import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
 import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
@@ -94,6 +95,7 @@ data class AmbientSettings(
     val dimAfter: AmbientDim = AmbientDim.NEVER,
     val maxSession: AmbientSession = AmbientSession.NEVER,
     val showWeather: Boolean = false,
+    val aerialQuality: AerialQuality = AerialQuality.COMPATIBLE,
     val redditSubreddit: String = AmbientRedditStore.DEFAULT_SUBREDDIT,
     val redditRefresh: RedditRefresh = RedditRefresh.TWELVE,
     val redditSelection: RedditSelection = RedditSelection.ALL,
@@ -112,6 +114,7 @@ object AmbientSettingsStore {
     const val KEY_DIM_AFTER = "ambient_dim_after"
     const val KEY_MAX_SESSION = "ambient_max_session"
     const val KEY_SHOW_WEATHER = "ambient_show_weather"
+    const val KEY_AERIAL_QUALITY = "ambient_aerial_quality"
 
     fun load(context: Context): AmbientSettings = AmbientSettings(
         mode = mode(context),
@@ -125,6 +128,7 @@ object AmbientSettingsStore {
         dimAfter = dimAfter(context),
         maxSession = maxSession(context),
         showWeather = showWeather(context),
+        aerialQuality = aerialQuality(context),
         redditSubreddit = AmbientRedditStore.subreddit(context),
         redditRefresh = AmbientRedditStore.refresh(context),
         redditSelection = AmbientRedditStore.selection(context),
@@ -181,6 +185,15 @@ object AmbientSettingsStore {
         prefs(context).edit().putBoolean(KEY_SHOW_WEATHER, enabled).apply()
     }
 
+    fun aerialQuality(context: Context): AerialQuality =
+        AerialQuality.fromKey(
+            SafePreferences.string(prefs(context), KEY_AERIAL_QUALITY, null),
+        )
+
+    fun setAerialQuality(context: Context, quality: AerialQuality) {
+        prefs(context).edit().putString(KEY_AERIAL_QUALITY, quality.key).apply()
+    }
+
     /** Reset is the same reset the Aerial page always did, plus ambient fields. */
     fun reset(context: Context) {
         SaverPreferences.reset(context)
@@ -190,6 +203,7 @@ object AmbientSettingsStore {
         setDimAfter(context, AmbientDim.NEVER)
         setMaxSession(context, AmbientSession.NEVER)
         setShowWeather(context, false)
+        setAerialQuality(context, AerialQuality.COMPATIBLE)
     }
 
     internal fun prefs(context: Context) =

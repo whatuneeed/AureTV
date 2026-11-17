@@ -37,6 +37,9 @@ import kotlinx.coroutines.delay
  * The view is transparent until the first video frame, so the already loaded
  * poster stays visible while the network is buffering. A failed preview simply
  * disappears and leaves that poster; there is no retry loop and no black hero.
+ *
+ * Like [TrailerOverlay], this is a direct stream: no CacheDataSource, no
+ * SimpleCache and no downloaded copy on the device.
  */
 private const val HERO_PREVIEW_SETTLE_MS = 650L
 private const val HERO_PREVIEW_FADE_MS = 320

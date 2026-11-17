@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
+import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeEdit
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
@@ -93,6 +94,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.FolderCard
 import com.whatuneed.ovisiontv.kotlin.ui.components.LAUNCH_START_DELAY_MS
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
+import com.whatuneed.ovisiontv.kotlin.ui.components.OnlineInfoOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SearchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.StatusCapsule
@@ -116,6 +118,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySnapshot
 import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
+import com.whatuneed.ovisiontv.kotlin.discovery.providerTargetForOnline
 import com.whatuneed.ovisiontv.kotlin.online.onlinePreviewUri
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -130,7 +133,14 @@ import kotlin.math.min
 private const val TAG = "OVisionHome"
 private const val MENU_HOLD_MS = 350L
 
-private data class PlayingTrailer(val title: String, val url: String)
+private data class PlayingTrailer(
+    val title: String,
+    val url: String,
+    /** The provider row whose app should open after the preview. */
+    val target: DiscoveryItem? = null,
+    val appLabel: String? = null,
+    val synopsis: String? = null,
+)
 
 // Phase 08: only a resting cursor is remembered; a 400 ms pause reads as an
 // intentional stop and is shorter than the time it takes to leave the room.
@@ -290,6 +300,8 @@ fun HomeScreen(
     var discoveryRevision by remember { mutableIntStateOf(0) }
     var shelfMenu by remember { mutableStateOf<DiscoveryItem?>(null) }
     var playingTrailer by remember { mutableStateOf<PlayingTrailer?>(null) }
+    var onlineInfo by remember { mutableStateOf<DiscoveryItem?>(null) }
+    var onlineInfoTarget by remember { mutableStateOf<DiscoveryItem?>(null) }
     val sectionCardMemory = remember { mutableStateMapOf<String, Int>() }
     var lastShelfPackage by remember { mutableStateOf<String?>(null) }
     val rails = discoverySnapshot.rails
@@ -367,6 +379,9 @@ fun HomeScreen(
     var moveToFolderApp by remember { mutableStateOf<TvApp?>(null) }
     // "New Folder…" in that picker: the keyboard names a folder around the app.
     var newFolderApp by remember { mutableStateOf<TvApp?>(null) }
+    // Renaming an app changes only the launcher's caption; the package and its
+    // activity stay untouched, and the value lives in AppLabelStore.
+    var renameApp by remember { mutableStateOf<TvApp?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     // The status pill is the only way into the Control Center. `capsuleFromShelf`
     // remembers that Up came from the carousel, so Down returns there instead of
@@ -577,15 +592,18 @@ fun HomeScreen(
         menuApp,
         moveToFolderApp,
         newFolderApp,
+        renameApp,
         searchOpen,
         controlCenterOpen,
         weatherPanelOpen,
         playingTrailer,
+        onlineInfo,
     ) {
         if (editing || openFolder != null || launching != null ||
             menuFolderId != null || folderDeleteId != null || menuApp != null ||
-            moveToFolderApp != null || newFolderApp != null || searchOpen ||
-            controlCenterOpen || weatherPanelOpen || playingTrailer != null
+            moveToFolderApp != null || newFolderApp != null || renameApp != null || searchOpen ||
+            controlCenterOpen || weatherPanelOpen || playingTrailer != null ||
+            onlineInfo != null
         ) {
             shelfFocus = -1
             sectionFocused = false
@@ -612,19 +630,21 @@ fun HomeScreen(
         menuApp,
         moveToFolderApp,
         newFolderApp,
+        renameApp,
         searchOpen,
         controlCenterOpen,
         capsuleFocused,
         weatherFocused,
         weatherPanelOpen,
         playingTrailer,
+        onlineInfo,
     ) {
         if (shelfCards.size <= 1 || sectionFocused || shelfFocus >= 0 ||
             shelfMenu != null || libraryMode || editing || openFolder != null ||
             launching != null || menuFolderId != null || folderDeleteId != null ||
             menuApp != null || moveToFolderApp != null || newFolderApp != null ||
-            searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
-            weatherPanelOpen || playingTrailer != null
+            renameApp != null || searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
+            weatherPanelOpen || playingTrailer != null || onlineInfo != null
         ) {
             return@LaunchedEffect
         }
@@ -918,19 +938,7 @@ fun HomeScreen(
         shelfFocusTick++
     }
 
-    fun activateShelfCard(card: DiscoveryItem) {
-        // An online card is a real official preview, not a package launch. It
-        // is played by the launcher itself, so no foreign app is started and
-        // no browser is needed on the TV.
-        if (card.source == DiscoverySource.ONLINE) {
-            val url = card.intentUri
-            if (url != null && url.startsWith("https://")) {
-                playingTrailer = PlayingTrailer(card.title, url)
-            } else {
-                Toast.makeText(context, R.string.trailer_unavailable, Toast.LENGTH_SHORT).show()
-            }
-            return
-        }
+    fun openShelfContent(card: DiscoveryItem) {
         // The rail is refreshed after a profile/allowlist change, but a press
         // in that gap must not open an app the kids profile no longer allows.
         if (kidsMode && !KidsMode.allowed(context, card.packageName)) {
@@ -957,6 +965,49 @@ fun HomeScreen(
         } else {
             Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun activateShelfCard(card: DiscoveryItem) {
+        // An online card has no installed app to open. It is an information
+        // card: its preview may decorate the hero, but a dead-end trailer is
+        // deliberately not played here. Trailers belong to provider cards,
+        // where OK can finally open the film in the publishing app.
+        if (card.source == DiscoverySource.ONLINE) {
+            // If the same film exists in an installed app's Watch Next, the
+            // online card can do more than describe it: trailer → OK → open
+            // that app. Without a target it stays an honest information card.
+            val target = providerTargetForOnline(card, discoverySnapshot.rails)
+            val trailerUrl = card.trailerUri
+            if (target != null && !trailerUrl.isNullOrBlank()) {
+                playingTrailer = PlayingTrailer(
+                    title = card.title,
+                    url = trailerUrl,
+                    target = target,
+                    appLabel = target.packageLabel ?: target.packageName,
+                    synopsis = card.synopsis,
+                )
+            } else {
+                onlineInfo = card
+                onlineInfoTarget = target
+            }
+            return
+        }
+        if (kidsMode && !KidsMode.allowed(context, card.packageName)) {
+            Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val trailerUrl = card.trailerUri
+        if (!trailerUrl.isNullOrBlank()) {
+            playingTrailer = PlayingTrailer(
+                title = card.title,
+                url = trailerUrl,
+                target = card,
+                appLabel = card.packageLabel ?: card.packageName,
+                synopsis = card.synopsis,
+            )
+            return
+        }
+        openShelfContent(card)
     }
 
     // TalkBack activates through semantics, not key events; run the same path a
@@ -1019,6 +1070,36 @@ fun HomeScreen(
             hideApp(items, app.packageName, context.getString(R.string.hidden_folder_name))
                 ?: return,
         )
+    }
+
+    fun applyAppLabel(packageName: String, label: String) {
+        fun rename(app: TvApp): TvApp =
+            if (app.packageName == packageName) app.copy(label = label) else app
+        val list = items.map { item ->
+            when (item) {
+                is HomeItem.AppItem -> HomeItem.AppItem(rename(item.app))
+                is HomeItem.FolderItem -> item.copy(apps = item.apps.map(::rename))
+            }
+        }
+        items = list
+        openFolder?.let { open ->
+            val fresh = list.firstOrNull {
+                it is HomeItem.FolderItem && it.id == open.folder.id
+            } as? HomeItem.FolderItem
+            if (fresh != null) openFolder = open.copy(folder = fresh)
+        }
+    }
+
+    fun renameAppInHome(app: TvApp, label: String) {
+        AppLabelStore.setLabel(context, app.packageName, label, prefsName)
+        applyAppLabel(app.packageName, label)
+        renameApp = null
+    }
+
+    fun resetAppLabel(app: TvApp) {
+        AppLabelStore.clearLabel(context, app.packageName, prefsName)
+        applyAppLabel(app.packageName, AppLabelStore.defaultLabel(context, app))
+        renameApp = null
     }
 
     // 05_FOLDERS §9: the app returns to the grid next to its folder; an emptied
@@ -1114,8 +1195,8 @@ fun HomeScreen(
     BackHandler(
         enabled = libraryMode && !editing && openFolder == null && launching == null &&
             menuFolderId == null && folderDeleteId == null && menuApp == null &&
-            moveToFolderApp == null && newFolderApp == null && !searchOpen &&
-            !controlCenterOpen,
+            moveToFolderApp == null && newFolderApp == null && renameApp == null &&
+            !searchOpen && !controlCenterOpen,
     ) {
         focusIndex = focusIndex % columns
     }
@@ -1133,10 +1214,12 @@ fun HomeScreen(
         menuApp != null || moveToFolderApp != null
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
-        openFolder == null && launching == null && !menuOpen && !searchOpen &&
-        !controlCenterOpen && !weatherPanelOpen && shelfFocus < 0 && !sectionFocused
+        openFolder == null && launching == null && !menuOpen && renameApp == null &&
+        !searchOpen && !controlCenterOpen && !weatherPanelOpen && shelfFocus < 0 &&
+        !sectionFocused
     val gridModal = openFolder != null || launching != null || menuOpen ||
-        newFolderApp != null || searchOpen || controlCenterOpen || weatherPanelOpen
+        newFolderApp != null || renameApp != null || searchOpen || controlCenterOpen ||
+        weatherPanelOpen || playingTrailer != null || onlineInfo != null
     // Layout gate instead of a blind delay: once the grid is placed every tile's
     // FocusRequester is attached, so the cursor can move on the first frame.
     var gridPlaced by remember { mutableStateOf(false) }
@@ -1239,7 +1322,7 @@ fun HomeScreen(
                 // A context menu owns the remote. A hold that opened it keeps
                 // sending repeats, and some remotes deliver each repeat as its
                 // own press and release; those pairs must not reach the grid.
-                if (menuOpen || newFolderApp != null) {
+                if (menuOpen || newFolderApp != null || renameApp != null) {
                     return@onKeyEvent true
                 }
                 when (event.type) {
@@ -1668,9 +1751,10 @@ fun HomeScreen(
                 // The overlay/zoom is modal on screen, so TalkBack must not keep
                 // offering the tiles it covers.
                 .then(
-                    if (openFolder != null || launching != null || menuOpen || searchOpen ||
+                    if (openFolder != null || launching != null || menuOpen ||
+                        newFolderApp != null || renameApp != null || searchOpen ||
                         controlCenterOpen || weatherPanelOpen || shelfMenu != null ||
-                        playingTrailer != null
+                        playingTrailer != null || onlineInfo != null
                     ) {
                         Modifier.clearAndSetSemantics {}
                     } else {
@@ -1703,6 +1787,7 @@ fun HomeScreen(
                         onCardActivate = ::activateShelfCard,
                         onSectionActivate = ::selectDiscoverySection,
                         scale = scale,
+                        providerState = discoverySnapshot.providerState,
                         reduceMotion = reduceMotion,
                         // The online card's official preview becomes the
                         // motion hero. It is not tied to the shelf cursor:
@@ -1714,9 +1799,10 @@ fun HomeScreen(
                             enabled = previewAutoplay && !kidsMode && !reduceMotion &&
                                 !libraryMode && !editing && !pickupActive &&
                                 !saverVisible && openFolder == null && launching == null &&
-                                !menuOpen && newFolderApp == null && !searchOpen &&
-                                !controlCenterOpen && !weatherPanelOpen && shelfMenu == null &&
-                                playingTrailer == null,
+                                !menuOpen && newFolderApp == null && renameApp == null &&
+                                !searchOpen && !controlCenterOpen && !weatherPanelOpen &&
+                                shelfMenu == null &&
+                                playingTrailer == null && onlineInfo == null,
                         ),
                         // The weather pill owns the top-left corner. On the
                         // browsing Home the title moves below it instead of
@@ -2031,10 +2117,26 @@ fun HomeScreen(
                             moveToFolderApp = app
                         },
                     )
-                    if (app.available && !own) {
+                    if (!own) {
                         add(
                             TvMenuEntry(context.getString(R.string.menu_hide)) {
                                 hideAppFromHome(app)
+                            },
+                        )
+                    }
+                    if (app.available) {
+                        add(
+                            TvMenuEntry(context.getString(R.string.menu_rename_app)) {
+                                renameApp = app
+                            },
+                        )
+                    }
+                    if (app.available &&
+                        AppLabelStore.label(context, app.packageName, prefsName) != null
+                    ) {
+                        add(
+                            TvMenuEntry(context.getString(R.string.menu_reset_app_name)) {
+                                resetAppLabel(app)
                             },
                         )
                     }
@@ -2169,6 +2271,18 @@ fun HomeScreen(
             )
         }
 
+        renameApp?.let { app ->
+            RenameKeyboardOverlay(
+                title = context.getString(R.string.rename_app_title),
+                initial = AppLabelStore.label(context, app.packageName, prefsName) ?: app.label,
+                scale = scale,
+                onDone = { name -> renameAppInHome(app, name) },
+                onCancel = { renameApp = null },
+                placeholder = context.getString(R.string.keyboard_placeholder),
+                note = context.getString(R.string.rename_app_note),
+            )
+        }
+
         if (searchOpen) {
             SearchOverlay(
                 apps = searchableApps,
@@ -2291,15 +2405,54 @@ fun HomeScreen(
         }
 
         playingTrailer?.let { trailer ->
+            val actionLabel = trailer.target?.let {
+                stringResource(R.string.trailer_open_in, trailer.appLabel ?: it.packageName)
+            }
             TrailerOverlay(
                 title = trailer.title,
                 url = trailer.url,
+                synopsis = trailer.synopsis,
+                actionLabel = actionLabel,
+                onAction = trailer.target?.let { target ->
+                    {
+                        // The trailer is only a preview step. The second OK
+                        // finally opens the provider row in its own app.
+                        playingTrailer = null
+                        openShelfContent(target)
+                    }
+                },
                 onDismiss = {
                     playingTrailer = null
                     // Closing the preview returns to the card that opened it,
                     // not to the dock: the modal effect lowered the shelf while
                     // the preview played, so put its cursor back before asking
                     // TopShelf for Android focus again.
+                    if (shelfCards.isNotEmpty()) {
+                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                    }
+                    shelfFocusTick++
+                },
+            )
+        }
+
+        onlineInfo?.let { card ->
+            val target = onlineInfoTarget
+            val actionLabel = target?.let {
+                stringResource(R.string.trailer_open_in, it.packageLabel ?: it.packageName)
+            }
+            OnlineInfoOverlay(
+                item = card,
+                actionLabel = actionLabel,
+                onAction = target?.let { provider ->
+                    {
+                        onlineInfo = null
+                        onlineInfoTarget = null
+                        openShelfContent(provider)
+                    }
+                },
+                onDismiss = {
+                    onlineInfo = null
+                    onlineInfoTarget = null
                     if (shelfCards.isNotEmpty()) {
                         shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
                     }

@@ -16,8 +16,8 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version 8"))
-        assertTrue(ru.contains("Версия политики 8"))
+        assertTrue(en.contains("Policy version 10"))
+        assertTrue(ru.contains("Версия политики 10"))
         assertTrue(en.contains("2026-11-17"))
         assertTrue(ru.contains("17.11.2026"))
     }
@@ -26,6 +26,8 @@ class PrivacyPolicyTextTest {
     fun everyNetworkHostIsNamedInBothLanguages() {
         val hosts = listOf(
             "sylvan.apple.com",
+            "apis.justwatch.com",
+            "images.justwatch.com",
             "itunes.apple.com",
             "is1-ssl.mzstatic.com",
             "video-ssl.itunes.apple.com",
@@ -66,11 +68,11 @@ class PrivacyPolicyTextTest {
     }
 
     @Test
-    fun onlineTopMoviesAreDisclosedAsAnOptInPublicAppleFeed() {
-        assertTrue(en.contains("Online Top Movies"))
+    fun onlineTrailersAndDescriptionsAreDisclosedAsAnOptInSource() {
+        assertTrue(en.contains("Online trailers and descriptions"))
         assertTrue(en.contains("no account, API key"))
         assertTrue(en.contains("six hours"))
-        assertTrue(ru.contains("Онлайн-фильмы"))
+        assertTrue(ru.contains("Онлайн-трейлеры и описания"))
         assertTrue(ru.contains("API-ключ"))
         assertTrue(ru.contains("шесть часов"))
     }

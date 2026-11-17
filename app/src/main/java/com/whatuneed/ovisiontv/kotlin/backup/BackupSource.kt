@@ -2,6 +2,8 @@ package com.whatuneed.ovisiontv.kotlin.backup
 
 import android.content.Context
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
+import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
@@ -45,7 +47,9 @@ internal class BackupSource(private val context: Context) {
             if (selection.home) {
                 val raw = HomeOrderStore(context, prefsName).savedOrder()
                 try {
-                    homes[profile.id] = BackupJson.decodeHome(raw)
+                    homes[profile.id] = BackupJson.decodeHome(raw).copy(
+                        labels = AppLabelStore.labels(context, prefsName),
+                    )
                 } catch (_: Exception) {
                     warnings += BackupWarning.SOURCE_UNREADABLE
                 }
@@ -96,6 +100,7 @@ internal class BackupSource(private val context: Context) {
                 dimAfter = AmbientSettingsStore.dimAfter(context).key,
                 maxSession = AmbientSettingsStore.maxSession(context).key,
                 showWeather = AmbientSettingsStore.showWeather(context),
+                aerialQuality = AmbientSettingsStore.aerialQuality(context).key,
             )
         } else {
             null

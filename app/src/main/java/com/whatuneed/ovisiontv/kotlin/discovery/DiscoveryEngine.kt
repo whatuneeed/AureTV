@@ -8,7 +8,11 @@ import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.WatchNextRow
 import com.whatuneed.ovisiontv.kotlin.data.WatchNextSource
+import com.whatuneed.ovisiontv.kotlin.online.FLUX_PACKAGE
+import com.whatuneed.ovisiontv.kotlin.online.OnlineMovie
 import com.whatuneed.ovisiontv.kotlin.online.OnlineRepository
+import com.whatuneed.ovisiontv.kotlin.online.fluxMovieUri
+import com.whatuneed.ovisiontv.kotlin.online.normalizeOnlineTitle
 import com.whatuneed.ovisiontv.kotlin.online.toDiscoveryItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -32,10 +36,14 @@ internal data class DiscoveryInputs(
     val includeContinue: Boolean,
     val personalization: Boolean,
     val providerState: DiscoverySourceState,
-    // Real chart entries from the optional public online source. They bypass
-    // the TV provider filter because they are not published by an installed
-    // app, but never bypass Kids mode or the hidden list.
+    // Real chart entries from the optional public online source. When Flux is
+    // installed, previews become Flux-branded For You cards; otherwise they
+    // only decorate matching provider rows. Kids mode and hidden ids still
+    // filter them, and no separate Online rail is created.
     val onlineItems: List<DiscoveryItem> = emptyList(),
+    // Same chart, used as artwork when a fresh online fetch is unavailable.
+    // It never creates a card or a network request by itself.
+    val onlineArtItems: List<DiscoveryItem> = emptyList(),
 )
 
 /**
@@ -48,6 +56,9 @@ internal fun buildSnapshot(inputs: DiscoveryInputs): DiscoverySnapshot {
     val visible = inputs.visiblePackages
     val hidden = inputs.hidden
 
+    val onlineArt = OnlineArtIndex(
+        inputs.onlineArtItems.ifEmpty { inputs.onlineItems },
+    )
     val providerItems = dedupeProvider(
         inputs.providerRows
             .asSequence()
@@ -57,7 +68,12 @@ internal fun buildSnapshot(inputs: DiscoveryInputs): DiscoverySnapshot {
             .filter {
                 inputs.includeContinue || !(it.continueRow || it.progress != null)
             }
-            .map { row -> row.toDiscoveryItem(appsByPackage[row.packageName]?.label) }
+            .map { row ->
+                row.toDiscoveryItem(
+                    appsByPackage[row.packageName]?.label,
+                    onlineArt.match(row.title, row.intentUri),
+                )
+            }
             .filterNot { it.id in hidden }
             .toList(),
     )
@@ -93,37 +109,34 @@ internal fun buildSnapshot(inputs: DiscoveryInputs): DiscoverySnapshot {
         }
     }
 
-    // For You: every visible provider row, at most two per app. A rail with
-    // fewer than three cards is not worth a section. A card already in
-    // Continue Watching is not repeated in the next rail.
+    // For You: real provider rows plus, when Flux is installed, the chart's
+    // movie cards that have an official preview. The latter are rewired to the
+    // Flux package so their source badge is "Flux", not "JustWatch", and OK
+    // opens the title in Flux after its trailer. No separate Films tab exists.
     //
     // Kids profiles keep the app-specific rails only: a cross-app "For You"
     // would let the launcher choose between apps a parent allowed, which is a
     // decision the profile did not grant. Allowed rows still appear under the
     // app that published them.
     if (!inputs.kidsMode) {
-        val forYou = rankSection(
-            candidates = providerItems.filterNot { it.id in continueIds },
+        val providerForYouCandidates = providerItems.filterNot { it.id in continueIds }
+        val onlineForYou = onlineForYouCards(
+            inputs = inputs,
+            appsByPackage = appsByPackage,
+            providerItems = providerForYouCandidates,
+        )
+        val providerForYou = rankSection(
+            candidates = providerForYouCandidates.filterNot { provider ->
+                onlineForYou.any { it.tmdbId == provider.tmdbId ||
+                    normalizeOnlineTitle(it.title) == normalizeOnlineTitle(provider.title) }
+            },
             section = DiscoverySection.FOR_YOU,
             context = ranking,
-            limit = SECTION_LIMIT,
-            maxPerPackage = 2,
+            limit = (SECTION_LIMIT - onlineForYou.size).coerceAtLeast(0),
+            maxPerPackage = FOR_YOU_MAX_PER_PACKAGE,
         )
-        if (forYou.size >= 3) rails += DiscoveryRail(DiscoverySection.FOR_YOU, forYou)
-    }
-
-    // Online Top Movies are opt-in and never appear for a Kids profile. The
-    // rail is used exactly as published, without ranking across providers.
-    if (!inputs.kidsMode) {
-        val online = inputs.onlineItems
-            .asSequence()
-            .filter { it.id !in hidden }
-            .filter { !it.intentUri.isNullOrBlank() }
-            .take(SECTION_LIMIT)
-            .toList()
-        if (online.isNotEmpty()) {
-            rails += DiscoveryRail(DiscoverySection.ONLINE, online)
-        }
+        val forYou = (onlineForYou + providerForYou).distinctBy { it.id }
+        if (forYou.isNotEmpty()) rails += DiscoveryRail(DiscoverySection.FOR_YOU, forYou)
     }
 
     // From this app: the old tvOS top shelf, kept as one rail among the others.
@@ -209,13 +222,15 @@ internal fun buildSnapshot(inputs: DiscoveryInputs): DiscoverySnapshot {
 }
 
 internal const val SECTION_LIMIT = 8
+internal const val FOR_YOU_MAX_PER_PACKAGE = 3
+internal const val ONLINE_FOR_YOU_LIMIT = 3
 internal const val MAX_SECTIONS = 4
 
 private val SECTION_ORDER = listOf(
     DiscoverySection.FROM_APP,
     DiscoverySection.CONTINUE,
-    DiscoverySection.ONLINE,
     DiscoverySection.FOR_YOU,
+    DiscoverySection.ONLINE,
     DiscoverySection.RECENT,
     DiscoverySection.FAVORITES,
 )
@@ -233,7 +248,166 @@ private fun dedupeProvider(items: List<DiscoveryItem>): List<DiscoveryItem> {
     return byId.values.toList()
 }
 
-private fun WatchNextRow.toDiscoveryItem(label: String?): DiscoveryItem = DiscoveryItem(
+/** Wide art + poster from the matching JustWatch card, when the title is exact. */
+private data class OnlineArt(
+    val wide: String?,
+    val poster: String?,
+    val trailer: String?,
+    val tmdbId: String?,
+    val synopsis: String?,
+)
+
+/**
+ * A strict metadata fallback for provider rows: first an exact TMDB id from the
+ * provider's own deep link, then an exact title or original title. A duplicate
+ * is ambiguous and deliberately yields nothing. The same match supplies the
+ * synopsis and the trailer, so the card can behave like a tvOS title card.
+ */
+private class OnlineArtIndex(items: List<DiscoveryItem>) {
+    private val byTitle = HashMap<String, OnlineArt?>()
+    private val byTmdb = HashMap<String, OnlineArt?>()
+
+    init {
+        items.forEach { item ->
+            val art = OnlineArt(
+                wide = item.landscapeUri,
+                poster = item.posterUri ?: item.landscapeUri,
+                // Only an official HTTPS preview can become the provider card's
+                // trailer. An information-only online card has no playable URL.
+                trailer = item.trailerUri?.takeIf { it.startsWith("https://") },
+                tmdbId = item.tmdbId,
+                synopsis = item.synopsis,
+            )
+            item.tmdbId
+                ?.takeIf { it.all(Char::isDigit) && it.length <= 12 }
+                ?.let { id ->
+                    if (!byTmdb.containsKey(id)) {
+                        byTmdb[id] = art
+                    } else if (byTmdb[id] != art) {
+                        byTmdb[id] = null
+                    }
+                }
+            // A provider such as Flux publishes the original title while the
+            // Russian chart publishes the localized one. Index both names so an
+            // exact English row can still borrow "Дюна"'s real trailer.
+            listOfNotNull(item.title, item.originalTitle)
+                .map(::normalizeOnlineTitle)
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .forEach { key ->
+                    if (!byTitle.containsKey(key)) {
+                        byTitle[key] = art
+                    } else if (byTitle[key] != art) {
+                        byTitle[key] = null
+                    }
+                }
+        }
+    }
+
+    fun match(title: String, intentUri: String?): OnlineArt? {
+        val tmdb = tmdbIdFromProviderIntent(intentUri)
+        // A deep link is stronger than a title: Flux publishes the original
+        // title while JustWatch's RU chart publishes the localized one. An
+        // ambiguous id, like an ambiguous title, deliberately yields no art.
+        if (tmdb != null && byTmdb.containsKey(tmdb)) return byTmdb[tmdb]
+        // An exact localized/original title is the second-best link. It is
+        // used for the trailer too: a provider row that has no TMDB id in its
+        // deep link would otherwise never get the tvOS preview step. Duplicate
+        // titles are still ambiguous and return null.
+        return byTitle[normalizeOnlineTitle(title)]
+    }
+}
+
+/** Extract only a real movie/series id from a provider deep link. */
+private fun tmdbIdFromProviderIntent(uri: String?): String? {
+    val value = uri?.takeIf { it.length <= 4_096 } ?: return null
+    val match = Regex(
+        "(?:movie|series|tv|show|title|tmdb)[^0-9]{0,16}(\\d{2,})",
+        RegexOption.IGNORE_CASE,
+    ).find(value)
+    return match?.groupValues?.getOrNull(1)?.takeIf { it.length <= 12 }
+}
+
+/** Find the installed-app row that can open an online card in its own app. */
+internal fun providerTargetForOnline(
+    online: DiscoveryItem,
+    rails: List<DiscoveryRail>,
+): DiscoveryItem? {
+    if (online.source != DiscoverySource.ONLINE) return null
+    val providers = rails.asSequence()
+        .flatMap { it.items.asSequence() }
+        .filter { it.source == DiscoverySource.TV_PROVIDER }
+        .toList()
+    online.tmdbId?.let { id ->
+        providers.firstOrNull { it.tmdbId == id }?.let { return it }
+    }
+    val key = normalizeOnlineTitle(online.title)
+    if (key.isEmpty()) return null
+    return providers.firstOrNull { normalizeOnlineTitle(it.title) == key }
+}
+
+/**
+ * Converts a chart movie into a real Flux card only when Flux is installed and
+ * the movie has an official HTTPS preview. The justwatch card itself is not
+ * published; the provider package is the source the user sees and opens.
+ */
+private fun onlineForYouCards(
+    inputs: DiscoveryInputs,
+    appsByPackage: Map<String, TvApp>,
+    providerItems: List<DiscoveryItem>,
+): List<DiscoveryItem> {
+    if (inputs.kidsMode) return emptyList()
+    val flux = appsByPackage[FLUX_PACKAGE]
+        ?.takeIf { it.packageName in inputs.visiblePackages }
+        ?: return emptyList()
+    val providerTmdb = providerItems.mapNotNullTo(HashSet()) { it.tmdbId }
+    val providerTitles = providerItems.mapTo(HashSet()) { normalizeOnlineTitle(it.title) }
+    return inputs.onlineItems
+        .asSequence()
+        .filter { it.id !in inputs.hidden }
+        .filter { !it.trailerUri.isNullOrBlank() }
+        .mapNotNull { card ->
+            val tmdbId = card.tmdbId ?: return@mapNotNull null
+            val intent = fluxMovieUri(tmdbId) ?: return@mapNotNull null
+            if (tmdbId in providerTmdb || normalizeOnlineTitle(card.title) in providerTitles) {
+                return@mapNotNull null
+            }
+            card.copy(
+                source = DiscoverySource.TV_PROVIDER,
+                packageName = flux.packageName,
+                packageLabel = flux.label,
+                intentUri = intent,
+                activityName = null,
+                progress = null,
+                remainingMinutes = null,
+                isContinue = false,
+                lastEngagementUtc = null,
+            )
+        }
+        .distinctBy { it.tmdbId ?: it.id }
+        .take(ONLINE_FOR_YOU_LIMIT)
+        .toList()
+}
+
+/**
+ * Provider previews are untrusted and optional. Only a direct HTTPS media URL
+ * is handed to ExoPlayer; a YouTube watch/embed page is a web page, not a
+ * stream, so it is rejected and the card keeps its normal open-in-app action.
+ */
+internal fun playableProviderPreview(uri: String?): String? {
+    val value = uri?.takeIf { it.startsWith("https://") } ?: return null
+    val host = value.substringAfter("://", "").substringBefore('/').lowercase()
+    val isYouTubePage = host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com")
+    val isWebPage = value.contains("/watch", ignoreCase = true) ||
+        value.contains("/embed/", ignoreCase = true) ||
+        value.contains("/shorts/", ignoreCase = true)
+    return value.takeUnless { host == "youtu.be" || (isYouTubePage && isWebPage) }
+}
+
+private fun WatchNextRow.toDiscoveryItem(
+    label: String?,
+    fallback: OnlineArt?,
+): DiscoveryItem = DiscoveryItem(
     id = "tv|$packageName|$intentUri",
     source = DiscoverySource.TV_PROVIDER,
     kind = DiscoveryKind.VIDEO,
@@ -241,10 +415,18 @@ private fun WatchNextRow.toDiscoveryItem(label: String?): DiscoveryItem = Discov
     packageLabel = label,
     title = title,
     subtitle = subtitle,
-    landscapeUri = thumbnailUri,
-    posterUri = posterUri,
+    landscapeUri = thumbnailUri
+        ?: fallback?.wide
+        ?: posterUri?.takeIf { posterArtAspect == null || posterArtAspect <= 2 },
+    posterUri = posterUri
+        ?: thumbnailUri
+        ?: fallback?.poster,
     intentUri = intentUri,
+    trailerUri = playableProviderPreview(previewVideoUri) ?: fallback?.trailer,
+    synopsis = fallback?.synopsis,
+    tmdbId = fallback?.tmdbId,
     progress = progress,
+    remainingMinutes = remainingMinutes,
     isContinue = continueRow,
     lastEngagementUtc = engagement.takeIf { it > 0L },
 )
@@ -380,15 +562,15 @@ class DiscoveryEngine(
             }
         }
 
+        val localized = LocalePreference.wrap(appContext)
+        fun OnlineMovie.asCard(): DiscoveryItem = toDiscoveryItem(
+            ownPackage = appContext.packageName,
+            sourceLabel = localized.getString(R.string.online_source_label),
+            infoLabel = localized.getString(R.string.online_info_label),
+        )
         val onlineItems = if (settings.online() && !kidsMode) {
             try {
-                online.topMovies(chartCountry()).map { movie ->
-                    movie.toDiscoveryItem(
-                        ownPackage = appContext.packageName,
-                        sourceLabel = appContext.getString(R.string.online_source_label),
-                        previewLabel = appContext.getString(R.string.trailer_preview),
-                    )
-                }
+                online.topMovies(chartCountry()).map { it.asCard() }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -396,6 +578,14 @@ class DiscoveryEngine(
             }
         } else {
             emptyList()
+        }
+        // A cached JustWatch card may supply a poster/backdrop for an installed
+        // app's Watch Next row even when the viewer turned the online rail off.
+        // This is a local read only: no request is made here.
+        val onlineArtItems = when {
+            kidsMode -> emptyList()
+            onlineItems.isNotEmpty() -> onlineItems
+            else -> online.cachedMovies(chartCountry()).map { it.asCard() }
         }
 
         val personalization = settings.personalization()
@@ -417,6 +607,10 @@ class DiscoveryEngine(
                 personalization = personalization,
                 providerState = providerState,
                 onlineItems = onlineItems,
+                // The chart can be disabled or fail while its last download is
+                // still a valid source of posters and previews for provider
+                // rows. Pass the local cache instead of dropping that fallback.
+                onlineArtItems = onlineArtItems,
             ),
         )
         snapshot
@@ -424,8 +618,9 @@ class DiscoveryEngine(
 
     /**
      * The public chart is localized by storefront, not by the UI language
-     * alone. Russian UI asks the Russian store; otherwise the system country
-     * is used, with the US chart as the honest fallback.
+     * alone. Russian UI asks JustWatch for the RU chart and Apple for the RU
+     * preview chart; otherwise the system country is used, with US as the
+     * honest fallback.
      */
     private fun chartCountry(): String {
         if (LocalePreference.get(appContext) == LocalePreference.RUSSIAN) return "ru"

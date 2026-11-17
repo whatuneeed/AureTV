@@ -74,6 +74,7 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.RedditImageStore
 import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
 import com.whatuneed.ovisiontv.kotlin.data.Weather
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion
@@ -122,6 +123,7 @@ internal fun AmbientScreen(
     dimAfter: AmbientDim = AmbientDim.NEVER,
     maxSession: AmbientSession = AmbientSession.NEVER,
     showWeather: Boolean = false,
+    aerialQuality: AerialQuality = AerialQuality.COMPATIBLE,
     photos: List<Uri> = emptyList(),
     photosAllowed: Boolean = true,
     reddit: List<RedditWallpaper> = emptyList(),
@@ -137,6 +139,7 @@ internal fun AmbientScreen(
     if (mode == AmbientMode.AERIAL) {
         SaverScreen(
             items = items,
+            aerialQuality = aerialQuality,
             closing = closing,
             swallowOpeningPress = swallowOpeningPress,
             players = players,

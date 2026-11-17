@@ -86,6 +86,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySourceState
 import com.whatuneed.ovisiontv.kotlin.discovery.artUri
 import com.whatuneed.ovisiontv.kotlin.ui.ArtEasing
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
@@ -112,6 +113,7 @@ private const val ART_CROSSFADE_MS = 350
 private const val CARD_WIDTH = 330f
 private const val CARD_HEIGHT = 186f
 private const val CARD_GAP = 24f
+private const val PRELOAD_CARDS = 8
 private const val CARD_RADIUS = 18f
 private const val RAIL_BOTTOM = 56f
 private const val RAIL_TITLE_GAP = 12f
@@ -147,6 +149,9 @@ fun TopShelf(
     onCardActivate: (DiscoveryItem) -> Unit,
     onSectionActivate: (DiscoverySection) -> Unit,
     scale: TvScale,
+    // The engine knows why provider rows are missing. A silent empty rail made
+    // a revoked READ_TV_LISTINGS look like data loss; Home shows this state.
+    providerState: DiscoverySourceState = DiscoverySourceState.EMPTY,
     reduceMotion: Boolean = false,
     // Only the selected online card has an official preview URL. Home owns the
     // opt-in, Reduce Motion and modal gates; null means "show the poster".
@@ -173,7 +178,10 @@ fun TopShelf(
     // dock is below, so a neutral welcome state explains how to fill the shelf
     // instead of leaving a black field above it.
     if (drawableBanner == null && rails.isEmpty()) {
-        EmptyHome(scale)
+        EmptyHome(
+            scale = scale,
+            listingsDenied = providerState == DiscoverySourceState.NO_PERMISSION,
+        )
         return
     }
     val heroPrefix = "${ArtRole.HERO}:"
@@ -306,6 +314,7 @@ fun TopShelf(
             selected = selected,
             scale = scale,
             top = headingTop,
+            listingsDenied = providerState == DiscoverySourceState.NO_PERMISSION,
         )
 
         // The browsing Home is a poster, a title and the dock, as on tvOS. The
@@ -355,7 +364,7 @@ fun TopShelf(
 
 /** Neutral first screen when no app publishes a banner or a recommendation. */
 @Composable
-private fun EmptyHome(scale: TvScale) {
+private fun EmptyHome(scale: TvScale, listingsDenied: Boolean) {
     Column(
         Modifier
             .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(300f))
@@ -379,6 +388,17 @@ private fun EmptyHome(scale: TvScale) {
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
+        if (listingsDenied) {
+            Spacer(Modifier.height(scale.dp(18f)))
+            Text(
+                text = stringResource(R.string.shelf_listings_denied),
+                color = Color.White.copy(alpha = 0.62f),
+                fontSize = scale.sp(TvType.body),
+                lineHeight = scale.sp(TvType.body * 1.3f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -388,6 +408,7 @@ private fun TopShelfHeading(
     selected: DiscoveryItem?,
     scale: TvScale,
     top: Float,
+    listingsDenied: Boolean = false,
 ) {
     // tvOS captions the shelf with the selected content, not with the app
     // category. The old "APPLICATION" line was product metadata leaking into
@@ -413,6 +434,17 @@ private fun TopShelfHeading(
                 shadow = Shadow(color = Color.Black.copy(alpha = 0.55f), blurRadius = 30f),
             ),
         )
+        if (listingsDenied) {
+            Spacer(Modifier.height(scale.dp(12f)))
+            Text(
+                text = stringResource(R.string.shelf_listings_denied),
+                color = Color.White.copy(alpha = 0.66f),
+                fontSize = scale.sp(TvType.callout),
+                lineHeight = scale.sp(TvType.callout * 1.3f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -614,6 +646,32 @@ private fun RailCard(
     reduceMotion: Boolean,
     focusRequester: FocusRequester,
 ) {
+    val context = LocalContext.current
+    var lazyArt by remember(item.id) { mutableStateOf<ImageBitmap?>(null) }
+    // A 24-card online rail cannot be preloaded without evicting the hero or
+    // holding old bitmaps for cards that are far off screen. Cards outside the
+    // preload window load their own art when LazyRow composes them, and release
+    // it when they leave composition; the shared LRU still avoids re-decoding.
+    LaunchedEffect(item.id, art) {
+        if (art != null) {
+            lazyArt = null
+            return@LaunchedEffect
+        }
+        val target = Adaptive.budgets.discoveryCardPx
+        val cacheKey = "${item.source}:${item.artUri}|$target|${ArtRole.CARD}"
+        if (shelfArtFailures.isFailed(cacheKey)) return@LaunchedEffect
+        val cached = shelfArtCache.get(cacheKey)
+        val loaded = cached ?: withContext(Dispatchers.IO) {
+            loadArt(context, item, target)
+        }
+        if (loaded != null) {
+            if (cached == null) shelfArtCache.put(cacheKey, loaded)
+            lazyArt = loaded
+            shelfArtFailures.clear(cacheKey)
+        } else if (cached == null) {
+            shelfArtFailures.markFailed(cacheKey)
+        }
+    }
     val grow by animateFloatAsState(
         targetValue = if (focused) 1.06f else 1f,
         animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
@@ -674,9 +732,10 @@ private fun RailCard(
             }
             .testTag("shelfCard"),
     ) {
-        if (art != null) {
+        val shownArt = art ?: lazyArt
+        if (shownArt != null) {
             Image(
-                bitmap = art,
+                bitmap = shownArt,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -746,6 +805,36 @@ private fun RailCard(
                 )
             }
         }
+
+        val badge = when {
+            // Every JustWatch card is an in-launcher information card now: its
+            // preview may decorate the hero, but there is no installed app to
+            // open, so OK must not promise a trailer destination.
+            item.source == DiscoverySource.ONLINE -> stringResource(R.string.online_info_about)
+            // A provider row only gets this badge when an exact JustWatch title
+            // supplied a real official preview. OK then plays it and a second
+            // OK opens the film in the app that published the row.
+            !item.trailerUri.isNullOrBlank() -> stringResource(R.string.discovery_trailer_badge)
+            else -> null
+        }
+        badge?.let { label ->
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(scale.dp(TvSpace.sm))
+                    .clip(RoundedCornerShape(scale.dp(9f)))
+                    .background(Color.Black.copy(alpha = 0.62f))
+                    .padding(horizontal = scale.dp(8f), vertical = scale.dp(3f)),
+            ) {
+                Text(
+                    text = label,
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontSize = scale.sp(15f),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 
@@ -771,6 +860,26 @@ private fun RecommendationInfo(card: DiscoveryItem, scale: TvScale) {
                     lineHeight = scale.sp(TvLeading.infoSubtitle),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+            card.synopsis?.takeIf { it.isNotBlank() }?.let { synopsis ->
+                Spacer(Modifier.height(scale.dp(6f)))
+                Text(
+                    text = synopsis,
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = scale.sp(TvType.caption),
+                    lineHeight = scale.sp(TvType.caption * 1.3f),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            card.remainingMinutes?.let { minutes ->
+                Spacer(Modifier.height(scale.dp(4f)))
+                Text(
+                    text = stringResource(R.string.watch_next_minutes_left, minutes),
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = scale.sp(TvType.caption),
+                    maxLines = 1,
                 )
             }
             Spacer(Modifier.height(scale.dp(8f)))
@@ -897,11 +1006,13 @@ private fun rememberRailArts(
                 arts.remove(key)
             }
         }
-        items.forEach { item ->
-            loadInto(arts, context, item, ArtRole.CARD)
-        }
+        // Hero first: the focused card is what the viewer is looking at, and
+        // waiting for 24 card downloads before it was a visible black frame.
         items.firstOrNull { it.id == selectedId }?.let { item ->
             loadInto(arts, context, item, ArtRole.HERO)
+        }
+        items.take(PRELOAD_CARDS).forEach { item ->
+            loadInto(arts, context, item, ArtRole.CARD)
         }
         // Keep the rail plus the hero; the LRU would evict anyway, but the map
         // must not outlive the cache entry it points at.

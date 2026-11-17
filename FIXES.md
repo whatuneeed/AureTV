@@ -13,6 +13,14 @@
 
 | Симптом | Запись |
 |---|---|
+| В полке появилась отдельная вкладка «Фильмы», хотя онлайн-карточки должны жить внутри «Для вас» | 0.5.14 (Flux/For You) |
+| Онлайн-карточка без официального трейлера выглядит мёртвой | 0.5.14 (OnlineInfoOverlay) |
+| Заставка Aerial показывает только 1080p, хотя ТВ умеет 4K/HDR | 0.5.14 (Aerial quality) |
+| В выборе роликов Aerial пустые превью и кольцо фокуса смещено | 0.5.14 (Aerial polish) |
+| Плитку приложения нельзя переименовать; имя общее для всех профилей | 0.5.14 (App labels) |
+| Мёртвую плитку нельзя убрать, а пропавшие системные приложения остаются в раскладке | 0.5.14 (Dead tiles) |
+| Провайдер публикует `preview_video_uri`, но лаунчер его не использует | 0.5.14 (Provider previews) |
+| Пустая полка не объясняет, что отозван `READ_TV_LISTINGS` | 0.5.14 (Home hint) |
 | На Главной hero онлайн-фильма остаётся узким портретным постером, а не полноэкранным кадром | 0.5.13 (motion hero) |
 | Нет tvOS-автопревью: трейлер запускается только после OK, а не при выборе карточки | 0.5.13 (motion hero) |
 | Пока трейлер грузится, hero становится чёрным и закрывает постер | 0.5.13 (hero fallback) |
@@ -244,6 +252,21 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.14: Flux/For You, Aerial 4K-каталог, имена приложений и провайдерские трейлеры
+
+- **Симптом.** Отдельная вкладка «Фильмы» противоречила решению владельца: онлайн-контент должен жить внутри «Для вас», а не быть вторым киноразделом. Онлайн-карточка без официального preview выглядела мёртвой; Apple RSS отдавал только портретные постеры и 640p. Aerial умел только 1080p, в выборе роликов были пустые превью и смещённое кольцо фокуса. Плитку нельзя было переименовать, мёртвая плитка не удалялась, а пропавшие системные приложения оставались в сохранённой раскладке. Провайдерский `preview_video_uri` не использовался вообще.
+- **Причина.** Онлайн-слой был построен вокруг Apple Top Movies и отдельной `DiscoverySection.ONLINE`; у него не было ни RU-каталога, ни информации о фильме, ни честного состояния «трейлера нет». Aerial-каталог не имел вариантов качества и достаточно широкого набора роликов; превью грузились полноразмерными PNG, а кольцо фокуса рисовалось `Modifier.border()` поверх масштабируемой карточки. `WatchNextRow` не читал колонку preview-видео. У имён приложений не было хранилища, а фильтр системных приложений был чрезмерно широким.
+- **Что сделано.**
+  - **Flux/For You.** Удалена отдельная полка `ONLINE`; чарт JustWatch + официальные Apple preview дают карточки внутри «Для вас». Фильм становится Flux-карточкой только при наличии HTTPS-preview, числового TMDB id и установленного/видимого Flux; ссылка — `flux://movie/{tmdbId}`, не больше 3 карточек. Для карточки без preview OK открывает `OnlineInfoOverlay` с настоящим постером/кадром, годом и описанием, а не браузер и не чужое приложение. Для Flux-карточки — трейлер → описание → «Смотреть в Flux».
+  - **Провайдерские трейлеры.** `WatchNext` читает `COLUMN_PREVIEW_VIDEO_URI`; `DiscoveryEngine.playableProviderPreview()` принимает только HTTPS и отбрасывает YouTube-страницы (`youtu.be`, `/watch`, `/embed/`, `/shorts/`). Если provider preview нет, используется прежний fallback.
+  - **Aerial.** `AerialQuality` (`compatible`/`best`), цепочка `4K HDR → 4K SDR → 1080p HDR → 1080p HEVC → H264`, каталог расширен до **117** клипов и **92** вариантов. 17 новых клипов получили реальные кадры из своего видео (`assets/aerial_previews/`, 1.6 MB); официальный Apple preview остаётся приоритетным. Превью-кеш — 450×290 JPEG q82, память + prefetch вокруг фокуса; постер снимается через 3 с, а не на чёрном входе; кольцо фокуса рисуется внутренним `drawRoundRect` и больше не съезжает при scale.
+  - **Приложения.** `AppLabelStore` — переименование/сброс имени, 64 символа, 500 записей, **отдельно для каждого профиля**. Имена входят в backup HOME-компонента (необязательное поле `labels`, schema 1, старые архивы совместимы). Мёртвая плитка при Hide удаляется, а не паркуется в «Ещё приложения»; пропавшие **системные** пакеты выпадают из сохранённого порядка, пользовательские placeholders сохраняются. Общего скрытия системных приложений нет: Play Store, системные Settings, Google TV и Play Games остаются видимыми.
+  - **Home.** Если `DiscoverySourceState.NO_PERMISSION`, полка объясняет, что рекомендации приложений отключены и где выдать «Доступ к рекомендациям». Кэш `onlineArtItems` теперь передаётся в `DiscoveryInputs` как источник постера/фона для provider-строк, но не создаёт карточку и не делает запрос.
+  - **Приватность.** Политика v10, EN/RU: Flux/JustWatch/Apple hosts, отсутствие отдельной полки Top Movies, отсутствие API-ключей/аккаунтов; старые legacy-кадры Aerial читаются из APK без сетевого запроса.
+- **Файлы.** `online/{OnlineModels,OnlineClient,OnlineDiscovery,FluxDeepLink}.kt`, `discovery/{DiscoveryEngine,DiscoveryModels,DiscoveryStore,DiscoveryIntents}.kt`, `ui/{HomeScreen,SettingsScreen,LauncherRoot}.kt`, `ui/components/{TopShelf,OnlineInfoOverlay,TrailerOverlay,HeroPreview}.kt`, `data/{AerialQuality,AerialCatalog,AppLabelStore,AppRepository,HomeOrderStore,FolderEdit,WatchNext}.kt`, `backup/*`, `ambient/AmbientModels.kt`, `AerialDreamService.kt`, `res/values/strings.xml`, `res/values-ru/strings.xml`, `res/raw/privacy_*.txt`, `assets/aerial_catalog.json`, `assets/aerial_previews/`; тесты `AerialQualityTest`, `AerialCatalogTest`, `AppLabelStoreTest`, `AppRepositoryTest`, `BackupCodecTest`, `BackupManagerInstrumentedTest`, `DiscoveryEngineTest`, `FluxDeepLinkTest`, `HeroPreviewPolicyTest`, `OnlineModelsTest`, `OnlineInfoOverlayTest`, `TrailerOverlayTest`, `TopShelfTest`, `HomeScreenTest`, `SettingsScreenTest`, `SaverPreviewTest`, `WatchNextTest`.
+- **Чего не делать.** Не возвращать отдельную вкладку «Фильмы» и не открывать чужое приложение/браузер из онлайн-чарта — только Flux и только для Flux-карточки. Не растягивать портретный постер в 16:9 и не выдумывать трейлер. Не считать JustWatch контрактным API: endpoint недокументирован, для поставки нужна юридическая проверка. Не включать 4K/HDR по умолчанию и не показывать HDR-бейдж без физического ТВ. Не скрывать все системные приложения опять. Не делать общий глобальный `app_labels` в обход профиля. Не увеличивать APK другими полноразмерными PNG: legacy-кадры уже дают +1.6 MB.
+- **Проверка.** `compileDebugKotlin`, `compileDebugUnitTestKotlin`, `compileDebugAndroidTestKotlin` — BUILD SUCCESSFUL. Targeted unit — **120/120** (10 классов); targeted connected на `hume-tv` API 34 — **35/35**; lint — **0 errors / 19 warnings / 5 information**. `assembleRelease` — BUILD SUCCESSFUL; `release_check.py` — PASS, v2, прежний сертификат, RU/EN 661. Артефакт: **6 568 839 B**, SHA-256 **`9170cdd6bd5854c927335100ba2b850a294415e32ec990bc45633e990d12cfdd`**, версия **0.5.14 / vc87**. Полный unit/connected suite по директиве владельца не перезапускался; физический ТВ, 4K/HDR/HEVC, 720p-трейлеры и TalkBack-голос не проверялись.
 
 ### 17.11.2026 — 0.5.13: tvOS-подобный motion hero и источники для RU
 

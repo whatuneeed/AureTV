@@ -1,6 +1,8 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import com.whatuneed.ovisiontv.kotlin.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,6 +20,22 @@ class HomeOrderStore(
 
     private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
+    /**
+     * A disabled built-in is still installed, so PackageManager can tell us it
+     * is a system package. Keep user-installed placeholders for a future
+     * reinstall, but do not leave a dead system-service tile in the grid.
+     */
+    private fun keepMissingPackage(packageName: String): Boolean {
+        val info = runCatching {
+            context.packageManager.getApplicationInfo(
+                packageName,
+                PackageManager.MATCH_DISABLED_COMPONENTS or
+                    PackageManager.MATCH_UNINSTALLED_PACKAGES,
+            )
+        }.getOrNull() ?: return true
+        return info.flags and ApplicationInfo.FLAG_SYSTEM == 0
+    }
+
     fun applyOrder(apps: List<TvApp>): List<HomeItem> {
         val saved = SafePreferences.string(prefs, LauncherPrefs.KEY_HOME_ORDER, null)
         val built = buildHomeOrderRepair(
@@ -25,6 +43,7 @@ class HomeOrderStore(
             apps = apps,
             defaultFolderName = context.getString(R.string.folder_default),
             hiddenFolderName = context.getString(R.string.hidden_folder_name),
+            keepMissing = ::keepMissingPackage,
         )
         // Keep the raw value before a repair can overwrite it. The backup is
         // one bounded key, so a corrupt order stays diagnosable after the
@@ -166,6 +185,7 @@ internal fun buildHomeOrderRepair(
     apps: List<TvApp>,
     defaultFolderName: String,
     hiddenFolderName: String? = null,
+    keepMissing: (String) -> Boolean = { true },
 ): BuiltHomeOrder {
     val fallback = apps.map(HomeItem::AppItem)
     if (saved == null) return BuiltHomeOrder(fallback, repairedIds = false)
@@ -189,16 +209,16 @@ internal fun buildHomeOrderRepair(
         val entry = entries.opt(index)
         if (entry is String) {
             if (entry.length > MAX_TEXT_CHARS) continue
-            val app = byPackage[entry] ?: missingApp(entry)
-            if (used.add(entry)) result += HomeItem.AppItem(app)
+            val app = byPackage[entry] ?: entry.takeIf(keepMissing)?.let(::missingApp)
+            if (app != null && used.add(entry)) result += HomeItem.AppItem(app)
         } else if (entry is JSONObject) {
             val folderApps = ArrayList<TvApp>()
             val packages = entry.optJSONArray("apps") ?: JSONArray()
             for (packageIndex in 0 until minOf(packages.length(), MAX_FOLDER_APPS)) {
                 val packageName = packages.optString(packageIndex)
                 if (packageName.length > MAX_TEXT_CHARS) continue
-                val app = byPackage[packageName] ?: missingApp(packageName)
-                if (used.add(packageName)) folderApps += app
+                val app = byPackage[packageName] ?: packageName.takeIf(keepMissing)?.let(::missingApp)
+                if (app != null && used.add(packageName)) folderApps += app
             }
             if (folderApps.isEmpty()) continue
             // Duplicate ids would collide with the key Compose uses for each cell.

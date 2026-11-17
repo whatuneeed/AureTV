@@ -74,14 +74,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -121,6 +125,8 @@ import com.whatuneed.ovisiontv.kotlin.SetupActivity
 import com.whatuneed.ovisiontv.kotlin.SoftwareUpdateActivity
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClipCache
+import com.whatuneed.ovisiontv.kotlin.data.AerialDeviceCapabilities
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.AerialRefresh
@@ -203,6 +209,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.saverThemeLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -663,7 +670,10 @@ fun SettingsScreen(
         val previousOwner = itemsOwner
         itemsOwner = null
         val result = apps?.let { AppLoadResult.Loaded(it) }
-            ?: AppRepository(context).loadResult(withArtwork = false)
+            ?: AppRepository(context).loadResult(
+                withArtwork = false,
+                prefsName = ProfileStore.homePrefsName(currentProfileId),
+            )
         when (result) {
             is AppLoadResult.Loaded -> {
                 val ordered = runCatching {
@@ -747,6 +757,10 @@ fun SettingsScreen(
     var ambientShowWeather by remember(resumeTick) {
         mutableStateOf(AmbientSettingsStore.showWeather(context))
     }
+    var aerialQuality by remember(resumeTick) {
+        mutableStateOf(AmbientSettingsStore.aerialQuality(context))
+    }
+    val aerialCapabilities = remember(context) { AerialDeviceCapabilities.from(context) }
     var photoFolder by remember(resumeTick) {
         mutableStateOf(
             PhotoFolderState(
@@ -1762,6 +1776,31 @@ fun SettingsScreen(
             if (ambientMode == AmbientMode.AERIAL) {
                 add(
                     SettingsRow(
+                        title = stringResource(R.string.saver_aerial_quality),
+                        value = when {
+                            aerialQuality == AerialQuality.COMPATIBLE ->
+                                stringResource(R.string.saver_aerial_quality_1080)
+                            aerialCapabilities.uhd && aerialCapabilities.hdr ->
+                                stringResource(R.string.saver_aerial_quality_best)
+                            aerialCapabilities.uhd ->
+                                stringResource(R.string.saver_aerial_quality_4k)
+                            aerialCapabilities.hdr ->
+                                stringResource(R.string.saver_aerial_quality_hdr)
+                            else -> stringResource(R.string.saver_aerial_quality_limited)
+                        },
+                        toggleState = aerialQuality == AerialQuality.BEST,
+                        action = {
+                            aerialQuality = if (aerialQuality == AerialQuality.BEST) {
+                                AerialQuality.COMPATIBLE
+                            } else {
+                                AerialQuality.BEST
+                            }
+                            AmbientSettingsStore.setAerialQuality(context, aerialQuality)
+                        },
+                    ),
+                )
+                add(
+                    SettingsRow(
                         title = stringResource(R.string.saver_choose),
                         value = stringResource(R.string.saver_aerials),
                         chevron = true,
@@ -2229,7 +2268,12 @@ fun SettingsScreen(
                     showPhoneOnlyApps = !showPhoneOnlyApps
                     setShowPhoneApps(context, showPhoneOnlyApps)
                     scope.launch {
-                        when (val result = AppRepository(context).loadResult(withArtwork = false)) {
+                        when (
+                            val result = AppRepository(context).loadResult(
+                                withArtwork = false,
+                                prefsName = ProfileStore.homePrefsName(currentProfileId),
+                            )
+                        ) {
                             is AppLoadResult.Loaded -> {
                                 val ordered = runCatching {
                                     orderStore.applyOrder(result.apps)
@@ -2953,6 +2997,38 @@ fun SettingsScreen(
         }
     }
 
+    // LazyColumn composes only the visible rows. Warm the rows immediately
+    // around the focused one so a D-pad step does not show an empty tile while
+    // its 900×580 still is fetched; the disk cache makes later opens instant.
+    LaunchedEffect(page, isGrid, filterKey, saverThemes, focusIndex) {
+        if (page != PAGE_SAVER_CHOOSER || !isGrid || filteredClips.isEmpty()) {
+            return@LaunchedEffect
+        }
+        val focusedRow = focusIndex.coerceIn(0, filteredClips.lastIndex) / GRID_COLUMNS
+        val firstRow = (focusedRow - 1).coerceAtLeast(0)
+        val lastRow = (focusedRow + 4).coerceAtMost(
+            (filteredClips.size - 1) / GRID_COLUMNS,
+        )
+        val urls = filteredClips
+            .subList(firstRow * GRID_COLUMNS, minOf((lastRow + 1) * GRID_COLUMNS, filteredClips.size))
+            .map { it.previewUrl }
+            .filter { it.isNotEmpty() && AerialPreviewStore.cachedThumbnail(it) == null }
+            .distinct()
+        if (urls.isEmpty()) return@LaunchedEffect
+        // Let the tiles that are actually on screen start first; the prefetch
+        // then sees their memory hits instead of downloading the same still twice.
+        delay(250)
+        withContext(Dispatchers.IO) {
+            urls.chunked(4).forEach { chunk ->
+                coroutineScope {
+                    chunk.forEach { url ->
+                        launch { AerialPreviewStore.loadThumbnail(context, url) }
+                    }
+                }
+            }
+        }
+    }
+
     val allLabel = stringResource(R.string.saver_filter_all)
     val themeLabels = chooserThemes.associateWith { saverThemeLabel(it) }
     val categories = if (isGrid) {
@@ -2998,6 +3074,7 @@ fun SettingsScreen(
         PAGE_KIDS_APPS -> stringResource(R.string.kids_allowed_hint)
         PAGE_SAVER_RESET -> stringResource(R.string.saver_reset_hint)
         PAGE_SAVER -> when (ambientMode) {
+            AmbientMode.AERIAL -> stringResource(R.string.saver_aerial_quality_hint)
             AmbientMode.CLOCK -> stringResource(R.string.saver_pixel_shift_hint)
             AmbientMode.PHOTOS -> stringResource(R.string.saver_photos_hint)
             AmbientMode.REDDIT -> stringResource(R.string.saver_reddit_hint)
@@ -4375,11 +4452,30 @@ private fun SaverTile(
                 .size(scale.dp(TILE_WIDTH), scale.dp(TILE_HEIGHT))
                 .clip(shape)
                 .background(TvInk.previewTop)
-                .border(
-                    width = scale.dp(TvFocus.TILE_STROKE),
-                    color = Color.White.copy(alpha = focusAmount),
-                    shape = shape,
-                ),
+                // Draw the ring ourselves, inset by half its stroke. A
+                // Modifier.border stroke is centred on the bounds and is
+                // clipped unevenly once the focused tile is scaled, which
+                // made the outline look displaced by a few pixels.
+                .drawWithContent {
+                    drawContent()
+                    if (focusAmount > 0f) {
+                        val stroke = scale.dp(TvFocus.TILE_STROKE).toPx()
+                        val radius = scale.dp(TILE_RADIUS).toPx()
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = focusAmount),
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                stroke / 2f,
+                                stroke / 2f,
+                            ),
+                            size = Size(size.width - stroke, size.height - stroke),
+                            cornerRadius = CornerRadius(
+                                (radius - stroke / 2f).coerceAtLeast(0f),
+                                (radius - stroke / 2f).coerceAtLeast(0f),
+                            ),
+                            style = Stroke(width = stroke),
+                        )
+                    }
+                },
         ) {
             frame?.let { bitmap ->
                 Image(
@@ -4442,7 +4538,13 @@ private fun SaverTile(
 @Composable
 private fun rememberThumbnail(url: String): Bitmap? {
     val context = LocalContext.current.applicationContext
-    var bitmap by remember(url) { mutableStateOf<Bitmap?>(null) }
+    // Seed from the in-memory thumbnail cache: a tile that was visible before
+    // must not go blank while an IO hop fetches the same bitmap again.
+    var bitmap by remember(url) {
+        mutableStateOf(
+            url.takeIf { it.isNotEmpty() }?.let(AerialPreviewStore::cachedThumbnail),
+        )
+    }
     LaunchedEffect(url) {
         if (url.isEmpty() || bitmap != null) return@LaunchedEffect
         bitmap = withContext(Dispatchers.IO) { AerialPreviewStore.loadThumbnail(context, url) }

@@ -1,0 +1,21 @@
+OVisionTV 0.5.10 / versionCode 83 verification (2026-11-16)
+
+code commit: 4ae91bb
+tag: v0.5.10
+
+== unit ==
+debug 481 / release 481; failures 0; errors 0; skipped 0
+
+== instrumented ==
+connectedDebugAndroidTest on hume-tv API 34: 277 / 277 passed, 0 failed, 6m46s
+
+== lint ==
+lintDebug: 0 Error / 19 Warning / 5 Information
+
+== apk ==
+a30dde38c354d337049c16b2a881f15cfbafc219648a5b147316cde09c5d8286 *app/build/outputs/apk/release/app-release.apk
+bytes 4877894
+
+== zipalign ==
+ 4215444 resources.arsc (OK)
+Verification succesful

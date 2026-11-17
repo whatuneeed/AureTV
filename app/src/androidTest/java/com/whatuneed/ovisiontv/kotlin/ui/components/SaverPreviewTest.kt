@@ -21,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -98,6 +99,39 @@ class SaverPreviewTest {
         assertNotNull(bitmap)
         assertTrue(bitmap!!.width.toLong() * bitmap.height <= 4_000_000)
         assertTrue(file.exists())
+    }
+
+    @Test
+    fun a_loaded_thumbnail_is_available_to_the_next_tile_without_io() {
+        val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
+        val loaded = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        assertNotNull(loaded)
+        assertSame(loaded, AerialPreviewStore.cachedThumbnail(url))
+    }
+
+    @Test
+    fun a_thumbnail_is_cached_as_a_small_file_not_the_full_png() {
+        AerialPreviewStore.clear(targetContext())
+        val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
+        val bitmap = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        assertNotNull(bitmap)
+        assertEquals(450, bitmap!!.width)
+        val thumbs = File(targetContext().cacheDir, "aerial_previews/thumbs")
+            .listFiles()?.filter { it.isFile }.orEmpty()
+        assertTrue(thumbs.any { it.length() > 0 && it.length() < 150_000 })
+    }
+
+    @Test
+    fun a_bundled_legacy_frame_loads_without_the_network() {
+        val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
+        val bitmap = AerialPreviewStore.load(targetContext(), url)
+        assertNotNull(bitmap)
+        assertEquals(900, bitmap!!.width)
+        assertEquals(580, bitmap.height)
+
+        val thumb = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        assertNotNull(thumb)
+        assertTrue(thumb!!.width > 0)
     }
 
     @Test

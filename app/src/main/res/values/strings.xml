@@ -7,6 +7,7 @@
     <string name="shelf_context">Application</string>
     <string name="home_empty_title">Welcome to OVisionTV</string>
     <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings.</string>
+    <string name="shelf_listings_denied">App recommendations are off. Allow Recommendations Access in Settings.</string>
     <string name="shelf_continue">Continue Watching</string>
     <string name="discovery_section_continue">Continue Watching</string>
     <string name="discovery_section_for_you">For You</string>
@@ -15,6 +16,7 @@
     <string name="discovery_section_recent">Recently Used</string>
     <string name="discovery_section_favorites">Favorites</string>
     <string name="discovery_reason_trending">Top movie</string>
+    <string name="watch_next_minutes_left">%1$d min left</string>
     <string name="discovery_reason_continue">Continue watching</string>
     <string name="discovery_reason_recent">Recently opened</string>
     <string name="discovery_reason_favorite">In Favorites</string>
@@ -25,11 +27,17 @@
     <string name="discovery_settings_title">Recommendations</string>
     <string name="discovery_personalization">Personalization</string>
     <string name="discovery_section_online">Top Movies</string>
-    <string name="online_source_label">Apple iTunes</string>
-    <string name="discovery_online">Online Top Movies</string>
+    <string name="online_source_label">JustWatch</string>
+    <string name="discovery_online">Online trailers and descriptions</string>
     <string name="discovery_preview_autoplay">Autoplay previews</string>
+    <string name="online_info_label">About</string>
+    <string name="discovery_trailer_badge">Trailer</string>
+    <string name="online_info_no_synopsis">No synopsis available</string>
+    <string name="online_info_about">About the film</string>
     <string name="trailer_preview">Official preview</string>
     <string name="trailer_unavailable">Preview unavailable</string>
+    <string name="trailer_open_in">Watch in %1$s</string>
+    <string name="trailer_action_hint">OK — open · BACK — close</string>
     <string name="trailer_exit_hint">Press BACK to close</string>
     <string name="trailer_description">Preview: %1$s</string>
     <string name="discovery_hidden">Hidden recommendations</string>
@@ -40,7 +48,7 @@
     <string name="discovery_clear_confirm">Clear history</string>
     <string name="discovery_clear_hint">Removes the launcher\'s launch history and recency. Favorites and hidden cards stay.</string>
     <string name="discovery_clear_done">Recommendation history cleared</string>
-    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. Online Top Movies use the public Apple iTunes RSS and play official previews inside the launcher; a muted preview can autoplay on the selected card.</string>
+    <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. When Flux is installed, films with an official preview from the public chart appear as Flux cards in For You: OK plays the trailer, then opens the title in Flux. A muted preview can autoplay on the selected card.</string>
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
     <string name="library_favorites">Favorites</string>
@@ -225,6 +233,13 @@
     <string name="saver_refresh_monthly">Monthly</string>
     <string name="saver_refresh_never">Never</string>
     <string name="saver_refresh_hint">Apple’s public catalogue is older than the built-in one today, so a check normally keeps the built-in clips.</string>
+    <string name="saver_aerial_quality">Aerial quality</string>
+    <string name="saver_aerial_quality_1080">1080p (compatible)</string>
+    <string name="saver_aerial_quality_4k">4K</string>
+    <string name="saver_aerial_quality_hdr">HDR</string>
+    <string name="saver_aerial_quality_best">4K/HDR</string>
+    <string name="saver_aerial_quality_limited">1080p (TV lacks 4K/HDR)</string>
+    <string name="saver_aerial_quality_hint">4K/HDR is used only when the TV supports it and uses more data; otherwise 1080p.</string>
     <string name="saver_screen_description">Screen Saver, %1$s. Press any button to exit.</string>
     <string name="aerial_dream_label">OVisionTV Ambient</string>
     <string name="saver_system_title">System screen saver</string>
@@ -700,4 +715,8 @@
     <string name="backup_password_mismatch">Passwords do not match</string>
     <string name="backup_category_content">Content sources</string>
     <string name="backup_password_too_short">Use at least 8 characters</string>
+    <string name="menu_rename_app">Rename App</string>
+    <string name="rename_app_title">Rename App</string>
+    <string name="menu_reset_app_name">Reset Name</string>
+    <string name="rename_app_note">This name is shown only in OVisionTV.</string>
 </resources>

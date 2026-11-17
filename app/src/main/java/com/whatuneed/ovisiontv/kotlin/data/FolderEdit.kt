@@ -58,9 +58,19 @@ internal fun hideApp(
     val index = items.indexOfFirst { it is HomeItem.AppItem && it.app.packageName == packageName }
     if (index < 0) return null
     val app = (items[index] as HomeItem.AppItem).app
-    if (!app.available) return null
     val list = items.toMutableList()
     list.removeAt(index)
+    if (!app.available) {
+        // A dead tile from a removed/disabled package cannot be launched or
+        // restored from the hidden folder. "Hide" means remove it from the
+        // saved layout, not park it in a folder that would still show it.
+        val target = when {
+            index < list.size && !isHiddenFolder(list[index]) -> index
+            else -> (index - 1 downTo 0).firstOrNull { !isHiddenFolder(list[it]) }
+                ?: list.lastIndex.coerceAtLeast(0)
+        }
+        return HomeEdit(list, target)
+    }
     val hiddenIndex = list.indexOfFirst { isHiddenFolder(it) }
     if (hiddenIndex >= 0) {
         val folder = list[hiddenIndex] as HomeItem.FolderItem

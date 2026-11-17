@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,9 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +41,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -55,9 +60,16 @@ internal const val TRAILER_OVERLAY_TAG = "trailer_overlay"
 
 /**
  * A single official preview, played by the launcher itself. It is deliberately
- * not a second video app: one ExoPlayer, no controls, any remote key or BACK
- * closes it. A failed preview leaves an honest error state instead of a black
- * screen that looks like a hang.
+ * not a second video app: one ExoPlayer, no controls, and BACK closes it. When
+ * [actionLabel] is present, OK performs [onAction] instead of closing, so a
+ * provider recommendation can go preview → OK → open in its own app. Without
+ * an action every remote key closes the overlay. A failed preview leaves an
+ * honest error state instead of a black screen that looks like a hang.
+ *
+ * The media source is the provider URL itself: no CacheDataSource, no
+ * SimpleCache and no DownloadHelper. The only storage is ExoPlayer's normal
+ * in-memory read buffer while the stream is playing; leaving the overlay
+ * releases it.
  *
  * It lives in a [Dialog] window so its focus and BACK handling cannot be
  * swallowed by the Home grid underneath. A plain overlay inside Home left the
@@ -69,6 +81,9 @@ fun TrailerOverlay(
     title: String,
     url: String,
     onDismiss: () -> Unit,
+    synopsis: String? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scale = rememberTvScale()
@@ -125,10 +140,31 @@ fun TrailerOverlay(
                 .background(Color.Black)
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown) onDismiss()
-                    // A preview has no sub-focus: every remote key closes it,
-                    // including BACK and OK, as the old player did.
-                    true
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent true
+                    val hasAction = actionLabel != null && onAction != null
+                    when {
+                        event.key == Key.Back -> {
+                            onDismiss()
+                            true
+                        }
+                        hasAction && (
+                            event.key == Key.DirectionCenter ||
+                                event.key == Key.Enter ||
+                                event.key == Key.NumPadEnter
+                            ) -> {
+                            onAction?.invoke()
+                            true
+                        }
+                        // While an app action exists, stray keys must not throw
+                        // the viewer back to Home before they can press OK.
+                        hasAction -> true
+                        // A preview without a destination still keeps the old
+                        // contract: every remote key closes it.
+                        else -> {
+                            onDismiss()
+                            true
+                        }
+                    }
                 }
                 .focusable()
                 .clearAndSetSemantics {
@@ -193,12 +229,46 @@ fun TrailerOverlay(
                     lineHeight = scale.sp(TvType.hero * 1.1f),
                     maxLines = 2,
                 )
-                Text(
-                    text = stringResource(R.string.trailer_exit_hint),
-                    color = LauncherColors.textSecondary,
-                    fontSize = scale.sp(TvType.callout),
-                    modifier = Modifier.padding(top = scale.dp(TvSpace.xs)),
-                )
+                synopsis?.takeIf { it.isNotBlank() }?.let { description ->
+                    Text(
+                        text = description,
+                        color = LauncherColors.textPrimary.copy(alpha = 0.86f),
+                        fontSize = scale.sp(TvType.body),
+                        lineHeight = scale.sp(TvType.body * 1.3f),
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = scale.dp(TvSpace.sm)),
+                    )
+                }
+                if (actionLabel != null) {
+                    Box(
+                        Modifier
+                            .padding(top = scale.dp(TvSpace.md))
+                            .clip(RoundedCornerShape(scale.dp(10f)))
+                            .background(Color.White.copy(alpha = 0.16f))
+                            .padding(horizontal = scale.dp(TvSpace.md), vertical = scale.dp(TvSpace.sm)),
+                    ) {
+                        Text(
+                            text = actionLabel,
+                            color = LauncherColors.textPrimary,
+                            fontSize = scale.sp(TvType.callout),
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.trailer_action_hint),
+                        color = LauncherColors.textSecondary.copy(alpha = 0.78f),
+                        fontSize = scale.sp(TvType.caption),
+                        modifier = Modifier.padding(top = scale.dp(TvSpace.xs)),
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.trailer_exit_hint),
+                        color = LauncherColors.textSecondary,
+                        fontSize = scale.sp(TvType.callout),
+                        modifier = Modifier.padding(top = scale.dp(TvSpace.xs)),
+                    )
+                }
             }
         }
     }

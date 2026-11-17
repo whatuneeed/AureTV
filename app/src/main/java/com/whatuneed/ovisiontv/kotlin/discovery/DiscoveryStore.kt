@@ -20,6 +20,7 @@ internal const val MAX_ITEM_PACKAGE_CHARS = 255
 internal const val MAX_ITEM_TITLE_CHARS = 256
 internal const val MAX_ITEM_SUBTITLE_CHARS = 256
 internal const val MAX_ITEM_LABEL_CHARS = 256
+internal const val MAX_ITEM_SYNOPSIS_CHARS = 1_200
 internal const val MAX_ITEM_ACTIVITY_CHARS = 256
 internal const val MAX_ITEM_URI_CHARS = 4_096
 
@@ -196,12 +197,18 @@ internal fun encodeItems(items: List<DiscoveryItem>): String {
                 .put("title", item.title)
                 .put("reason", item.reason.name)
             item.packageLabel?.let { entry.put("label", it) }
+            item.originalTitle?.let { entry.put("original", it) }
+            item.tmdbId?.let { entry.put("tmdb", it) }
+            item.year?.let { entry.put("year", it) }
             item.subtitle?.let { entry.put("sub", it) }
+            item.synopsis?.let { entry.put("syn", it) }
             item.landscapeUri?.let { entry.put("land", it) }
             item.posterUri?.let { entry.put("poster", it) }
             item.intentUri?.let { entry.put("intent", it) }
+            item.trailerUri?.let { entry.put("trailer", it) }
             item.activityName?.let { entry.put("act", it) }
             item.progress?.let { entry.put("prog", it.toDouble()) }
+            item.remainingMinutes?.let { entry.put("left", it) }
             if (item.isContinue) entry.put("cont", true)
             item.lastEngagementUtc?.let { entry.put("eng", it) }
             array.put(entry)
@@ -231,12 +238,19 @@ internal fun decodeItems(raw: String?): List<DiscoveryItem> {
             packageName = packageName,
             packageLabel = boundedItemText(entry.optString("label"), MAX_ITEM_LABEL_CHARS),
             title = title,
+            originalTitle = boundedItemText(entry.optString("original"), MAX_ITEM_TITLE_CHARS),
+            tmdbId = boundedItemText(entry.optString("tmdb"), 12)
+                ?.takeIf { value -> value.all(Char::isDigit) },
+            year = boundedItemText(entry.optString("year"), 4),
             subtitle = boundedItemText(entry.optString("sub"), MAX_ITEM_SUBTITLE_CHARS),
+            synopsis = boundedItemText(entry.optString("syn"), MAX_ITEM_SYNOPSIS_CHARS),
             landscapeUri = boundedItemUri(entry.optString("land"), MAX_ITEM_URI_CHARS),
             posterUri = boundedItemUri(entry.optString("poster"), MAX_ITEM_URI_CHARS),
             intentUri = boundedItemUri(entry.optString("intent"), MAX_ITEM_URI_CHARS),
+            trailerUri = boundedItemUri(entry.optString("trailer"), MAX_ITEM_URI_CHARS),
             activityName = boundedItemText(entry.optString("act"), MAX_ITEM_ACTIVITY_CHARS),
             progress = progress?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
+            remainingMinutes = entry.optInt("left", 0).takeIf { it in 1..10_000 },
             isContinue = entry.optBoolean("cont", false),
             lastEngagementUtc = entry.optLong("eng", 0L).takeIf { it > 0L },
             reason = enumOr(entry.optString("reason"), DiscoveryReason.NEW_FROM_APP),
@@ -247,11 +261,16 @@ internal fun decodeItems(raw: String?): List<DiscoveryItem> {
 
 private fun DiscoveryItem.boundedForStorage(): DiscoveryItem = copy(
     title = title.take(MAX_ITEM_TITLE_CHARS),
+    originalTitle = originalTitle?.take(MAX_ITEM_TITLE_CHARS),
+    tmdbId = tmdbId?.take(12)?.takeIf { it.all(Char::isDigit) },
+    year = year?.take(4),
     subtitle = subtitle?.take(MAX_ITEM_SUBTITLE_CHARS),
+    synopsis = synopsis?.take(MAX_ITEM_SYNOPSIS_CHARS),
     packageLabel = packageLabel?.take(MAX_ITEM_LABEL_CHARS),
     landscapeUri = landscapeUri?.takeIf { it.length <= MAX_ITEM_URI_CHARS },
     posterUri = posterUri?.takeIf { it.length <= MAX_ITEM_URI_CHARS },
     intentUri = intentUri?.takeIf { it.length <= MAX_ITEM_URI_CHARS },
+    trailerUri = trailerUri?.takeIf { it.length <= MAX_ITEM_URI_CHARS },
     activityName = activityName?.take(MAX_ITEM_ACTIVITY_CHARS),
 )
 

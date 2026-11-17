@@ -174,6 +174,7 @@ private fun DreamSaver(onFinished: () -> Unit) {
         dimAfter = settings.dimAfter,
         maxSession = settings.maxSession,
         showWeather = settings.showWeather,
+        aerialQuality = settings.aerialQuality,
         photos = photoUris,
         photosAllowed = photosAllowed,
         reddit = redditItems,

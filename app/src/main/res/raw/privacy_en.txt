@@ -1,6 +1,6 @@
 Privacy
 
-Policy version 8, updated 2026-11-17.
+Policy version 10, updated 2026-11-17.
 
 The launcher needs no account and has no developer-operated server. Updates, when enabled, are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
@@ -24,9 +24,9 @@ Network requests
 
 No account, cookie, API key or advertising identifier is sent. Like any internet request, a request reveals the TV's IP address and ordinary connection details to the host that receives it.
 
-Apple's screen saver: the public Apple CDN at sylvan.apple.com supplies the aerial catalogue, still images and video clips. The videos and stills are fetched over HTTP because some TV trust stores reject Apple's certificate chain; only this public host is allowed cleartext. These requests carry no account, token or personal data beyond ordinary connection details. The catalogue refresh remains HTTPS.
+Apple's screen saver: the public Apple CDN at sylvan.apple.com supplies the aerial catalogue, still images and video clips. The videos and stills are fetched over HTTP because some TV trust stores reject Apple's certificate chain; only this public host is allowed cleartext. These requests carry no account, token or personal data beyond ordinary connection details. A few legacy clips bundle a still captured from that same clip, so no request is made for those. The catalogue refresh remains HTTPS.
 
-Online Top Movies (only when you turn them on in Settings → Recommendations): itunes.apple.com serves Apple's public Top Movies RSS chart; is1-ssl.mzstatic.com serves the poster images; video-ssl.itunes.apple.com serves the official preview videos. Those requests reveal the TV IP address and an ordinary launcher User-Agent; no account, API key, cookie or persistent identifier is sent. The chart is cached locally for six hours; turning online recommendations off stops further requests, and Settings → Storage → Clear cache removes the cache. Muted previews play inside the launcher and may start automatically when a card is selected; Settings → Recommendations → Autoplay previews turns that off. A full trailer with sound starts only after you press OK.
+Online trailers and descriptions (only when you turn them on in Settings → Recommendations): apis.justwatch.com serves JustWatch's public popular-titles chart; images.justwatch.com serves the posters and wide backdrops. Where the same title is found in an Apple chart, itunes.apple.com supplies the official preview metadata and video-ssl.itunes.apple.com serves the preview video; is1-ssl.mzstatic.com may supply a fallback poster. These details are attached to the matching recommendation card in "For You"; no separate Top Movies rail is shown. Those requests reveal the TV IP address and an ordinary launcher User-Agent; no account, API key, cookie or persistent identifier is sent. The chart is cached locally for six hours; turning online metadata off stops further requests, and Settings → Storage → Clear cache removes the cache. Muted previews play inside the launcher and may start automatically when a card is selected; Settings → Recommendations → Autoplay previews turns that off. A full trailer with sound starts only after you press OK.
 
 Reddit (only when you choose Reddit): www.reddit.com serves a public Atom feed, and i.redd.it, preview.redd.it and external-preview.redd.it serve the images. Those requests reveal the TV's IP address and an ordinary launcher User-Agent; no Reddit account, cookie, token, vote or comment is sent. Reddit content is third-party and unmoderated: any subreddit can contain adult material. Reddit is disabled in Kids Mode.
 
@@ -34,7 +34,7 @@ Weather (only when you turn it on): Open-Meteo (api.open-meteo.com) supplies for
 
 Permissions
 
-Internet access is used for Apple's screen saver, online Top Movies and, if enabled, weather.
+Internet access is used for Apple's screen saver, online trailers and descriptions, and, if enabled, weather.
 
 Network state access is used to show the connection type and the local IP address on the Network page.
 

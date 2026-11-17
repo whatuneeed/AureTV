@@ -14,6 +14,7 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
+import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
@@ -165,6 +166,11 @@ class BackupManagerInstrumentedTest {
         assertEquals("f1", folder.id)
         assertEquals(listOf("com.example.two", "com.example.missing"), folder.apps.map { it.packageName })
         assertFalse(folder.apps.last().available)
+        assertEquals("Кино", AppLabelStore.label(context, "com.example.one"))
+        assertEquals(
+            "Мультики",
+            AppLabelStore.label(context, "com.example.two", ProfileStore.homePrefsName("p2")),
+        )
 
         val entries = manager.list()
         assertTrue(entries.any { it.info.trigger == BackupTrigger.PRE_RESTORE && it.info.pinned })
@@ -289,11 +295,13 @@ class BackupManagerInstrumentedTest {
             .putString(SaverPreferences.KEY_REFRESH, "MONTHLY")
             .putString(SaverPreferences.KEY_THEMES, "landscapes,earth")
             .putString(SaverPreferences.KEY_HIDDEN_CLIPS, "clip-1")
+            .putString(AppLabelStore.KEY, """{"com.example.one":"Кино"}""")
             .commit()
 
         context.getSharedPreferences(ProfileStore.homePrefsName("p2"), Context.MODE_PRIVATE)
             .edit()
             .putString(LauncherPrefs.KEY_HOME_ORDER, """["com.example.two"]""")
+            .putString(AppLabelStore.KEY, """{"com.example.two":"Мультики"}""")
             .commit()
 
         DiscoverySettings(context, LauncherPrefs.NAME).setPersonalization(true)
@@ -337,10 +345,12 @@ class BackupManagerInstrumentedTest {
             .putString(SaverPreferences.KEY_REFRESH, "DAILY")
             .putString(SaverPreferences.KEY_THEMES, "cities")
             .putString(SaverPreferences.KEY_HIDDEN_CLIPS, "")
+            .putString(AppLabelStore.KEY, """{"com.example.two":"Другое"}""")
             .commit()
         context.getSharedPreferences(ProfileStore.homePrefsName("p2"), Context.MODE_PRIVATE)
             .edit()
             .putString(LauncherPrefs.KEY_HOME_ORDER, """["com.example.missing"]""")
+            .putString(AppLabelStore.KEY, """{"com.example.two":"Другое"}""")
             .commit()
         context.getSharedPreferences(ProfileStore.FILE, Context.MODE_PRIVATE)
             .edit()

@@ -41,6 +41,7 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryKind
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
+import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySourceState
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
@@ -215,6 +216,34 @@ class TopShelfTest {
         rule.onNodeWithText(context.getString(R.string.home_empty_title)).assertIsDisplayed()
         rule.onNodeWithText(context.getString(R.string.home_empty_body)).assertIsDisplayed()
         rule.onAllNodesWithText(context.getString(R.string.shelf_context)).assertCountEquals(0)
+    }
+
+    @Test
+    fun a_missing_listings_permission_is_explained_on_home() {
+        val section = rails(
+            DiscoverySection.FOR_YOU to listOf(card("Первый кадр")),
+        )
+        rule.setContent {
+            OVisionTheme {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
+                    TopShelf(
+                        app = app("test.one", "Кинопоиск"),
+                        rails = section,
+                        selectedSection = DiscoverySection.FOR_YOU,
+                        selectedCard = 0,
+                        focusedCard = -1,
+                        sectionFocused = false,
+                        onCardActivate = {},
+                        onSectionActivate = {},
+                        providerState = DiscoverySourceState.NO_PERMISSION,
+                        scale = TvScale(1f),
+                    )
+                }
+            }
+        }
+
+        rule.onNodeWithText(context.getString(R.string.shelf_listings_denied))
+            .assertIsDisplayed()
     }
 
     @Test

@@ -37,6 +37,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.HIDDEN_FOLDER_ID
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
@@ -869,6 +870,10 @@ class HomeScreenTest {
         // system's own confirmation, it is not pressed here.
         rule.onNodeWithContentDescription(context.getString(R.string.menu_uninstall))
             .assertIsDisplayed()
+        rule.onNodeWithContentDescription(context.getString(R.string.menu_rename_app))
+            .assertIsDisplayed()
+        rule.onNodeWithContentDescription(context.getString(R.string.menu_reset_app_name))
+            .assertDoesNotExist()
 
         // Open, Move, Move to Folder…, Hide.
         repeat(3) { press(Key.DirectionDown) }
@@ -1000,6 +1005,40 @@ class HomeScreenTest {
             .assertDoesNotExist()
         rule.onNodeWithContentDescription(context.getString(R.string.menu_open))
             .assertDoesNotExist()
+    }
+
+    @Test
+    fun menu_can_reset_a_custom_app_name() {
+        AppLabelStore.setLabel(context, "test.one", "Своё имя")
+        setHome()
+
+        press(Key.Menu)
+        rule.waitForIdle()
+        // Open, Move, Move to Folder…, Hide, Rename, Reset Name.
+        repeat(5) { press(Key.DirectionDown) }
+        rule.onNodeWithContentDescription(context.getString(R.string.menu_reset_app_name))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        rule.mainClock.advanceTimeBy(300)
+        rule.waitForIdle()
+
+        assertNull(AppLabelStore.label(context, "test.one"))
+        rule.onNodeWithContentDescription("Первый").assertIsDisplayed()
+    }
+
+    @Test
+    fun menu_rename_opens_the_keyboard_with_the_current_name() {
+        setHome()
+
+        press(Key.Menu)
+        rule.waitForIdle()
+        repeat(4) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(400)
+        rule.waitForIdle()
+
+        rule.onNodeWithContentDescription(context.getString(R.string.keyboard_space))
+            .assertIsDisplayed()
+        rule.onNodeWithContentDescription("Первый").assertDoesNotExist()
     }
 
     @Test

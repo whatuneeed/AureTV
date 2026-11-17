@@ -189,16 +189,20 @@ class AppRepository(context: Context) {
     // or the "Settings" tile stays in the system language after a switch.
     private val context: Context = LocalePreference.wrap(context)
 
-    suspend fun load(): List<TvApp> = load(withArtwork = true)
-
-    suspend fun load(withArtwork: Boolean): List<TvApp> = loadResult(withArtwork).appsOrEmpty()
+    suspend fun load(
+        withArtwork: Boolean = true,
+        prefsName: String = LauncherPrefs.NAME,
+    ): List<TvApp> = loadResult(withArtwork, prefsName).appsOrEmpty()
 
     /**
      * A Primary-surface load: a failure is returned to the caller instead of
      * escaping a UI coroutine. Cancellation is never converted into a failure.
      */
-    suspend fun loadResult(withArtwork: Boolean = true): AppLoadResult = try {
-        AppLoadResult.Loaded(loadNow(withArtwork))
+    suspend fun loadResult(
+        withArtwork: Boolean = true,
+        prefsName: String = LauncherPrefs.NAME,
+    ): AppLoadResult = try {
+        AppLoadResult.Loaded(loadNow(withArtwork, prefsName))
     } catch (error: CancellationException) {
         throw error
     } catch (error: Exception) {
@@ -210,7 +214,10 @@ class AppRepository(context: Context) {
      * Settings lists names only; decoding a banner and an icon for every
      * installed app would allocate bitmaps that screen never draws.
      */
-    private suspend fun loadNow(withArtwork: Boolean): List<TvApp> = withContext(Dispatchers.IO) {
+    private suspend fun loadNow(
+        withArtwork: Boolean,
+        prefsName: String,
+    ): List<TvApp> = withContext(Dispatchers.IO) {
         val packageManager = context.packageManager
         // The launcher can show a language different from the system one; the
         // grid order must follow the captions the user actually reads.
@@ -220,9 +227,18 @@ class AppRepository(context: Context) {
         }
 
         val activities = collectActivities(packageManager)
+        // One preference read for the whole scan: per-tile parsing would repeat
+        // the same JSON for every app in the grid.
+        val customLabels = AppLabelStore.labels(context, prefsName)
         filterPhoneOnly(
             activities.mapNotNull { activity ->
-                readApp(packageManager, activity.info, activity.leanback, withArtwork)
+                readApp(
+                    packageManager,
+                    activity.info,
+                    activity.leanback,
+                    withArtwork,
+                    customLabels[activity.info.packageName],
+                )
             },
             showPhoneApps(context),
         )
@@ -272,8 +288,9 @@ class AppRepository(context: Context) {
         activity: ActivityInfo,
         leanback: Boolean,
         withArtwork: Boolean,
+        customLabel: String?,
     ): TvApp? = try {
-        readAppUnchecked(packageManager, activity, leanback, withArtwork)
+        readAppUnchecked(packageManager, activity, leanback, withArtwork, customLabel)
     } catch (_: PackageManager.NameNotFoundException) {
         // The package disappeared after the query; the rest of the grid is still valid.
         null
@@ -289,6 +306,7 @@ class AppRepository(context: Context) {
         activity: ActivityInfo,
         leanback: Boolean,
         withArtwork: Boolean,
+        customLabel: String?,
     ): TvApp? {
         // PackageInfo carries both the application entry and lastUpdateTime, so
         // one lookup keys the artwork cache to the exact package version.
@@ -299,13 +317,14 @@ class AppRepository(context: Context) {
 
         // The system TV Settings is also labelled "Настройки"/"Settings", so the
         // launcher tile needs its own name to stay distinguishable in the grid.
-        val label = if (activity.packageName == context.packageName) {
+        val defaultLabel = if (activity.packageName == context.packageName) {
             context.getString(R.string.settings_tile_name)
         } else {
             packageManager.getApplicationLabel(appInfo)
                 .toString()
                 .ifBlank { activity.packageName }
         }
+        val label = customLabel ?: defaultLabel
 
         // The application banner belongs to the launcher itself and would replace
         // the gear that SettingsActivity declares, so this one tile skips it.

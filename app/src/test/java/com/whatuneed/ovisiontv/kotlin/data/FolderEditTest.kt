@@ -110,6 +110,17 @@ class FolderEditTest {
     }
 
     @Test
+    fun hiding_a_dead_tile_removes_it_instead_of_parking_it() {
+        val dead = HomeItem.AppItem(tvApp("gone.app").copy(available = false))
+        val items = listOf(dead, app("b"))
+
+        val edit = hideApp(items, "gone.app", "Ещё приложения")!!
+
+        assertEquals(listOf("b"), edit.items.keys())
+        assertEquals(0, edit.focusIndex)
+    }
+
+    @Test
     fun hiding_an_unknown_or_folder_package_changes_nothing() {
         assertNull(hideApp(listOf(app("a"), folder("f", "b")), "missing", "Ещё приложения"))
         assertNull(hideApp(listOf(folder("f", "b")), "b", "Ещё приложения"))

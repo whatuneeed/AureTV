@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.discovery
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.WatchNextRow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,6 +31,8 @@ class DiscoveryEngineTest {
         progress: Float? = null,
         continueRow: Boolean = false,
         engagement: Long = now,
+        posterArtAspect: Int? = null,
+        previewVideoUri: String? = null,
     ) = WatchNextRow(
         packageName = packageName,
         title = title,
@@ -40,6 +43,8 @@ class DiscoveryEngineTest {
         progress = progress,
         engagement = engagement,
         continueRow = continueRow,
+        posterArtAspect = posterArtAspect,
+        previewVideoUri = previewVideoUri,
     )
 
     private fun item(
@@ -71,6 +76,7 @@ class DiscoveryEngineTest {
         ownPackage: String = "me",
         providerState: DiscoverySourceState = DiscoverySourceState.OK,
         onlineItems: List<DiscoveryItem> = emptyList(),
+        onlineArtItems: List<DiscoveryItem> = emptyList(),
     ) = DiscoveryInputs(
         profileId = "p1",
         nowUtc = now,
@@ -88,57 +94,70 @@ class DiscoveryEngineTest {
         personalization = personalization,
         providerState = providerState,
         onlineItems = onlineItems,
+        onlineArtItems = onlineArtItems,
     )
 
     private fun DiscoverySnapshot.rail(section: DiscoverySection) =
         rails.firstOrNull { it.section == section }
 
-    private fun online(id: String) = DiscoveryItem(
+    private fun online(id: String, preview: Boolean = true) = DiscoveryItem(
         id = id,
         source = DiscoverySource.ONLINE,
         kind = DiscoveryKind.VIDEO,
         packageName = "me",
-        packageLabel = "Apple iTunes",
+        packageLabel = "JustWatch",
         title = id,
-        intentUri = "https://video-ssl.itunes.apple.com/$id.m4v",
+        synopsis = if (preview) null else "Synopsis for $id",
+        landscapeUri = "https://images.justwatch.com/backdrop/$id/s1920/film.jpg",
+        posterUri = "https://images.justwatch.com/poster/$id/s592/film.jpg",
+        trailerUri = if (preview) "https://video-ssl.itunes.apple.com/$id.m4v" else null,
         reason = DiscoveryReason.TRENDING,
     )
 
     @Test
-    fun onlineTopMoviesBecomeTheirOwnRailAndTheDefaultWhenNothingElseExists() {
+    fun a_chart_movie_with_a_preview_becomes_a_flux_card_in_for_you() {
+        val snapshot = buildSnapshot(
+            inputs(
+                apps = listOf(app("a"), app("app.flux.tv", "Flux")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Дюна",
+                        originalTitle = "Dune",
+                        tmdbId = "438631",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals(DiscoverySource.TV_PROVIDER, card?.source)
+        assertEquals("app.flux.tv", card?.packageName)
+        assertEquals("Flux", card?.packageLabel)
+        assertEquals("flux://movie/438631", card?.intentUri)
+        assertEquals("https://video-ssl.itunes.apple.com/justwatch|1.m4v", card?.trailerUri)
+        assertNull(snapshot.rail(DiscoverySection.ONLINE))
+    }
+
+    @Test
+    fun a_chart_movie_without_a_preview_is_not_moved_into_for_you() {
+        val snapshot = buildSnapshot(
+            inputs(
+                apps = listOf(app("app.flux.tv", "Flux")),
+                onlineItems = listOf(online("justwatch|1", preview = false).copy(tmdbId = "438631")),
+            ),
+        )
+        assertNull(snapshot.rail(DiscoverySection.FOR_YOU))
+    }
+
+    @Test
+    fun onlineChartIsMetadataOnlyAndNeverBecomesItsOwnTab() {
         val snapshot = buildSnapshot(
             inputs(onlineItems = listOf(online("apple|1"), online("apple|2"))),
         )
 
-        assertEquals(
-            listOf("apple|1", "apple|2"),
-            snapshot.rail(DiscoverySection.ONLINE)?.items?.map { it.id },
-        )
-        assertEquals(DiscoverySection.ONLINE, defaultDiscoverySection(snapshot.rails))
-    }
-
-    @Test
-    fun kidsModeNeverShowsOnlineTopMovies() {
-        val snapshot = buildSnapshot(
-            inputs(
-                kidsMode = true,
-                onlineItems = listOf(online("apple|1"), online("apple|2")),
-            ),
-        )
-
         assertTrue(snapshot.rail(DiscoverySection.ONLINE) == null)
-    }
-
-    @Test
-    fun aHiddenOnlineCardIsDropped() {
-        val snapshot = buildSnapshot(
-            inputs(
-                onlineItems = listOf(online("apple|1"), online("apple|2")),
-                hidden = setOf("apple|1"),
-            ),
-        )
-
-        assertEquals(listOf("apple|2"), snapshot.rail(DiscoverySection.ONLINE)?.items?.map { it.id })
+        assertTrue(snapshot.rails.isEmpty())
+        assertNull(defaultDiscoverySection(snapshot.rails))
     }
 
     @Test
@@ -180,7 +199,7 @@ class DiscoveryEngineTest {
                 ),
             ),
         )
-        // "c" is valid, but one card is not a For You rail; the test only
+        // "c" is valid and may form a one-card For You rail; the test only
         // proves that the two broken rows never became cards.
         val items = snapshot.rails.flatMap { it.items }
         assertTrue(items.none { it.packageName == "a" || it.packageName == "b" })
@@ -199,8 +218,12 @@ class DiscoveryEngineTest {
         )
         val continueRail = snapshot.rail(DiscoverySection.CONTINUE)
         assertEquals(listOf("a"), continueRail?.items?.map { it.packageName })
-        // For You never repeats what Continue already shows.
-        assertTrue(snapshot.rail(DiscoverySection.FOR_YOU) == null)
+        // For You never repeats what Continue already shows, but it still
+        // carries the other two app recommendations.
+        assertEquals(
+            listOf("b", "c"),
+            snapshot.rail(DiscoverySection.FOR_YOU)?.items?.map { it.packageName },
+        )
     }
 
     @Test
@@ -216,9 +239,9 @@ class DiscoveryEngineTest {
     }
 
     @Test
-    fun for_you_needs_three_cards_to_be_a_rail() {
-        val two = buildSnapshot(inputs(rows = listOf(row("a"), row("b"))))
-        assertTrue(two.rail(DiscoverySection.FOR_YOU) == null)
+    fun a_single_app_recommendation_is_still_a_rail() {
+        val one = buildSnapshot(inputs(rows = listOf(row("a"))))
+        assertEquals(1, one.rail(DiscoverySection.FOR_YOU)?.items?.size)
 
         val three = buildSnapshot(inputs(rows = listOf(row("a"), row("b"), row("c"))))
         assertEquals(3, three.rail(DiscoverySection.FOR_YOU)?.items?.size)
@@ -370,6 +393,258 @@ class DiscoveryEngineTest {
         )
         assertEquals(listOf("a", "b"), snapshot.rail(DiscoverySection.RECENT)?.items?.map { it.packageName })
         assertEquals(DiscoverySourceState.FAILED, snapshot.providerState)
+    }
+
+    @Test
+    fun installed_app_recommendations_lead_before_the_online_chart() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a"), row("b"), row("c")),
+                onlineItems = listOf(online("justwatch|1")),
+            ),
+        )
+
+        assertEquals(
+            listOf(DiscoverySection.FOR_YOU),
+            snapshot.rails.map { it.section },
+        )
+    }
+
+    @Test
+    fun a_wide_provider_poster_is_used_as_the_card_art() {
+        val wide = "https://provider.example/wide.jpg"
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(
+                    row("a", title = "Dune").copy(posterUri = wide, posterArtAspect = 0),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals(wide, card?.landscapeUri)
+        assertEquals(wide, card?.posterUri)
+    }
+
+    @Test
+    fun a_portrait_provider_poster_is_not_stretched_into_the_wide_slot() {
+        val portrait = "https://provider.example/poster.jpg"
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(
+                    row("a", title = "Dune").copy(posterUri = portrait, posterArtAspect = 4),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals(null, card?.landscapeUri)
+        assertEquals(portrait, card?.posterUri)
+    }
+
+    @Test
+    fun a_provider_row_without_art_gets_exact_justwatch_art() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Dune",
+                        landscapeUri = "https://images.justwatch.com/backdrop/dune/s1920.jpg",
+                        posterUri = "https://images.justwatch.com/poster/dune/s592.jpg",
+                        trailerUri = "https://video-ssl.itunes.apple.com/dune.m4v",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals("https://images.justwatch.com/backdrop/dune/s1920.jpg", card?.landscapeUri)
+        assertEquals("https://images.justwatch.com/poster/dune/s592.jpg", card?.posterUri)
+    }
+
+    @Test
+    fun cached_online_art_can_decorate_a_provider_row_without_an_online_rail() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune")),
+                onlineArtItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Dune",
+                        landscapeUri = "https://images.justwatch.com/backdrop/dune/s1920.jpg",
+                        posterUri = "https://images.justwatch.com/poster/dune/s592.jpg",
+                        trailerUri = "https://video-ssl.itunes.apple.com/dune.m4v",
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(null, snapshot.rail(DiscoverySection.ONLINE))
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals("https://images.justwatch.com/backdrop/dune/s1920.jpg", card?.landscapeUri)
+        assertEquals("https://images.justwatch.com/poster/dune/s592.jpg", card?.posterUri)
+        assertEquals("https://video-ssl.itunes.apple.com/dune.m4v", card?.trailerUri)
+    }
+
+    @Test
+    fun a_provider_row_keeps_its_own_art_over_justwatch() {
+        val own = "https://provider.example/own.jpg"
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(
+                    row("a", title = "Dune").copy(
+                        thumbnailUri = own,
+                        posterUri = own,
+                    ),
+                ),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(title = "Dune"),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals(own, card?.landscapeUri)
+        assertEquals(own, card?.posterUri)
+    }
+
+    @Test
+    fun a_flux_movie_deep_link_matches_justwatch_by_tmdb_even_when_titles_differ() {
+        val snapshot = buildSnapshot(
+            inputs(
+                apps = listOf(app("app.flux.tv", "Flux")),
+                rows = listOf(
+                    row(
+                        "app.flux.tv",
+                        title = "Dune",
+                        intent = "flux://movie/438631",
+                    ),
+                ),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Дюна",
+                        originalTitle = "Dune",
+                        tmdbId = "438631",
+                        trailerUri = "https://video-ssl.itunes.apple.com/dune.m4v",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals("Dune", card?.title)
+        assertEquals("https://video-ssl.itunes.apple.com/dune.m4v", card?.trailerUri)
+    }
+
+    @Test
+    fun a_provider_row_can_borrow_art_and_trailer_by_the_original_title() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Дюна",
+                        originalTitle = "Dune",
+                        trailerUri = "https://video-ssl.itunes.apple.com/dune.m4v",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals("Dune", card?.title)
+        assertEquals("https://video-ssl.itunes.apple.com/dune.m4v", card?.trailerUri)
+    }
+
+    @Test
+    fun a_provider_published_preview_becomes_the_card_trailer() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(
+                    row(
+                        "a",
+                        title = "Provider clip",
+                        previewVideoUri = "https://cdn.provider.example/clip.mp4",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals("https://cdn.provider.example/clip.mp4", card?.trailerUri)
+    }
+
+    @Test
+    fun a_provider_preview_that_is_a_web_page_is_not_played_as_media() {
+        assertNull(playableProviderPreview(null))
+        assertNull(playableProviderPreview("http://cdn.provider.example/clip.mp4"))
+        assertNull(playableProviderPreview("https://www.youtube.com/watch?v=abc"))
+        assertNull(playableProviderPreview("https://youtu.be/abc"))
+        assertEquals(
+            "https://cdn.provider.example/clip.mp4",
+            playableProviderPreview("https://cdn.provider.example/clip.mp4"),
+        )
+    }
+
+    @Test
+    fun a_provider_row_without_a_matching_online_title_has_no_trailer_step() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "A different film",
+                        trailerUri = "https://video-ssl.itunes.apple.com/other.m4v",
+                    ),
+                ),
+            ),
+        )
+
+        val card = snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()
+        assertEquals(null, card?.trailerUri)
+    }
+
+    @Test
+    fun a_provider_row_gets_the_matching_synopsis_for_its_own_overlay() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Dune",
+                        synopsis = "A real synopsis.",
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals("A real synopsis.", snapshot.rail(DiscoverySection.FOR_YOU)?.items?.single()?.synopsis)
+    }
+
+    @Test
+    fun an_online_card_can_find_the_provider_row_that_should_open_it() {
+        val snapshot = buildSnapshot(
+            inputs(
+                rows = listOf(row("a", title = "Dune", intent = "flux://movie/438631")),
+                onlineItems = listOf(
+                    online("justwatch|1").copy(
+                        title = "Дюна",
+                        originalTitle = "Dune",
+                        tmdbId = "438631",
+                    ),
+                ),
+            ),
+        )
+
+        val online = online("justwatch|1").copy(
+            title = "Дюна",
+            originalTitle = "Dune",
+            tmdbId = "438631",
+            trailerUri = "https://video-ssl.itunes.apple.com/dune.m4v",
+        )
+        val target = providerTargetForOnline(online, snapshot.rails)
+        assertEquals("a", target?.packageName)
+        assertEquals("flux://movie/438631", target?.intentUri)
     }
 
     @Test

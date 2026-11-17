@@ -19,7 +19,7 @@ class HeroPreviewPolicyTest {
         kind = DiscoveryKind.VIDEO,
         packageName = "com.whatuneed.ovisiontv.kotlin",
         title = "A title",
-        intentUri = uri,
+        trailerUri = uri,
         reason = DiscoveryReason.TRENDING,
     )
 
@@ -34,6 +34,17 @@ class HeroPreviewPolicyTest {
     @Test
     fun theUserSettingStopsThePreview() {
         assertNull(onlinePreviewUri(item(), enabled = false))
+    }
+
+    @Test
+    fun aProviderRowWithAMatchedPreviewCanDriveTheHeroToo() {
+        assertEquals(
+            "https://video-ssl.itunes.apple.com/preview.m4v",
+            onlinePreviewUri(
+                item(source = DiscoverySource.TV_PROVIDER),
+                enabled = true,
+            ),
+        )
     }
 
     @Test

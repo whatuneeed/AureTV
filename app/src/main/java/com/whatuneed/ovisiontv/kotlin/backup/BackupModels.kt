@@ -27,6 +27,8 @@ internal object BackupContract {
     const val MAX_EMOJI_CHARS = 32
     const val MAX_PACKAGE_CHARS = 255
     const val MAX_LABEL_CHARS = 256
+    const val MAX_APP_LABELS = 500
+    const val MAX_APP_LABEL_CHARS = 64
     const val MAX_ORDER_ENTRIES = 1_000
     const val MAX_FOLDER_APPS = 1_000
     const val MAX_DISCOVERY_ITEMS = 100
@@ -216,6 +218,8 @@ internal sealed interface HomeOrderEntry {
 
 internal data class HomeData(
     val order: List<HomeOrderEntry>,
+    /** User-chosen app captions for this profile; absent in older archives. */
+    val labels: Map<String, String> = emptyMap(),
 )
 
 internal data class DiscoveryData(
@@ -255,6 +259,8 @@ internal data class SaverData(
     val dimAfter: String = "never",
     val maxSession: String = "never",
     val showWeather: Boolean = false,
+    /** Added after schema 1; absent in older archives means compatible 1080p. */
+    val aerialQuality: String = "compatible",
 )
 
 internal data class LanguageData(

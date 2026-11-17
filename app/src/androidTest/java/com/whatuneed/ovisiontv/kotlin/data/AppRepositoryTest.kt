@@ -42,6 +42,39 @@ class AppRepositoryTest {
     }
 
     @Test
+    fun a_saved_custom_name_replaces_the_package_label_and_can_be_reset() {
+        AppLabelStore.setLabel(context, context.packageName, "  Мой дом  ")
+        try {
+            val own = load().single { it.packageName == context.packageName }
+            assertEquals("Мой дом", own.label)
+            assertEquals(
+                context.getString(R.string.settings_tile_name),
+                AppLabelStore.defaultLabel(context, own),
+            )
+        } finally {
+            AppLabelStore.clearLabel(context, context.packageName)
+        }
+        val reset = load().single { it.packageName == context.packageName }
+        assertEquals(context.getString(R.string.settings_tile_name), reset.label)
+    }
+
+    @Test
+    fun a_profile_reads_its_own_custom_name() = runBlocking {
+        val profilePrefs = LauncherPrefs.NAME + "_labels_test"
+        AppLabelStore.setLabel(context, context.packageName, "Второй профиль", profilePrefs)
+        try {
+            val main = AppRepository(context).load(prefsName = LauncherPrefs.NAME)
+                .single { it.packageName == context.packageName }
+            val other = AppRepository(context).load(prefsName = profilePrefs)
+                .single { it.packageName == context.packageName }
+            assertEquals(context.getString(R.string.settings_tile_name), main.label)
+            assertEquals("Второй профиль", other.label)
+        } finally {
+            AppLabelStore.clear(context, profilePrefs)
+        }
+    }
+
+    @Test
     fun a_successful_scan_is_reported_as_loaded() = runBlocking {
         val result = AppRepository(context).loadResult(withArtwork = false)
 

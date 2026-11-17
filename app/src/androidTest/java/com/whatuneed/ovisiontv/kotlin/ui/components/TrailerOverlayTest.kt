@@ -18,6 +18,31 @@ class TrailerOverlayTest {
     val rule = createComposeRule()
 
     @Test
+    fun ok_with_an_action_opens_the_provider_instead_of_closing_the_preview() {
+        var dismissals = 0
+        var actions = 0
+        rule.setContent {
+            OVisionTheme {
+                TrailerOverlay(
+                    title = "Test title",
+                    url = "file:///android_asset/does-not-exist.mp4",
+                    actionLabel = "OK — open in Flux",
+                    onAction = { actions++ },
+                    onDismiss = { dismissals++ },
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(TRAILER_OVERLAY_TAG)
+            .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.waitForIdle()
+
+        assertEquals(1, actions)
+        assertEquals(0, dismissals)
+    }
+
+    @Test
     fun back_closes_the_preview_instead_of_the_home_grid() {
         var dismissals = 0
         rule.setContent {

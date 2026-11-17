@@ -76,6 +76,9 @@ import androidx.media3.ui.PlayerView
 import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.AerialDeviceCapabilities
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
+import com.whatuneed.ovisiontv.kotlin.data.AerialQualityPolicy
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
@@ -144,7 +147,10 @@ private const val FIRST_FRAME_LEAD_IN_MS = 1_500L
 private const val STILL_DRAW_FALLBACK_MS = 1_000L
 private const val FAILED_HOLD_MS = 12_000L
 private const val NO_PICTURE_TIMEOUT_MS = 15_000L
-private const val POSTER_DELAY_MS = 200L
+// Wait until the entrance crossfade is over and the decoder is steady. A
+// TextureView readback right at the first frame caused a visible hitch and
+// usually captured the black lead-in, which the poster store rejected anyway.
+private const val POSTER_DELAY_MS = 3_000L
 private const val MAX_CONSECUTIVE_FAILURES = 3
 private const val TAG = "SaverPlayer"
 
@@ -176,6 +182,7 @@ internal fun saverOfflineRetryDelay(rounds: Int): Long {
 @Composable
 internal fun SaverScreen(
     items: List<AerialClip>,
+    aerialQuality: AerialQuality = AerialQuality.COMPATIBLE,
     closing: Boolean = false,
     // The preview is opened by holding OK. Until that press is released, all
     // of its events belong to the opener, not to the key that leaves.
@@ -193,6 +200,7 @@ internal fun SaverScreen(
 ) {
     val plan = items
     val context = LocalContext.current
+    val capabilities = remember(context) { AerialDeviceCapabilities.from(context) }
     val language = LocalConfiguration.current.locales[0]?.language.orEmpty()
     val hasClips = plan.isNotEmpty()
     // Two players take turns: one plays, the other has the next excerpt
@@ -383,7 +391,7 @@ internal fun SaverScreen(
         }
     }
 
-    LaunchedEffect(planPlayers, plan) {
+    LaunchedEffect(planPlayers, plan, aerialQuality, capabilities) {
         fun stop(slot: Int) {
             val player = planPlayers[slot]
             player.playWhenReady = false
@@ -416,44 +424,57 @@ internal fun SaverScreen(
             AerialPosterStore.save(context, clip.id, frame)
         }
 
+        // Try the real renditions best-first. The chain is finite and shares
+        // one watchdog: a decoder that rejects 4K falls through to 1080p
+        // instead of holding the saver on a still for every URL in turn.
+        fun urlsFor(clip: AerialClip): List<String> =
+            AerialQualityPolicy.order(clip, aerialQuality, capabilities).map { it.url }
+
         // The first clip starts at the head: a mid-file seek needs a second
         // network round trip and can outlast the start watchdog on slow
         // decoders, leaving the saver on the still.
         suspend fun startFromHead(slot: Int, clip: AerialClip): Long {
-            prepare(slot, clip.videoUrl, play = true)
-            val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
-            while (true) {
-                delay(PLAYER_POLL_MS)
-                val failed = player.playerError != null ||
-                    player.playbackState == Player.STATE_ENDED
-                val timedOut = SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS
-                if (failed || (timedOut && !renderedFirstFrame[slot])) {
-                    // Media is HTTPS-only; a blocked TLS port falls back to the
-                    // stills-only path rather than silently downgrading to HTTP.
-                    Log.w(TAG, "saver clip failed to start", player.playerError)
-                    return -1L
+            for (url in urlsFor(clip)) {
+                prepare(slot, url, play = true)
+                val player = planPlayers[slot]
+                while (true) {
+                    delay(PLAYER_POLL_MS)
+                    val failed = player.playerError != null ||
+                        player.playbackState == Player.STATE_ENDED
+                    val timedOut = SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS
+                    if (failed) {
+                        // Media comes from Apple's public CDN. A blocked
+                        // network falls back to the stills-only path rather
+                        // than inventing content or retrying forever.
+                        Log.w(TAG, "saver clip variant failed: $url", player.playerError)
+                        break
+                    }
+                    if (renderedFirstFrame[slot]) {
+                        launch { capturePoster(slot, clip) }
+                        // Every clip starts at its head here, and the head is
+                        // black. Crossfading in on that first frame would paint
+                        // the overlay black over the still; let the picture come
+                        // up first, then reveal the slot.
+                        delay(FIRST_FRAME_LEAD_IN_MS)
+                        setSlotVisible(slot, true)
+                        return SystemClock.elapsedRealtime()
+                    }
+                    if (timedOut) {
+                        Log.w(
+                            TAG,
+                            "saver clip did not render within $CLIP_START_TIMEOUT_MS ms" +
+                                " state=${player.playbackState} pos=${player.currentPosition}" +
+                                " buffered=${player.bufferedPosition} url=$url",
+                        )
+                        break
+                    }
                 }
-                if (renderedFirstFrame[slot]) {
-                    launch { capturePoster(slot, clip) }
-                    // Every clip starts at its head here, and the head is
-                    // black. Crossfading in on that first frame would paint
-                    // the overlay black over the still; let the picture come
-                    // up first, then reveal the slot.
-                    delay(FIRST_FRAME_LEAD_IN_MS)
-                    setSlotVisible(slot, true)
-                    return SystemClock.elapsedRealtime()
-                }
-                if (timedOut) {
-                    Log.w(
-                        TAG,
-                        "saver clip did not render within $CLIP_START_TIMEOUT_MS ms" +
-                            " state=${player.playbackState} pos=${player.currentPosition}" +
-                            " buffered=${player.bufferedPosition}",
-                    )
+                if (SystemClock.elapsedRealtime() - born >= CLIP_START_TIMEOUT_MS) {
                     return -1L
                 }
             }
+            return -1L
         }
 
         // Both clips start at their head: a mid-file seek needs a second
@@ -461,22 +482,25 @@ internal fun SaverScreen(
         // decoders, leaving the saver on the still. This is also how the Java
         // launcher plays its clips.
         suspend fun prefetch(slot: Int, clip: AerialClip): Boolean {
-            prepare(slot, clip.videoUrl, play = false)
-            val player = planPlayers[slot]
             val born = SystemClock.elapsedRealtime()
-            while (true) {
-                delay(PLAYER_POLL_MS)
-                if (player.playerError != null ||
-                    player.playbackState == Player.STATE_ENDED
-                ) {
-                    Log.w(TAG, "saver prefetch failed", player.playerError)
-                    return false
-                }
-                if (player.playbackState == Player.STATE_READY) return true
-                if (SystemClock.elapsedRealtime() - born >= PREFETCH_TIMEOUT_MS) {
-                    return false
+            for (url in urlsFor(clip)) {
+                prepare(slot, url, play = false)
+                val player = planPlayers[slot]
+                while (true) {
+                    delay(PLAYER_POLL_MS)
+                    if (player.playerError != null ||
+                        player.playbackState == Player.STATE_ENDED
+                    ) {
+                        Log.w(TAG, "saver prefetch variant failed: $url", player.playerError)
+                        break
+                    }
+                    if (player.playbackState == Player.STATE_READY) return true
+                    if (SystemClock.elapsedRealtime() - born >= PREFETCH_TIMEOUT_MS) {
+                        return false
+                    }
                 }
             }
+            return false
         }
 
         suspend fun awaitStart(slot: Int): Boolean {

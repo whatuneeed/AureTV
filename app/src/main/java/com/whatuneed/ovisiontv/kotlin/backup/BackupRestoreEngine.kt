@@ -7,6 +7,8 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientDim
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSession
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
+import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
@@ -126,6 +128,11 @@ internal class BackupRestoreEngine(private val context: Context) {
                     LauncherPrefs.KEY_HOME_ORDER,
                     BackupJson.encodeHomeOrder(home),
                 )
+                if (home.labels.isEmpty()) {
+                    editor.remove(AppLabelStore.KEY)
+                } else {
+                    editor.putString(AppLabelStore.KEY, AppLabelStore.encode(home.labels))
+                }
                 editor.remove(LauncherPrefs.KEY_FOCUS_PACKAGE)
                 editor.remove(LauncherPrefs.KEY_SHELF_PACKAGE)
             }
@@ -217,6 +224,10 @@ internal class BackupRestoreEngine(private val context: Context) {
                     AmbientSession.fromKey(saver.maxSession).key,
                 )
                 editor.putBoolean(AmbientSettingsStore.KEY_SHOW_WEATHER, saver.showWeather)
+                editor.putString(
+                    AmbientSettingsStore.KEY_AERIAL_QUALITY,
+                    AerialQuality.fromKey(saver.aerialQuality).key,
+                )
             }
         }
 

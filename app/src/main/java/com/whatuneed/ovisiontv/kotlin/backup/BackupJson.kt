@@ -407,22 +407,24 @@ internal object BackupJson {
         return HomeData(order)
     }
 
-    fun encodeHome(data: HomeData): JSONObject = JSONObject().put(
-        "order",
-        JSONArray().apply {
-            data.order.forEach { entry ->
-                when (entry) {
-                    is HomeOrderEntry.App -> put(entry.packageName)
-                    is HomeOrderEntry.Folder -> put(
-                        JSONObject()
-                            .put("id", entry.id)
-                            .put("name", entry.name)
-                            .put("apps", JSONArray(entry.apps)),
-                    )
+    fun encodeHome(data: HomeData): JSONObject = JSONObject()
+        .put(
+            "order",
+            JSONArray().apply {
+                data.order.forEach { entry ->
+                    when (entry) {
+                        is HomeOrderEntry.App -> put(entry.packageName)
+                        is HomeOrderEntry.Folder -> put(
+                            JSONObject()
+                                .put("id", entry.id)
+                                .put("name", entry.name)
+                                .put("apps", JSONArray(entry.apps)),
+                        )
+                    }
                 }
-            }
-        },
-    )
+            },
+        )
+        .put("labels", JSONObject(data.labels as Map<*, *>))
 
     /** The exact array shape HomeOrderStore already reads and writes. */
     fun encodeHomeOrder(data: HomeData): String = JSONArray().apply {
@@ -439,9 +441,25 @@ internal object BackupJson {
         }
     }.toString()
 
-    private fun decodeHome(json: JSONObject): HomeData = decodeHome(
-        json.optJSONArray("order")?.toString() ?: "[]",
-    )
+    private fun decodeHome(json: JSONObject): HomeData {
+        val order = decodeHome(json.optJSONArray("order")?.toString() ?: "[]")
+        val labels = LinkedHashMap<String, String>()
+        val encoded = json.optJSONObject("labels")
+        if (encoded != null) {
+            val keys = encoded.keys()
+            while (keys.hasNext() && labels.size < BackupContract.MAX_APP_LABELS) {
+                val packageName = keys.next()
+                val label = encoded.optString(packageName).trim()
+                if (packageName.isNotBlank() &&
+                    label.isNotEmpty() &&
+                    label.length <= BackupContract.MAX_APP_LABEL_CHARS
+                ) {
+                    labels[packageName] = label
+                }
+            }
+        }
+        return order.copy(labels = labels)
+    }
 
     // -------------------------------------------------------------- discovery
 
@@ -518,6 +536,7 @@ internal object BackupJson {
         .put("dimAfter", data.dimAfter)
         .put("maxSession", data.maxSession)
         .put("showWeather", data.showWeather)
+        .put("aerialQuality", data.aerialQuality)
 
     private fun decodeSaver(json: JSONObject): SaverData {
         val themes = json.optJSONArray("themes")?.stringSet() ?: emptySet()
@@ -534,6 +553,7 @@ internal object BackupJson {
             dimAfter = json.optString("dimAfter", "never"),
             maxSession = json.optString("maxSession", "never"),
             showWeather = json.optBoolean("showWeather", false),
+            aerialQuality = json.optString("aerialQuality", "compatible"),
         )
     }
 

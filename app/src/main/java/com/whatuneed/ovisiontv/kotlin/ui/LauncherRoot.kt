@@ -431,7 +431,11 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         val generation = ++reloadGeneration
         val store = orderStore
         reloadJob = scope.launch {
-            when (val result = repository.loadResult()) {
+            when (
+                val result = repository.loadResult(
+                    prefsName = ProfileStore.homePrefsName(profile.id),
+                )
+            ) {
                 is AppLoadResult.Loaded -> {
                     // A cancelled load may still return from a blocking section;
                     // the generation keeps its result from landing on a newer profile.
@@ -682,6 +686,7 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
                 dimAfter = ambient.dimAfter,
                 maxSession = ambient.maxSession,
                 showWeather = ambient.showWeather,
+                aerialQuality = ambient.aerialQuality,
                 photos = photoUris,
                 photosAllowed = !kidsActive,
                 reddit = redditItems,

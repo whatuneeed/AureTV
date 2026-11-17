@@ -13,11 +13,11 @@ class AerialCatalogTest {
 
     @Test
     fun the_bundled_catalogue_holds_the_four_real_aerial_categories() {
-        assertEquals(100, clips.size)
-        assertEquals(11, clips.count { it.theme == SaverTheme.CITIES })
-        assertEquals(57, clips.count { it.theme == SaverTheme.LANDSCAPES })
-        assertEquals(14, clips.count { it.theme == SaverTheme.UNDERWATER })
-        assertEquals(18, clips.count { it.theme == SaverTheme.EARTH })
+        assertEquals(117, clips.size)
+        assertEquals(15, clips.count { it.theme == SaverTheme.CITIES })
+        assertEquals(60, clips.count { it.theme == SaverTheme.LANDSCAPES })
+        assertEquals(21, clips.count { it.theme == SaverTheme.UNDERWATER })
+        assertEquals(21, clips.count { it.theme == SaverTheme.EARTH })
     }
 
     @Test
@@ -27,9 +27,64 @@ class AerialCatalogTest {
             assertTrue(clip.nameRu.isNotBlank())
             assertTrue(clip.videoUrl, clip.videoUrl.startsWith("http://sylvan.apple.com/"))
             assertTrue(clip.videoUrl, clip.videoUrl.endsWith(".mov"))
-            assertTrue(clip.videoUrl, clip.videoUrl.contains("_AVC"))
-            assertTrue(clip.previewUrl, clip.previewUrl.startsWith("http://sylvan.apple.com/"))
+            // Apple's Hong Kong file is H.264 but named ..._tag0.mov, not ..._AVC.mov.
+            assertTrue(
+                clip.videoUrl,
+                clip.videoUrl.contains("_AVC") || clip.videoUrl.contains("_tag0"),
+            )
+            assertTrue(
+                clip.previewUrl,
+                clip.previewUrl.startsWith("http://sylvan.apple.com/") ||
+                    clip.previewUrl.startsWith("asset:aerial_previews/"),
+            )
         }
+    }
+
+    @Test
+    fun audited_quality_variants_are_parsed_as_real_apple_files() {
+        val withVariants = clips.filter { it.variants.isNotEmpty() }
+        assertEquals(92, withVariants.size)
+        withVariants.forEach { clip ->
+            assertTrue(clip.nameEn, clip.variants.any { it.label == "1080p" })
+            assertTrue(clip.nameEn, clip.variants.any { it.label == "h264" })
+            assertTrue(clip.nameEn, clip.variants.any { it.label == "4k_hdr" })
+            clip.variants.forEach { variant ->
+                assertTrue(variant.url, variant.url.startsWith("http://sylvan.apple.com/"))
+                assertTrue(variant.url, variant.url.endsWith(".mov"))
+            }
+        }
+    }
+
+    @Test
+    fun legacy_clips_use_real_frames_captured_from_their_own_videos() {
+        val legacy = clips.filter { it.previewUrl.startsWith("asset:aerial_previews/") }
+        assertEquals(17, legacy.size)
+        legacy.forEach { clip ->
+            val file = File("src/main/assets/${clip.previewUrl.removePrefix("asset:")}")
+            assertTrue(clip.nameEn, file.isFile)
+            assertTrue(clip.nameEn, file.length() > 0)
+        }
+    }
+
+    @Test
+    fun a_refreshed_catalogue_keeps_variants_and_bundled_frames() {
+        val variant = AerialVariant(
+            label = "4k_hdr",
+            url = "http://sylvan.apple.com/4k_hdr.mov",
+            width = 3840,
+            height = 2160,
+            codec = AerialCodec.HEVC,
+            hdr = true,
+        )
+        val bundled = listOf(
+            clip("a", "asset:aerial_previews/a.jpg").copy(variants = listOf(variant)),
+        )
+        val refreshed = listOf(clip("a", ""))
+
+        val preferred = preferredCatalogue(refreshed, bundled)
+
+        assertEquals(listOf(variant), preferred.single().variants)
+        assertEquals("asset:aerial_previews/a.jpg", preferred.single().previewUrl)
     }
 
     @Test
