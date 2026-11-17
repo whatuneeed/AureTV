@@ -106,6 +106,12 @@ class ProfileStoreTest {
             .putString(LauncherPrefs.KEY_HOME_ORDER, "[]")
             .putString("discovery_usage", "{}")
             .commit()
+        AppLabelStore.setLabel(
+            context,
+            "com.example.orphan",
+            "Старое имя",
+            ProfileStore.homePrefsName(second.id),
+        )
         val kids = KidsStore(context)
         kids.setAllowlist(second.id, setOf("orphan.app"))
         runBlocking { kids.setPin(second.id, "1234") }
@@ -114,6 +120,14 @@ class ProfileStoreTest {
 
         assertEquals(null, layout.all[LauncherPrefs.KEY_HOME_ORDER])
         assertEquals(null, layout.all["discovery_usage"])
+        assertEquals(
+            null,
+            AppLabelStore.label(
+                context,
+                "com.example.orphan",
+                ProfileStore.homePrefsName(second.id),
+            ),
+        )
         assertTrue(kids.allowlist(second.id).isEmpty())
         assertEquals(false, kids.hasPin(second.id))
     }

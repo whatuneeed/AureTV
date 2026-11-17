@@ -3,9 +3,11 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import org.junit.Assert.assertEquals
@@ -36,6 +38,31 @@ class TrailerOverlayTest {
 
         rule.onNodeWithTag(TRAILER_OVERLAY_TAG)
             .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.waitForIdle()
+
+        assertEquals(1, actions)
+        assertEquals(0, dismissals)
+    }
+
+    @Test
+    fun a_talkback_click_opens_the_provider_action() {
+        var dismissals = 0
+        var actions = 0
+        rule.setContent {
+            OVisionTheme {
+                TrailerOverlay(
+                    title = "Test title",
+                    url = "file:///android_asset/does-not-exist.mp4",
+                    actionLabel = "OK — open in Flux",
+                    onAction = { actions++ },
+                    onDismiss = { dismissals++ },
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(TRAILER_OVERLAY_TAG)
+            .performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
 
         assertEquals(1, actions)

@@ -1,0 +1,15 @@
+0.5.15 / vc88 targeted verification (2026-11-18)
+
+Unit: 120/120 (same 10 classes as 0.5.14)
+Connected (hume-tv API 34): 42/42
+  ProfileStoreTest (4, including orphan app-label cleanup),
+  AppLabelStoreTest, AppRepositoryTest, HomeOrderStoreTest,
+  SearchOverlayTest (BACK from results keeps query; second BACK closes),
+  OnlineInfoOverlayTest, TrailerOverlayTest (remote OK + TalkBack click),
+  TopShelfTest listings hint, HomeScreen rename/reset/hide,
+  BackupManagerInstrumentedTest labels, SaverPreviewTest.
+
+Lint: 0 errors / 19 warnings / 5 information
+Release: assembleRelease BUILD SUCCESSFUL; release_check.py PASS
+APK: 6 568 839 B; SHA-256 4de5d26de9c3282ebb2e85769b260d496ae8e605d17ab3a54bb38b79da9a1433
+Signing: v2; certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10

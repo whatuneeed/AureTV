@@ -367,6 +367,8 @@ class ProfileStore(context: Context) {
 
     private fun clearProfileData(id: String) {
         HomeOrderStore(appContext, homePrefsName(id)).clearLayout()
+        // A reused id must not inherit the previous owner's app captions.
+        AppLabelStore.clear(appContext, homePrefsName(id))
         // A reused id must not inherit the deleted profile's discovery signals.
         DiscoveryStore(appContext, homePrefsName(id)).clearAll()
         // A reused id must not inherit the deleted profile's PIN or allowlist.

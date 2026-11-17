@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -169,7 +170,16 @@ fun TrailerOverlay(
                 .focusable()
                 .clearAndSetSemantics {
                     testTag = TRAILER_OVERLAY_TAG
-                    contentDescription = context.getString(R.string.trailer_description, title)
+                    contentDescription = buildString {
+                        append(context.getString(R.string.trailer_description, title))
+                        actionLabel?.let { append(". ").append(it) }
+                    }
+                    // TalkBack cannot send BACK/DPAD. Expose the same primary
+                    // action as a semantic click on the full-screen player.
+                    onClick {
+                        if (actionLabel != null && onAction != null) onAction?.invoke() else onDismiss()
+                        true
+                    }
                 },
         ) {
             AndroidView(

@@ -83,6 +83,7 @@ private const val VISIBLE_RESULTS = 7
 
 // Lets the UI test keep the results header clear of the input field.
 internal const val SEARCH_FIELD_TAG = "search_field"
+internal const val SEARCH_OVERLAY_TAG = "search_overlay"
 
 private enum class SearchZone { KEYS, RESULTS }
 
@@ -132,7 +133,14 @@ fun SearchOverlay(
         focusRequester.requestFocus()
     }
 
-    BackHandler { onClose() }
+    fun back() {
+        keyRepeat.stopRepeat()
+        // The first BACK leaves the results and keeps the query; a second BACK
+        // closes Search. Closing straight from the results lost the typed text.
+        if (zone == SearchZone.RESULTS) zone = SearchZone.KEYS else onClose()
+    }
+
+    BackHandler { back() }
 
     val windowStart = (resultIndex / VISIBLE_RESULTS) * VISIBLE_RESULTS
     val visibleResults = results.drop(windowStart).take(VISIBLE_RESULTS)
@@ -164,6 +172,7 @@ fun SearchOverlay(
                 ),
             )
             .focusRequester(focusRequester)
+            .testTag(SEARCH_OVERLAY_TAG)
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyUp) {
                     keyRepeat.release(event.key)
@@ -242,8 +251,7 @@ fun SearchOverlay(
                     }
 
                     Key.Back -> {
-                        keyRepeat.stopRepeat()
-                        onClose()
+                        back()
                         true
                     }
 

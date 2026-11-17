@@ -35,6 +35,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -125,6 +126,14 @@ fun OnlineInfoOverlay(
                         append(item.title)
                         item.year?.let { append(". ").append(it) }
                         synopsis?.let { append(". ").append(it) }
+                        actionLabel?.let { append(". ").append(it) }
+                    }
+                    // TalkBack has no remote key event. Make the same action
+                    // available as a semantic click instead of an unclickable
+                    // full-screen text node.
+                    onClick {
+                        if (actionLabel != null && onAction != null) onAction?.invoke() else onDismiss()
+                        true
                     }
                 },
         ) {

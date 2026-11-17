@@ -3,9 +3,11 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryKind
@@ -47,6 +49,38 @@ class OnlineInfoOverlayTest {
 
         rule.onNodeWithTag(ONLINE_INFO_OVERLAY_TAG)
             .performKeyInput { pressKey(Key.DirectionCenter) }
+        rule.waitForIdle()
+
+        assertEquals(1, actions)
+        assertEquals(0, dismissals)
+    }
+
+    @Test
+    fun a_talkback_click_opens_the_provider_action() {
+        var dismissals = 0
+        var actions = 0
+        rule.setContent {
+            OVisionTheme {
+                OnlineInfoOverlay(
+                    item = DiscoveryItem(
+                        id = "justwatch|1",
+                        source = DiscoverySource.ONLINE,
+                        kind = DiscoveryKind.VIDEO,
+                        packageName = "me",
+                        packageLabel = "JustWatch",
+                        title = "Test title",
+                        reason = DiscoveryReason.TRENDING,
+                    ),
+                    actionLabel = "Смотреть в Flux",
+                    onAction = { actions++ },
+                    onDismiss = { dismissals++ },
+                )
+            }
+        }
+        rule.waitForIdle()
+
+        rule.onNodeWithTag(ONLINE_INFO_OVERLAY_TAG)
+            .performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
 
         assertEquals(1, actions)
