@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Backup/Update выглядят как отдельные страницы: заголовок слева, список 1200, нет иконки | 0.5.18 (two-pane tool pages) |
 | Settings и Backup/Update по-разному подсвечивают строку и ставят заголовок | 0.5.17 (row surface) |
 | BackupScreenTest падает на русском UI, хотя строки существуют | 0.5.17 (test localization) |
 | OK на подтверждении удаления папки сразу удаляет папку | 0.5.16 (destructive focus) |
@@ -260,6 +261,15 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.18: Backup и Update в том же двухпанельном каркасе, что Settings
+
+- **Симптом.** Backup и Software Update выглядели как отдельный продукт: заголовок и подзаголовок прижаты влево, список шириной 1200 занимал весь экран, слева не было иконки категории. В Settings заголовок центрирован, слева стоит крупная иконка раздела, а действия живут в правой колонке 776 px. После 0.5.17 совпадала только строка, но не страница.
+- **Причина.** Tool-экраны были написаны как самостоятельные full-width Activity и не использовали геометрию Settings. Общий `TvListRowSurface` решал только строку, а заголовок, иконка и колонка оставались локальными.
+- **Что сделано.** Добавлен `TvToolPageScaffold`: центрированные title/subtitle, иконка категории слева (`ICON_LEFT=259`, `ICON_TOP=247`, `ICON_SIZE=534`), правый список `x=1066`, ширина **776**, тот же нижний inset. Backup использует `SectionGlyph.shield`, Update — `SectionGlyph.update`. Списки, прогресс-бар и ряды переведены на 776 px; notes-overlay остаётся полноэкранным. Это тот же двухпанельный frame, что у Settings, но Activity остаются отдельными — так сохраняются их lifecycle, SAF/install intents и back-stack.
+- **Файлы.** `ui/components/TvToolPageScaffold.kt`, `ui/BackupScreen.kt`, `ui/SoftwareUpdateScreen.kt`, `ui/components/TvListRowSurface.kt`.
+- **Чего не делать.** Не возвращать левый заголовок и full-width 1200-список на Backup/Update. Не встраивать их в `SettingsActivity` силой: это сломает отдельные Activity, SAF-экспорт и установку APK. Не менять 776-колонку только на одном экране.
+- **Проверка.** Targeted unit — **120/120**; targeted connected на `hume-tv` API 34 — **64/64**: `SettingsScreenTest` 58/58, `BackupScreenTest` 3/3, `SoftwareUpdateScreenTest` 3/3. Lint — **0 errors / 19 warnings / 5 information**. `assembleRelease` — BUILD SUCCESSFUL; `release_check.py` — PASS, v2, прежний сертификат, RU/EN 661. Артефакт: **6 568 843 B**, SHA-256 **`8ae75a3e66b01161c6e3f636af9db3c321bd114463226cbce1fbf6c7eea27a18`**, версия **0.5.18 / vc91**. Полный suite не перезапускался; визуальная проверка на физическом ТВ не выполнялась.
 
 ### 18.11.2026 — 0.5.17: единая строка фокуса для Settings, Backup и Update
 

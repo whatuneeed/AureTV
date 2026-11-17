@@ -46,7 +46,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
+import com.whatuneed.ovisiontv.kotlin.ui.components.TV_TOOL_LIST_WIDTH
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
+import com.whatuneed.ovisiontv.kotlin.ui.components.TvToolPageScaffold
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.update.UpdateChannel
 import com.whatuneed.ovisiontv.kotlin.update.UpdateCheckMode
@@ -356,29 +359,13 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
         if (focusIndex !in rows.indices) focusIndex = 0
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF101014), Color(0xFF0E0E11)))),
+    TvToolPageScaffold(
+        title = stringResource(R.string.update_title),
+        subtitle = stringResource(R.string.update_subtitle),
+        icon = SectionGlyph.update,
+        scale = scale,
     ) {
-        Column(
-            Modifier
-                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(44f))
-                .width(scale.dp(1200f)),
-        ) {
-            Text(
-                text = stringResource(R.string.update_title),
-                color = Color.White,
-                fontSize = scale.sp(TvType.largeTitle),
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(R.string.update_subtitle),
-                color = LauncherColors.textSecondary,
-                fontSize = scale.sp(TvType.callout),
-                modifier = Modifier.padding(top = scale.dp(8f)),
-            )
-            Spacer(Modifier.height(scale.dp(24f)))
+        Column(Modifier.fillMaxSize()) {
             val downloadTotal = state.totalBytes
             if (state.phase == UpdatePhase.DOWNLOADING && downloadTotal != null) {
                 LinearProgressIndicator(
@@ -386,7 +373,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                         (state.progressBytes.toFloat() / downloadTotal.toFloat()).coerceIn(0f, 1f)
                     },
                     modifier = Modifier
-                        .width(scale.dp(1200f))
+                        .width(scale.dp(TV_TOOL_LIST_WIDTH))
                         .height(scale.dp(6f))
                         .testTag("update_progress"),
                     color = Color.White.copy(alpha = 0.75f),
@@ -396,8 +383,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             }
             LazyColumn(
                 modifier = Modifier
-                    .width(scale.dp(1200f))
-                    .height(scale.dp(700f))
+                    .fillMaxSize()
                     .testTag("update_rows"),
                 verticalArrangement = Arrangement.spacedBy(scale.dp(8f)),
             ) {
@@ -416,12 +402,12 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 }
             }
         }
-        if (notesOpen) {
-            UpdateNotesOverlay(
-                release = release,
-                onClose = { notesOpen = false },
-            )
-        }
+    }
+    if (notesOpen) {
+        UpdateNotesOverlay(
+            release = release,
+            onClose = { notesOpen = false },
+        )
     }
 }
 
@@ -499,7 +485,7 @@ private fun UpdateRowView(
         focused = focused,
         scale = scale,
         modifier = Modifier
-            .width(scale.dp(1200f))
+            .width(scale.dp(TV_TOOL_LIST_WIDTH))
             .focusRequester(requester)
             .onFocusChanged { if (it.isFocused) onFocus() }
             .clickable { row.action?.invoke() },

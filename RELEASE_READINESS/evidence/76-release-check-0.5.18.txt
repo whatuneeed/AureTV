@@ -1,0 +1,16 @@
+APK   C:\OpenCode Project\OVisionTV\OVisionTV_Kotlin\app\build\outputs\apk\release\app-release.apk
+size  6568843 bytes
+sha256 8ae75a3e66b01161c6e3f636af9db3c321bd114463226cbce1fbf6c7eea27a18
+ok    versionCode 91
+ok    versionName 0.5.18
+ok    applicationId com.whatuneed.ovisiontv.kotlin
+ok    minSdk 28
+ok    targetSdk 35
+ok    apksigner verify
+ok    APK Signature Scheme v2
+ok    signing certificate
+ok    RU/EN resource names (661 entries)
+
+Evidence:
+  sha256=8ae75a3e66b01161c6e3f636af9db3c321bd114463226cbce1fbf6c7eea27a18
+  certificate=327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10

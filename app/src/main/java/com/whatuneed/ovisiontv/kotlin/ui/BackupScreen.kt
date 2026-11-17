@@ -55,7 +55,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
+import com.whatuneed.ovisiontv.kotlin.ui.components.TV_TOOL_LIST_WIDTH
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
+import com.whatuneed.ovisiontv.kotlin.ui.components.TvToolPageScaffold
 import com.whatuneed.ovisiontv.kotlin.backup.BackupCategory
 import com.whatuneed.ovisiontv.kotlin.backup.BackupContract
 import com.whatuneed.ovisiontv.kotlin.backup.BackupException
@@ -532,29 +535,13 @@ fun BackupScreen(onClose: () -> Unit) {
         }
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF101014), Color(0xFF0E0E11)))),
+    TvToolPageScaffold(
+        title = stringResource(R.string.backup_title),
+        subtitle = stringResource(R.string.backup_subtitle),
+        icon = SectionGlyph.shield,
+        scale = scale,
     ) {
-        Column(
-            Modifier
-                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(44f))
-                .width(scale.dp(1200f)),
-        ) {
-            Text(
-                text = stringResource(R.string.backup_title),
-                color = Color.White,
-                fontSize = scale.sp(TvType.largeTitle),
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(R.string.backup_subtitle),
-                color = LauncherColors.textSecondary,
-                fontSize = scale.sp(TvType.callout),
-                modifier = Modifier.padding(top = scale.dp(8f)),
-            )
-            Spacer(Modifier.height(scale.dp(24f)))
+        Column(Modifier.fillMaxSize()) {
             if (ui.page == BackupPage.PASSWORD) {
                 PasswordFields(
                     ui = ui,
@@ -590,8 +577,7 @@ fun BackupScreen(onClose: () -> Unit) {
             } else {
                 LazyColumn(
                     modifier = Modifier
-                        .width(scale.dp(1200f))
-                        .height(scale.dp(760f))
+                        .fillMaxSize()
                         .testTag("backup_rows"),
                     verticalArrangement = Arrangement.spacedBy(scale.dp(8f)),
                 ) {
@@ -752,7 +738,7 @@ private fun BackupRowView(
         focused = focused,
         scale = scale,
         modifier = Modifier
-            .width(scale.dp(1200f))
+            .width(scale.dp(TV_TOOL_LIST_WIDTH))
             .focusRequester(requester)
             .onFocusChanged { if (it.isFocused) onFocus() }
             // Every row is a focus target even when it only carries a warning;
