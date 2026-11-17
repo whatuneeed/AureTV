@@ -43,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.backup.BackupCategory
 import com.whatuneed.ovisiontv.kotlin.backup.BackupContract
 import com.whatuneed.ovisiontv.kotlin.backup.BackupException
@@ -537,7 +539,7 @@ fun BackupScreen(onClose: () -> Unit) {
     ) {
         Column(
             Modifier
-                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(54f))
+                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(44f))
                 .width(scale.dp(1200f)),
         ) {
             Text(
@@ -746,52 +748,56 @@ private fun BackupRowView(
     onFocus: () -> Unit,
     onClick: (() -> Unit)?,
 ) {
-    val shape = RoundedCornerShape(scale.dp(14f))
-    Row(
-        Modifier
+    TvListRowSurface(
+        focused = focused,
+        scale = scale,
+        modifier = Modifier
             .width(scale.dp(1200f))
-            .height(scale.dp(66f))
             .focusRequester(requester)
             .onFocusChanged { if (it.isFocused) onFocus() }
             // Every row is a focus target even when it only carries a warning;
             // an info row with no action must still be reachable and must not
             // leave the page without an initial focus owner.
-            .clickable { onClick?.invoke() }
-            .background(
-                if (focused) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.075f),
-                shape,
-            )
-            .border(
-                scale.dp(if (focused) 2f else 1f),
-                Color.White.copy(alpha = if (focused) 0.8f else 0.10f),
-                shape,
-            )
-            .padding(horizontal = scale.dp(20f)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = row.title,
-            color = if (row.destructive) LauncherColors.destructive else Color.White,
-            fontSize = scale.sp(TvType.body),
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            .clickable { onClick?.invoke() },
+    ) { focusAmount ->
+        val titleColor = if (row.destructive) {
+            LauncherColors.destructive
+        } else {
+            lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
+        }
+        val valueColor = lerp(
+            LauncherColors.textSecondary,
+            Color.Black.copy(alpha = 0.6f),
+            focusAmount,
         )
-        row.checked?.let {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = stringResource(if (it) R.string.saver_on else R.string.saver_off),
-                color = LauncherColors.textSecondary,
-                fontSize = scale.sp(TvType.callout),
-            )
-        } ?: row.value?.let {
-            Text(
-                text = it,
-                color = LauncherColors.textSecondary,
-                fontSize = scale.sp(TvType.callout),
+                text = row.title,
+                color = titleColor,
+                fontSize = scale.sp(TvType.body),
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            row.checked?.let {
+                Text(
+                    text = stringResource(if (it) R.string.saver_on else R.string.saver_off),
+                    color = valueColor,
+                    fontSize = scale.sp(TvType.callout),
+                )
+            } ?: row.value?.let {
+                Text(
+                    text = it,
+                    color = valueColor,
+                    fontSize = scale.sp(TvType.callout),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

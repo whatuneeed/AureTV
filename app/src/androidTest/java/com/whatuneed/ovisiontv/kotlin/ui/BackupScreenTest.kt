@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.whatuneed.ovisiontv.kotlin.BackupActivity
+import com.whatuneed.ovisiontv.kotlin.R
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,34 +29,41 @@ class BackupScreenTest {
 
     @Test
     fun theCreatePageIsReachableAndKeepsDpadFocusOnTheNextRow() {
-        compose.onNodeWithText("Create a backup").assertIsFocused()
-        compose.onNodeWithText("Create a backup").performClick()
+        val create = compose.activity.getString(R.string.backup_create)
+        compose.onNodeWithText(create).assertIsFocused()
+        compose.onNodeWithText(create).performClick()
 
-        compose.onNodeWithText("Profiles and home layout").assertIsFocused()
-        compose.onNodeWithText("Profiles and home layout").performKeyInput {
+        val profiles = compose.activity.getString(R.string.backup_category_profiles)
+        val home = compose.activity.getString(R.string.backup_category_home)
+        compose.onNodeWithText(profiles).assertIsFocused()
+        compose.onNodeWithText(profiles).performKeyInput {
             pressKey(Key.DirectionDown)
         }
-        compose.onNodeWithText("Home layout and folders").assertIsFocused()
+        compose.onNodeWithText(home).assertIsFocused()
     }
 
     @Test
     fun thePasswordFieldOwnsInitialFocusAndRejectsAShortPassword() {
-        compose.onNodeWithText("Create a backup").performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.backup_create)).performClick()
+        val export = compose.activity.getString(R.string.backup_export_now)
         compose.onNodeWithTag("backup_rows")
-            .performScrollToNode(hasText("Choose file and export"))
-        compose.onNodeWithText("Choose file and export").performClick()
+            .performScrollToNode(hasText(export))
+        compose.onNodeWithText(export).performClick()
 
         compose.onNodeWithTag("backup_password").assertIsFocused()
-        compose.onNodeWithText("Continue").performClick()
-        compose.onNodeWithText("Use at least 8 characters").assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.backup_password_continue))
+            .performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.backup_password_too_short))
+            .assertIsDisplayed()
     }
 
     @Test
     fun theBottomActionsRemainReachableAfterScrolling() {
-        compose.onNodeWithText("Create a backup").performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.backup_create)).performClick()
 
+        val export = compose.activity.getString(R.string.backup_export_now)
         compose.onNodeWithTag("backup_rows")
-            .performScrollToNode(hasText("Choose file and export"))
-        compose.onNodeWithText("Choose file and export").assertIsDisplayed()
+            .performScrollToNode(hasText(export))
+        compose.onNodeWithText(export).assertIsDisplayed()
     }
 }

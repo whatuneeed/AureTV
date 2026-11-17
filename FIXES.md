@@ -13,6 +13,8 @@
 
 | Симптом | Запись |
 |---|---|
+| Settings и Backup/Update по-разному подсвечивают строку и ставят заголовок | 0.5.17 (row surface) |
+| BackupScreenTest падает на русском UI, хотя строки существуют | 0.5.17 (test localization) |
 | OK на подтверждении удаления папки сразу удаляет папку | 0.5.16 (destructive focus) |
 | Software Update и Backup спрятаны на третьем уровне Settings | 0.5.16 (Settings IA) |
 | Тест сброса заставки после добавления Aerial quality открывает системные Dream settings | 0.5.16 (test row count) |
@@ -258,6 +260,15 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.17: единая строка фокуса для Settings, Backup и Update
+
+- **Симптом.** Settings подсвечивал строку белой заливкой с масштабом, а Backup и Software Update — полупрозрачной заливкой с рамкой. Заголовки tool-экранов стояли на 54 px против 44 px в Settings, строки были 66 px/radius 14 против 64 px/radius 16. Один и тот же product выглядел как три разных списка. `BackupScreenTest` при этом был привязан к английским литералам и падал на русском UI, хотя строки и фокус были на месте.
+- **Причина.** Каждый экран имел собственную копию анимации фокуса, размеров, границ и цветов. Тесты Backup не использовали строковые ресурсы.
+- **Что сделано.** Добавлен общий `TvListRowSurface`: height 64, radius 16, padding 22, focus scale 1.04, белая заливка и плавный переход текста в чёрный. Он используется в `SettingsRowCard`, `BackupRowView` и `UpdateRowView`; Settings и tool-экраны теперь имеют одинаковый focus language. Заголовки Backup/Update подняты на 44 px, список Update — на тот же 24 px spacer. Широкие tool-списки 1200 px сохранены: это осознанно, потому что перенос их в двухпанельный Settings был бы отдельным большим рефакторингом. `BackupScreenTest` переведён на `R.string.*`, поэтому проверяет поведение, а не конкретный язык.
+- **Файлы.** `ui/components/TvListRowSurface.kt`, `ui/SettingsScreen.kt`, `ui/BackupScreen.kt`, `ui/SoftwareUpdateScreen.kt`, `androidTest/.../BackupScreenTest.kt`.
+- **Чего не делать.** Не возвращать отдельные focus-стили и не менять высоту/radius одного экрана без остальных. Не считать перенос Backup/Update в двухпанельный Settings выполненным: это следующий уровень P1-1. Не привязывать UI-тесты к литералам, если экран локализуется.
+- **Проверка.** Targeted unit — **120/120**; targeted connected на `hume-tv` API 34 — **64/64**: `SettingsScreenTest` 58/58, `BackupScreenTest` 3/3, `SoftwareUpdateScreenTest` 3/3. Lint — **0 errors / 19 warnings / 5 information**. `assembleRelease` — BUILD SUCCESSFUL; `release_check.py` — PASS, v2, прежний сертификат, RU/EN 661. Артефакт: **6 568 843 B**, SHA-256 **`d252fb2e7e67cc3a91a5e53af2d84f8696ae6512f5f887744744872b02339e89`**, версия **0.5.17 / vc90**. Полный suite не перезапускался; визуальная проверка на физическом ТВ не выполнялась.
 
 ### 18.11.2026 — 0.5.16: безопасное удаление папки и Update/Backup на уровне Device
 

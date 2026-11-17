@@ -1,0 +1,11 @@
+0.5.17 / vc90 targeted verification (2026-11-18)
+
+Unit: 120/120 (same 10 classes as 0.5.14)
+Connected (hume-tv API 34): 64/64
+  SettingsScreenTest 58/58, BackupScreenTest 3/3,
+  SoftwareUpdateScreenTest 3/3.
+
+Lint: 0 errors / 19 warnings / 5 information
+Release: assembleRelease BUILD SUCCESSFUL; release_check.py PASS
+APK: 6 568 843 B; SHA-256 d252fb2e7e67cc3a91a5e53af2d84f8696ae6512f5f887744744872b02339e89
+Signing: v2; certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10

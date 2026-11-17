@@ -38,6 +38,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.update.UpdateChannel
 import com.whatuneed.ovisiontv.kotlin.update.UpdateCheckMode
@@ -361,7 +363,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     ) {
         Column(
             Modifier
-                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(54f))
+                .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(44f))
                 .width(scale.dp(1200f)),
         ) {
             Text(
@@ -376,7 +378,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 fontSize = scale.sp(TvType.callout),
                 modifier = Modifier.padding(top = scale.dp(8f)),
             )
-            Spacer(Modifier.height(scale.dp(22f)))
+            Spacer(Modifier.height(scale.dp(24f)))
             val downloadTotal = state.totalBytes
             if (state.phase == UpdatePhase.DOWNLOADING && downloadTotal != null) {
                 LinearProgressIndicator(
@@ -493,43 +495,47 @@ private fun UpdateRowView(
     requester: FocusRequester,
     onFocus: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(scale.dp(14f))
-    Row(
-        Modifier
+    TvListRowSurface(
+        focused = focused,
+        scale = scale,
+        modifier = Modifier
             .width(scale.dp(1200f))
-            .height(scale.dp(66f))
             .focusRequester(requester)
             .onFocusChanged { if (it.isFocused) onFocus() }
-            .clickable { row.action?.invoke() }
-            .background(
-                if (focused) Color.White.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.075f),
-                shape,
-            )
-            .border(
-                scale.dp(if (focused) 2f else 1f),
-                Color.White.copy(alpha = if (focused) 0.8f else 0.10f),
-                shape,
-            )
-            .padding(horizontal = scale.dp(20f)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = row.title,
-            color = if (row.destructive) LauncherColors.destructive else Color.White,
-            fontSize = scale.sp(TvType.body),
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
+            .clickable { row.action?.invoke() },
+    ) { focusAmount ->
+        val titleColor = if (row.destructive) {
+            LauncherColors.destructive
+        } else {
+            lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
+        }
+        val valueColor = lerp(
+            LauncherColors.textSecondary,
+            Color.Black.copy(alpha = 0.6f),
+            focusAmount,
         )
-        row.value?.let {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = it,
-                color = LauncherColors.textSecondary,
-                fontSize = scale.sp(TvType.callout),
+                text = row.title,
+                color = titleColor,
+                fontSize = scale.sp(TvType.body),
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            row.value?.let {
+                Text(
+                    text = it,
+                    color = valueColor,
+                    fontSize = scale.sp(TvType.callout),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

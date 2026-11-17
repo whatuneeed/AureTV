@@ -200,6 +200,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
+import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientDimLabel
@@ -4179,15 +4180,6 @@ private fun SettingsRowCard(
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
-    // One progress drives scale, fill and border, so the row cannot grow before
-    // its highlight appears.
-    val reduceMotion = LocalReduceMotion.current
-    val focusAmount by animateFloatAsState(
-        targetValue = if (focused) 1f else 0f,
-        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
-        label = "settingsRowFocus",
-    )
-    val shape = RoundedCornerShape(scale.dp(ROW_RADIUS))
     // Rows are drawn as separate Texts; a single cleared node keeps TalkBack from
     // stopping twice on the label and its value. Compose 1.7 does not map the
     // `selected` semantics to AccessibilityNodeInfo, so the check is announced
@@ -4196,15 +4188,11 @@ private fun SettingsRowCard(
     val selectedState = stringResource(R.string.settings_selected)
     val onState = stringResource(R.string.settings_state_on)
     val offState = stringResource(R.string.settings_state_off)
-    val titleColor = if (row.destructive) {
-        LauncherColors.destructive
-    } else {
-        lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
-    }
-    val valueColor = lerp(Color.White.copy(alpha = 0.5f), Color.Black.copy(alpha = 0.6f), focusAmount)
 
-    Box(
-        modifier
+    TvListRowSurface(
+        focused = focused,
+        scale = scale,
+        modifier = modifier
             .size(scale.dp(LIST_WIDTH), scale.dp(ROW_HEIGHT))
             .focusRequester(focusRequester)
             .focusable()
@@ -4230,18 +4218,18 @@ private fun SettingsRowCard(
                     // TalkBack's double-tap does not reach the key handler above.
                     onClick(label = row.actionLabel ?: row.title) { action(); true }
                 }
-            }
-            .graphicsLayer {
-                val grow = 1f + (FOCUS_SCALE - 1f) * focusAmount
-                scaleX = grow
-                scaleY = grow
-            }
-            .clip(shape)
-            .background(
-                lerp(Color.White.copy(alpha = 0.10f), Color.White, focusAmount),
-            )
-            .padding(horizontal = scale.dp(ROW_PADDING)),
-    ) {
+            },
+    ) { focusAmount ->
+        val titleColor = if (row.destructive) {
+            LauncherColors.destructive
+        } else {
+            lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
+        }
+        val valueColor = lerp(
+            Color.White.copy(alpha = 0.5f),
+            Color.Black.copy(alpha = 0.6f),
+            focusAmount,
+        )
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
