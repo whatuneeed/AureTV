@@ -2066,14 +2066,17 @@ fun HomeScreen(
                 TvMenu(
                     title = folder.name,
                     entries = listOf(
+                        // Safe action first: opening the confirmation and
+                        // pressing OK must not destroy the folder. The user
+                        // has to move down to the destructive row.
+                        TvMenuEntry(context.getString(R.string.settings_cancel)) {
+                            folderDeleteId = null
+                        },
                         TvMenuEntry(
                             label = context.getString(R.string.menu_delete_folder),
                             destructive = true,
                         ) {
                             removeFolderById(folderId)
-                            folderDeleteId = null
-                        },
-                        TvMenuEntry(context.getString(R.string.settings_cancel)) {
                             folderDeleteId = null
                         },
                     ),

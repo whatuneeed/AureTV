@@ -731,6 +731,22 @@ class HomeScreenTest {
         rule.waitForIdle()
         rule.onNodeWithContentDescription(context.getString(R.string.menu_delete_folder))
             .assertIsDisplayed()
+
+        // The confirmation opens on Cancel. A quick OK here must not delete.
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        rule.onNodeWithContentDescription("Моя папка").assertIsDisplayed()
+        assertNull(order)
+
+        // Reopen and choose the destructive row explicitly.
+        press(Key.Menu)
+        rule.waitForIdle()
+        repeat(2) { press(Key.DirectionDown) }
+        press(Key.DirectionCenter)
+        rule.mainClock.advanceTimeBy(500)
+        rule.waitForIdle()
+        press(Key.DirectionDown)
         press(Key.DirectionCenter)
         rule.waitForIdle()
 

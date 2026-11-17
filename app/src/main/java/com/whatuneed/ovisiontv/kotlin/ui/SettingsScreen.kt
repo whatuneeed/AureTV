@@ -136,6 +136,7 @@ import com.whatuneed.ovisiontv.kotlin.data.AppLoadResult
 import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.CityPlace
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
+import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.CrashReport
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFacts
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
@@ -143,7 +144,6 @@ import com.whatuneed.ovisiontv.kotlin.data.DeviceFormat
 import com.whatuneed.ovisiontv.kotlin.data.HIDDEN_FOLDER_ID
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
 import com.whatuneed.ovisiontv.kotlin.data.HomeOrderStore
-import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.setShowPhoneApps
 import com.whatuneed.ovisiontv.kotlin.update.UpdateStateStore
@@ -2576,10 +2576,6 @@ fun SettingsScreen(
 
         PAGE_SYSTEM -> {
             val defaultHome = facts?.defaultHome == true
-            val kidsActive = remember(context) { KidsMode.isKids(context) }
-            val updateSummary = remember(context, resumeTick) {
-                UpdateStateStore(context).summary()
-            }
             // Two steps, as in Java: the row turns the preference on, and the
             // next press sends the user to the switch it still needs.
             val homeAction: (() -> Unit)? = when {
@@ -2592,23 +2588,6 @@ fun SettingsScreen(
                     ({ homeOverride = false; StartupPreferences.setHomeOverride(context, false) })
             }
             listOfNotNull(
-                if (kidsActive) {
-                    null
-                } else {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_software_update),
-                        value = updateSummary?.let {
-                            stringResource(R.string.settings_software_update_available)
-                        } ?: stringResource(R.string.settings_software_update_manual),
-                        chevron = true,
-                        action = {
-                            context.startActivity(
-                                Intent(context, SoftwareUpdateActivity::class.java)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        },
-                    )
-                },
                 SettingsRow(
                     title = stringResource(R.string.settings_system_home),
                     value = facts?.let {
@@ -2701,14 +2680,6 @@ fun SettingsScreen(
                         null
                     },
                     actionLabel = stringResource(R.string.settings_airplay_open),
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.backup_title),
-                    value = stringResource(R.string.backup_open),
-                    chevron = true,
-                    action = {
-                        context.startActivity(Intent(context, BackupActivity::class.java))
-                    },
                 ),
             )
         }
@@ -2810,14 +2781,40 @@ fun SettingsScreen(
             ),
         )
 
-        PAGE_DEVICE_GROUP -> deviceGroupRows(
-            factsReady = factsReady,
-            network = if (factsReady) networkText else stringResource(R.string.settings_loading),
-            model = if (factsReady) facts?.model else null,
-            freeSpace = freeSpace,
-            permissions = permissionsSummary,
-            onOpen = ::open,
-        )
+        PAGE_DEVICE_GROUP -> {
+            val kidsActive = remember(context) { KidsMode.isKids(context) }
+            val updateSummary = remember(context, resumeTick) {
+                UpdateStateStore(context).summary()
+            }
+            deviceGroupRows(
+                factsReady = factsReady,
+                network = if (factsReady) networkText else stringResource(R.string.settings_loading),
+                model = if (factsReady) facts?.model else null,
+                freeSpace = freeSpace,
+                permissions = permissionsSummary,
+                updateValue = if (kidsActive) {
+                    null
+                } else {
+                    updateSummary?.let {
+                        stringResource(R.string.settings_software_update_available)
+                    } ?: stringResource(R.string.settings_software_update_manual)
+                },
+                onUpdate = if (kidsActive) {
+                    null
+                } else {
+                    {
+                        context.startActivity(
+                            Intent(context, SoftwareUpdateActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                },
+                onBackup = {
+                    context.startActivity(Intent(context, BackupActivity::class.java))
+                },
+                onOpen = ::open,
+            )
+        }
 
         PAGE_ABOUT_GROUP -> aboutGroupRows(
             clipCount = clipList.size,
@@ -4641,8 +4638,11 @@ private fun deviceGroupRows(
     model: String?,
     freeSpace: String?,
     permissions: String,
+    updateValue: String?,
+    onUpdate: (() -> Unit)?,
+    onBackup: () -> Unit,
     onOpen: (Int) -> Unit,
-): List<SettingsRow> = listOf(
+): List<SettingsRow> = listOfNotNull(
     SettingsRow(
         title = stringResource(R.string.settings_network),
         value = network,
@@ -4673,6 +4673,24 @@ private fun deviceGroupRows(
         title = stringResource(R.string.settings_system),
         chevron = true,
         action = { onOpen(PAGE_SYSTEM) },
+    ),
+    // Maintenance lives one level below Device, not three: Home → Device →
+    // Update/Backup. The System page keeps only Home-button and service state.
+    if (updateValue != null && onUpdate != null) {
+        SettingsRow(
+            title = stringResource(R.string.settings_software_update),
+            value = updateValue,
+            chevron = true,
+            action = onUpdate,
+        )
+    } else {
+        null
+    },
+    SettingsRow(
+        title = stringResource(R.string.backup_title),
+        value = stringResource(R.string.backup_open),
+        chevron = true,
+        action = onBackup,
     ),
 )
 

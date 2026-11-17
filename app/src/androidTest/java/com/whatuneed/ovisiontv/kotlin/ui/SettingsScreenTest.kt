@@ -1488,6 +1488,24 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun device_page_surfaces_update_and_backup_one_level_below_device() {
+        setSettings()
+        openDevice()
+
+        rule.onNodeWithContentDescription(string(R.string.settings_software_update), substring = true)
+            .assertExists()
+        rule.onNodeWithContentDescription(string(R.string.backup_title), substring = true)
+            .assertExists()
+
+        // System keeps service state; maintenance no longer needs a third level.
+        clickRow(string(R.string.settings_system))
+        rule.onNodeWithContentDescription(string(R.string.settings_software_update), substring = true)
+            .assertDoesNotExist()
+        rule.onNodeWithContentDescription(string(R.string.backup_title), substring = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun network_page_reports_the_live_connection() {
         setSettings()
         openDevice()
@@ -1849,9 +1867,9 @@ class SettingsScreenTest {
         setSettings()
         openSaver()
 
-        // The reset row is last, after Mode, Choose, Start After, Music, Themes,
-        // Frequency and the system screen-saver row.
-        repeat(7) { press(Key.DirectionDown) }
+        // The reset row is last, after Mode, Start After, Music, Quality,
+        // Choose, Themes, Frequency and the system screen-saver row.
+        repeat(8) { press(Key.DirectionDown) }
         press(Key.DirectionCenter)
         rule.onNodeWithText(string(R.string.saver_reset_title))
             .assertIsDisplayed()

@@ -13,6 +13,9 @@
 
 | Симптом | Запись |
 |---|---|
+| OK на подтверждении удаления папки сразу удаляет папку | 0.5.16 (destructive focus) |
+| Software Update и Backup спрятаны на третьем уровне Settings | 0.5.16 (Settings IA) |
+| Тест сброса заставки после добавления Aerial quality открывает системные Dream settings | 0.5.16 (test row count) |
 | TalkBack не может открыть провайдера из трейлера или инфо-экрана | 0.5.15 (a11y) |
 | BACK из результатов поиска закрывает поиск и теряет запрос | 0.5.15 (Search Back) |
 | Удалённый профиль оставляет свои имена приложений | 0.5.15 (profile labels) |
@@ -255,6 +258,15 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.16: безопасное удаление папки и Update/Backup на уровне Device
+
+- **Симптом.** Подтверждение удаления папки открывалось с фокусом на destructive-строке: случайный OK сразу удалял папку. Software Update и Backup находились на третьем уровне Settings (`Home → Device → System → …`), хотя это основные maintenance-действия. Полный `SettingsScreenTest` после добавления Aerial quality падал: тест сброса заставки делал 7 нажатий Down и попадал на системную Dream-строку, которая уводила из приложения.
+- **Причина.** В confirm-меню удаления папки destructive-строка стояла первой, а `TvMenu` ставит фокус на index 0. Update/Backup жили в `PAGE_SYSTEM`, вместе с Home override, startup и AirPlay. Тест сброса не был обновлён после появления строки Aerial quality, поэтому его фиксированное число шагов стало неверным.
+- **Что сделано.** В подтверждении удаления первой теперь стоит **Cancel**, destructive-строка — вторая; пользователь должен явно перейти к ней. Update и Backup перенесены в страницу `Device` (два уровня от Home), из `System` убраны; в Kids Mode Update по-прежнему скрыт, Backup остаётся доступен. Тест сброса заставки обновлён до 8 шагов и снова проверяет именно Reset. Добавлен тест, что обе maintenance-строки есть на Device и отсутствуют на System.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/SettingsScreen.kt`, `androidTest/.../HomeScreenTest.kt`, `SettingsScreenTest.kt`.
+- **Чего не делать.** Не ставить destructive-строку первой в confirm-меню. Не возвращать Update/Backup на третий уровень и не дублировать их на System. Не привязывать тесты навигации к числу строк без проверки итогового заголовка.
+- **Проверка.** Targeted unit — **120/120**; targeted connected на `hume-tv` API 34 — **101/101**, включая полный `SettingsScreenTest` 58/58, подтверждение удаления папки и перенос maintenance-строк. Lint — **0 errors / 19 warnings / 5 information**. `assembleRelease` — BUILD SUCCESSFUL; `release_check.py` — PASS, v2, прежний сертификат, RU/EN 661. Артефакт: **6 568 839 B**, SHA-256 **`f5842ea55a59eec1b5becd080a42b876bc0a9cc8e4d7bafe37bcea2e80e63620`**, версия **0.5.16 / vc89**. Полный suite не перезапускался; физический ТВ не проверялся.
 
 ### 18.11.2026 — 0.5.15: TalkBack-действия, Search Back и очистка имён профиля
 
