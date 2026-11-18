@@ -686,6 +686,7 @@
     <string name="backup_restore_selected">Restore selected data</string>
     <string name="backup_restore_confirm">This replaces the selected settings. A rollback copy is made first.</string>
     <string name="backup_restore_done">Restore completed. The launcher will restart</string>
+    <string name="backup_recovery_wait">Recovering your previous data…</string>
     <string name="backup_export_done">Backup exported</string>
     <string name="backup_local_done">Backup saved on this TV</string>
     <string name="backup_no_files">This TV has no file picker</string>

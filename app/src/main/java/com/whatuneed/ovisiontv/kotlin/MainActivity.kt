@@ -9,21 +9,27 @@ import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.whatuneed.ovisiontv.kotlin.backup.BackupRecovery
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
+import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoverySplash
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherRoot
 import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
+import kotlinx.coroutines.launch
 
 // SCREEN_ON and onResume race on some TVs. A wake older than this belongs to
 // whatever was on screen then, not to the Home resume that arrives now.
@@ -32,6 +38,9 @@ private const val WAKE_FRESH_MS = 2_000L
 class MainActivity : TvRemoteActivity() {
 
     private var appliedLanguage: String = LocalePreference.SYSTEM
+    // False only while an interrupted restore is rolling back. The setup and
+    // boot checks read prefs, so they wait for the recovery gate too.
+    private var bootstrapped by mutableStateOf(false)
 
     // A launch hands the screen to another app; every resume after it plays the
     // reverse zoom (12_SYSTEM_TRANSITIONS T2).
@@ -52,6 +61,8 @@ class MainActivity : TvRemoteActivity() {
     // drops the repeat, so registering here keeps wakes working without it.
     private val screenOnReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            // A wake that arrives while the recovery gate is up is not ours yet.
+            if (!bootstrapped) return
             // SCREEN_ON and onResume can arrive in either order, so a resumed
             // Home takes the wake now and a paused one keeps it for its resume.
             if (resumed) {
@@ -101,12 +112,17 @@ class MainActivity : TvRemoteActivity() {
         // and a savedInstanceState guard skipped the wizard, leaving an
         // unfinished setup behind a working Home. SetupActivity itself resumes
         // the page the user reached, so launching it again is idempotent.
-        if (!SetupProgress.done(this)) {
-            startActivity(Intent(this, SetupActivity::class.java))
+        // A journal makes the gates wait for the rollback, so the setup check
+        // never reads a half-restored preference file.
+        if (BackupRecovery.isReady.value) {
+            bootstrap()
+        } else {
+            lifecycleScope.launch {
+                BackupRecovery.await()
+                bootstrap()
+            }
         }
 
-        // "Start with the TV" only on an actual boot, not on every Home restart.
-        if (StartupPreferences.justBooted()) StartupPreferences.onBoot(this)
         ContextCompat.registerReceiver(
             this,
             screenOnReceiver,
@@ -117,14 +133,28 @@ class MainActivity : TvRemoteActivity() {
         setContent {
             OVisionTheme {
                 TvCanvas {
-                    LauncherRoot(
-                        resumeTick = resumeTick.intValue,
-                        foreground = foreground.value,
-                        wakeTick = wakeTick.intValue,
-                    )
+                    if (bootstrapped) {
+                        LauncherRoot(
+                            resumeTick = resumeTick.intValue,
+                            foreground = foreground.value,
+                            wakeTick = wakeTick.intValue,
+                        )
+                    } else {
+                        BackupRecoverySplash()
+                    }
                 }
             }
         }
+    }
+
+    private fun bootstrap() {
+        if (bootstrapped) return
+        if (!SetupProgress.done(this)) {
+            startActivity(Intent(this, SetupActivity::class.java))
+        }
+        // "Start with the TV" only on an actual boot, not on every Home restart.
+        if (StartupPreferences.justBooted()) StartupPreferences.onBoot(this)
+        bootstrapped = true
     }
 
     override fun onResume() {

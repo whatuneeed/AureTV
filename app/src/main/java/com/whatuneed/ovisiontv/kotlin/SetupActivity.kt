@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
+import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoveryGate
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.SetupScreen
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
@@ -51,14 +52,16 @@ class SetupActivity : TvRemoteActivity() {
         setContent {
             OVisionTheme {
                 TvCanvas {
-                    SetupScreen(
-                        resumeTick = resumeTick.intValue,
-                        onLanguageChanged = { language ->
-                            LocalePreference.set(this, language)
-                            recreate()
-                        },
-                        onFinish = { finish() },
-                    )
+                    BackupRecoveryGate {
+                        SetupScreen(
+                            resumeTick = resumeTick.intValue,
+                            onLanguageChanged = { language ->
+                                LocalePreference.set(this, language)
+                                recreate()
+                            },
+                            onFinish = { finish() },
+                        )
+                    }
                 }
             }
         }

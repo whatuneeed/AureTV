@@ -23,6 +23,13 @@ val signingProperties = Properties().apply {
 // revalidates it before every request.
 val updateMetadataUrl = System.getenv("OVISIONTV_UPDATE_URL")?.trim().orEmpty()
 
+composeCompiler {
+    // Compose 2.0 can write per-composable metrics; keep them out of the APK
+    // so a heavy screen is visible in CI logs instead of only as a line count.
+    reportsDestination = layout.buildDirectory.dir("compose-reports")
+    metricsDestination = layout.buildDirectory.dir("compose-metrics")
+}
+
 android {
     namespace = "com.whatuneed.ovisiontv.kotlin"
     compileSdk = 35
@@ -33,8 +40,8 @@ android {
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;
         // versionName names the batch of changes the build contains.
-        versionCode = 94
-        versionName = "0.5.21"
+        versionCode = 95
+        versionName = "0.5.22"
         buildConfigField(
             "String",
             "UPDATE_METADATA_URL",

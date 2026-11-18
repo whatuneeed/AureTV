@@ -7,15 +7,19 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.whatuneed.ovisiontv.kotlin.backup.BackupRecovery
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
+import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoverySplash
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.SettingsScreen
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
+import kotlinx.coroutines.launch
 
 // One-shot in-process token for the launcher's PIN pass: the activity is
 // exported, so an intent extra any app can send must never unlock the gate.
@@ -44,6 +48,7 @@ class SettingsActivity : TvRemoteActivity() {
     // the default Home are only true again on resume.
     private val resumeTick = mutableIntStateOf(0)
     private val kidsUnlocked = mutableStateOf(false)
+    private val kidsReady = mutableStateOf(false)
     // Setup or another Settings window may change the launcher language while
     // this activity is paused; its wrapped context is fixed at creation.
     private var appliedLanguage: String = LocalePreference.SYSTEM
@@ -67,18 +72,40 @@ class SettingsActivity : TvRemoteActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
-        kidsUnlocked.value = KidsEntryGrant.consume(ProfileStore(this).current().id)
+        refreshEntry()
         setContent {
             OVisionTheme {
                 TvCanvas {
-                    SettingsScreen(
-                        onClose = { finish() },
-                        resumeTick = resumeTick.intValue,
-                        kidsUnlocked = kidsUnlocked.value,
-                    )
+                    if (kidsReady.value) {
+                        SettingsScreen(
+                            onClose = { finish() },
+                            resumeTick = resumeTick.intValue,
+                            kidsUnlocked = kidsUnlocked.value,
+                        )
+                    } else {
+                        BackupRecoverySplash()
+                    }
                 }
             }
         }
+    }
+
+    // The entry grant names the current profile, so it must wait for an
+    // interrupted restore just like every other preference read.
+    private fun refreshEntry() {
+        if (BackupRecovery.isReady.value) {
+            consumeEntry()
+        } else {
+            lifecycleScope.launch {
+                BackupRecovery.await()
+                consumeEntry()
+            }
+        }
+    }
+
+    private fun consumeEntry() {
+        kidsUnlocked.value = KidsEntryGrant.consume(ProfileStore(this).current().id)
+        kidsReady.value = true
     }
 
     // singleTop warm start: a grant issued while Settings is already up must
@@ -86,7 +113,7 @@ class SettingsActivity : TvRemoteActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        kidsUnlocked.value = KidsEntryGrant.consume(ProfileStore(this).current().id)
+        refreshEntry()
     }
 
     override fun onResume() {

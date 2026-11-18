@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
+import com.whatuneed.ovisiontv.kotlin.backup.BackupRecovery
 import com.whatuneed.ovisiontv.kotlin.data.StartupPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,20 @@ class OVisionAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        // The service can start before a backup rollback finishes; the Home
+        // and boot preferences it reads must wait for that recovery.
+        if (BackupRecovery.isReady.value) {
+            configureService()
+        } else {
+            homesWorker.launch {
+                BackupRecovery.await()
+                configureService()
+            }
+        }
+    }
+
+    private fun configureService() {
+        if (instance !== this) return
         requestStockHomesRefresh()
 
         val receiver = object : BroadcastReceiver() {
@@ -70,6 +85,7 @@ class OVisionAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!BackupRecovery.isReady.value) return
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
         lastPackage = packageName

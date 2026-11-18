@@ -89,12 +89,16 @@ internal object BackupMaintenance {
     fun start(context: Context) {
         val appContext = context.applicationContext
         scope.launch {
+            // A restore may still be rolling back; never migrate a file in
+            // the middle of that swap.
+            BackupRecovery.await()
             runCatching { MigrationManager(appContext).ensureCurrent() }
                 .onFailure {
                     runCatching {
                         android.util.Log.w("BackupMaintenance", "backup migration failed", it)
                     }
                 }
+            runCatching { BackupScheduler.ensureScheduled(appContext) }
         }
     }
 }

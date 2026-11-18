@@ -29,6 +29,7 @@ import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
+import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoveryGate
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 import com.whatuneed.ovisiontv.kotlin.ui.components.AmbientScreen
@@ -60,7 +61,9 @@ class AerialDreamService : DreamService() {
             setContent {
                 OVisionTheme {
                     TvCanvas {
-                        DreamSaver(onFinished = { finish() })
+                        BackupRecoveryGate {
+                            DreamSaver(onFinished = { finish() })
+                        }
                     }
                 }
             }

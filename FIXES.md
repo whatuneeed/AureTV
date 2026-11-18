@@ -13,6 +13,8 @@
 
 | Симптом | Запись |
 |---|---|
+| После падения посреди restore приложение блокирует главный поток на копировании архива | 0.5.22 (recovery gate) |
+| Экран может прочитать prefs до завершения rollback и показать полувосстановленные данные | 0.5.22 (recovery gate) |
 | Полный connected suite падает на английской локали: текст запроса совпадает с клавишей клавиатуры | 0.5.21 (locale-stable test) |
 | В `SoftwareUpdateScreen` осталась недостижимая ветка после раннего `return`; лишняя строка и порядок `modifier` | 0.5.21 (audit cleanup) |
 | Последний экран мастера — чёрный фон вместо градиента, как на остальных страницах | 0.5.20 (finish backdrop) |
@@ -268,6 +270,16 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.22: recovery gate вместо блокирующего старта
+
+- **Симптом.** Если процесс умер между двумя коммитами restore, `OVisionApp.onCreate` вызывал `BackupRecovery.recoverIfNeeded()` через `runBlocking(Dispatchers.IO)`. На медленном ТВ или большом архиве rollback задерживал первый кадр; при этом просто убрать блокировку было нельзя — Home/Settings прочитали бы полувосстановленные prefs.
+- **Причина.** Journal проверялся синхронно, а сам rollback выполнялся внутри `Application.onCreate`; у экранов не было общего состояния готовности.
+- **Что сделано.** `BackupRecovery` теперь читает journal и при его отсутствии/терминальном состоянии сразу оставляет `isReady = true` (обычный старт не меняется). При незавершённом restore он выставляет `isReady = false`, запускает `BackupManager.recoverIfNeeded()` в IO-scope и поднимает флаг после завершения. Добавлен `BackupRecoveryGate`/`BackupRecoverySplash`; Home, Settings, Setup, Backup, Software Update и `AerialDreamService` не компонуют содержимое до готовности. `MainActivity` выполняет `SetupProgress`/`StartupPreferences` только в `bootstrap()` после await; `SettingsActivity` так же ждёт перед чтением профиля для kids-grant; accessibility service откладывает настройку и игнорирует события до готовности.
+- **Файлы.** `backup/BackupRecovery.kt`, `ui/BackupRecoveryGate.kt`, `OVisionApp.kt`, `MainActivity.kt`, `SettingsActivity.kt`, `SetupActivity.kt`, `BackupActivity.kt`, `SoftwareUpdateActivity.kt`, `AerialDreamService.kt`, `OVisionAccessibilityService.kt`, `SleepReceiver.kt`, `backup/BackupAlarmReceiver.kt`, `backup/BackupMigration.kt`, оба `strings.xml`.
+- **Чего не делать.** Не убирать gate и не читать `SetupProgress`/`StartupPreferences`/`ProfileStore` до `BackupRecovery.await()`. Не возвращать `runBlocking` в `Application.onCreate`: это снова блокирует первый кадр. При ошибке rollback journal сохраняется для следующего запуска, а приложение не зависает навсегда.
+- **Проверка.** `BackupRecoveryGateTest` — 1/1; `MainActivityInputTest`, `MainActivityResumeTest`, `LanguageReturnTest` — 8/8; `SettingsScreenTest`, `KidsGateTest`, `BackupScreenTest`, `SoftwareUpdateScreenTest`, `SetupScreenTest` — 100/100; `BackupManagerInstrumentedTest` — 5/5. Lint — **0 errors / 15 warnings / 0 information**. Дополнительно включены Compose compiler metrics (`app/build/compose-reports`, `app/build/compose-metrics`) для будущего разбора тяжёлых composable.
+- **Артефакт.** 0.5.22 / vc95; **6 585 339 B**, SHA-256 **`02a292964372a55ad027a4f88d99a37a436abf42e653fa03bf6d84be42089043`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.21: стабильный тестовый гейт и чистка по аудиту
 

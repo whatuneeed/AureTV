@@ -700,6 +700,7 @@
     <string name="backup_restore_selected">Восстановить выбранные данные</string>
     <string name="backup_restore_confirm">Выбранные настройки будут заменены. Сначала создаётся копия для отката.</string>
     <string name="backup_restore_done">Восстановление завершено. Лаунчер перезапустится</string>
+    <string name="backup_recovery_wait">Восстанавливаем предыдущие данные…</string>
     <string name="backup_export_done">Копия экспортирована</string>
     <string name="backup_local_done">Копия сохранена на этом телевизоре</string>
     <string name="backup_no_files">На этом телевизоре нет файлового менеджера</string>

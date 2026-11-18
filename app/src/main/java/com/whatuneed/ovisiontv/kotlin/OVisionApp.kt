@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import com.whatuneed.ovisiontv.kotlin.backup.BackupMaintenance
 import com.whatuneed.ovisiontv.kotlin.backup.BackupRecovery
-import com.whatuneed.ovisiontv.kotlin.backup.BackupScheduler
 import com.whatuneed.ovisiontv.kotlin.data.CrashReport
 import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
 
@@ -19,9 +18,9 @@ class OVisionApp : Application() {
         super.onCreate()
         CrashReport.install(this)
         // A journal means the previous process died between two restore
-        // commits; undo it before Home reads a half-restored profile file.
-        BackupRecovery.recoverIfNeeded(this)
-        BackupScheduler.ensureScheduled(this)
+        // commits. Start the rollback here; activities/services await its
+        // completion before reading prefs.
+        BackupRecovery.start(this)
         BackupMaintenance.start(this)
     }
 

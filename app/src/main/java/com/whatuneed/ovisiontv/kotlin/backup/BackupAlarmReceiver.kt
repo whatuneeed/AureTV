@@ -19,6 +19,9 @@ class BackupAlarmReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
+                // Do not archive a profile catalogue while a rollback is
+                // still replacing it.
+                BackupRecovery.await()
                 BackupManager(appContext).createLocal(trigger = BackupTrigger.AUTO)
             } catch (_: Exception) {
                 // The status remains visible in Settings; no fake success.

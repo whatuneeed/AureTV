@@ -9,6 +9,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
 import com.whatuneed.ovisiontv.kotlin.ui.BackupScreen
+import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoveryGate
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 
@@ -29,7 +30,9 @@ class BackupActivity : TvRemoteActivity() {
         setContent {
             OVisionTheme {
                 TvCanvas {
-                    BackupScreen(onClose = { finish() })
+                    BackupRecoveryGate {
+                        BackupScreen(onClose = { finish() })
+                    }
                 }
             }
         }
