@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `HomeScreen.kt` разросся до 2 619 строк: док, подписи, модели и запуск лежат в одном файле | 0.5.24 (Home split) |
 | `SettingsScreen.kt` разросся до 5 250 строк: строки, карточка и группы лежат в одном файле | 0.5.23 (Settings split) |
 | После падения посреди restore приложение блокирует главный поток на копировании архива | 0.5.22 (recovery gate) |
 | Экран может прочитать prefs до завершения rollback и показать полувосстановленные данные | 0.5.22 (recovery gate) |
@@ -271,6 +272,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.24: вынос chrome и моделей HomeScreen
+
+- **Симптом.** `HomeScreen.kt` занимал 2 619 строк: док-полоса, подписи плиток, заголовки библиотеки, фон библиотеки, запуск приложения, константы анимаций и модели состояния лежали в одном файле рядом с основным composable.
+- **Что сделано.** Без изменения поведения вынесены:
+  - `HomeChrome.kt` — `TileLabel`, `LibraryHeading`, `LibraryBackdrop`, `DockBand`, `launchApp`;
+  - `HomeModels.kt` — `PlayingTrailer`, `OpenFolder`, `Launching`, константы таймингов/геометрии и `FocusRequester.requestHomeFocusWhenAttached`.
+  Все объявления остались в package `ui`; `HomeScreen.kt` уменьшился до **2 394 строк**. Переименование requester'а обязательно: в `SoftwareUpdateScreen.kt` уже есть свой `requestWhenAttached`, и общий `internal`-хелпер дал `Overload resolution ambiguity`; `TAG` переименован в `HOME_TAG` по той же причине (в `SettingsScreen.kt` свой `TAG`).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeChrome.kt`, `ui/HomeModels.kt`.
+- **Чего не делать.** Не делать вынесенные хелперы `private`: ими пользуется `HomeScreen`, а `launchApp` ещё и `LauncherRoot`. Не возвращать одинаковые имена `requestWhenAttached`/`TAG` в общий namespace: конфликт с другими экранами уже проверен компилятором.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.24 / vc97; **6 585 339 B**, SHA-256 **`1a1b8a5a5a308b74128a87347026dc71134313d76d70305dea5ad8e64539e68f`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.23: разбиение SettingsScreen
 
