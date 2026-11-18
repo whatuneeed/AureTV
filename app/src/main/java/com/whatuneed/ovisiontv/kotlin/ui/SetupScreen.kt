@@ -785,13 +785,9 @@ fun SetupScreen(
         appear.animateTo(1f, tween(ms))
         slide.animateTo(0f, tween(ms))
     }
-    // Java dropped the wallpaper on the last page so the tick and its summary
-    // sit on plain dark ground; the scrim stays, as its `dim` view did.
-    val backdropAlpha by animateFloatAsState(
-        targetValue = if (page == PAGE_FINISH) 0f else BACKDROP_DIM,
-        animationSpec = tween(motionDuration(300, reduceMotion)),
-        label = "setupBackdrop",
-    )
+    // The aurora stays on every page, including the finish page. Dropping it
+    // to plain black made the last screen look like a different product even
+    // though the scrim already keeps the summary readable.
 
     Box(
         Modifier
@@ -865,7 +861,7 @@ fun SetupScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = backdropAlpha },
+                    .graphicsLayer { alpha = BACKDROP_DIM },
             )
         }
         Box(

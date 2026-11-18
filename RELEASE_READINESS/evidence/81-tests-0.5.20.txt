@@ -1,0 +1,13 @@
+0.5.20 / vc93 targeted verification (2026-11-18)
+
+Unit: 120/120
+Connected (hume-tv API 34): SetupScreenTest 27/27
+Manual AVD 1080p: full wizard walk-through, finish page now keeps the
+  same aurora gradient as the other pages.
+Visual: PRODUCT_EXPERIENCE/evidence-0.5.20/01-setup-finish.png
+
+Lint: 0 errors / 19 warnings / 5 information
+Release: assembleRelease BUILD SUCCESSFUL; release_check.py PASS
+APK: 6 585 167 B; SHA-256 8b14e59f0d26a2fdc065e6c5e2180be0b8f8f4d2bc2c420a7c7c870cbef9b065
+Signing: v2; certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10
+NOT TESTED: physical TV, 4K/HDR, HEVC decoder, TalkBack voice, IR/BT remote.
