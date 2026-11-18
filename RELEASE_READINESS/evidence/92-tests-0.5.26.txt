@@ -1,0 +1,20 @@
+0.5.26 / vc99 — targeted verification
+Date: 18.11.2026
+Device: emulator-5554 (hume-tv, API 34 x86, 1920x1080)
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest
+  Starting 41 tests on hume-tv(AVD) - 14
+  Finished 41 tests — 0 failed, 0 skipped
+  BUILD SUCCESSFUL in 2m 12s
+
+:app:lintDebug — BUILD SUCCESSFUL
+  0 errors / 15 warnings / 0 information
+  GradleDependency 9, DiscouragedApi 5, UnusedAttribute 1
+
+:app:assembleRelease — BUILD SUCCESSFUL
+Release APK installed on AVD and cold-started:
+  first launch  1398 ms
+  second launch 1366 ms
+MainActivity -> SetupActivity, pid alive, no FATAL EXCEPTION.
+Release package: versionCode 99, versionName 0.5.26.

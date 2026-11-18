@@ -72,8 +72,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SearchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.TopShelf
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenu
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenuEntry
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
@@ -1786,32 +1784,25 @@ fun HomeScreen(
             val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
             val folder = items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
-                TvMenu(
-                    title = folder.name,
-                    entries = listOf(
-                        TvMenuEntry(context.getString(R.string.menu_open)) {
-                            openFolderAt(index)
-                        },
-                        TvMenuEntry(context.getString(R.string.menu_move)) {
-                            focusIndex = index
-                            editing = true
-                            mergeVictim = null
-                            confirmIndex = null
-                            togglePickup()
-                        },
-                        TvMenuEntry(
-                            label = context.getString(R.string.menu_delete_folder),
-                            destructive = true,
-                        ) {
-                            // The menu already animated out; ask once more
-                            // before the layout loses the folder.
-                            menuFolderId = null
-                            folderDeleteId = folderId
-                        },
-                    ),
+                FolderContextMenu(
+                    folder = folder,
                     anchor = cellCenter(index),
                     scale = scale,
                     suppressOkUntilRelease = menuOpenedByHold,
+                    onOpen = { openFolderAt(index) },
+                    onMove = {
+                        focusIndex = index
+                        editing = true
+                        mergeVictim = null
+                        confirmIndex = null
+                        togglePickup()
+                    },
+                    onRequestDelete = {
+                        // The menu already animated out; ask once more
+                        // before the layout loses the folder.
+                        menuFolderId = null
+                        folderDeleteId = folderId
+                    },
                     onDismiss = {
                         menuFolderId = null
                         menuOpenedByHold = false
@@ -1826,25 +1817,15 @@ fun HomeScreen(
             val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
             val folder = items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
-                TvMenu(
-                    title = folder.name,
-                    entries = listOf(
-                        // Safe action first: opening the confirmation and
-                        // pressing OK must not destroy the folder. The user
-                        // has to move down to the destructive row.
-                        TvMenuEntry(context.getString(R.string.settings_cancel)) {
-                            folderDeleteId = null
-                        },
-                        TvMenuEntry(
-                            label = context.getString(R.string.menu_delete_folder),
-                            destructive = true,
-                        ) {
-                            removeFolderById(folderId)
-                            folderDeleteId = null
-                        },
-                    ),
+                FolderDeleteMenu(
+                    folder = folder,
                     anchor = cellCenter(index),
                     scale = scale,
+                    onCancel = { folderDeleteId = null },
+                    onDelete = {
+                        removeFolderById(folderId)
+                        folderDeleteId = null
+                    },
                     onDismiss = { folderDeleteId = null },
                 )
             }
@@ -1858,78 +1839,29 @@ fun HomeScreen(
                 // The own settings tile is the launcher's screen: hiding or
                 // uninstalling it would remove the way into Settings.
                 val own = app.packageName == context.packageName
-                val entries = buildList {
-                    // A package that was restored but is not installed here has
-                    // no activity to open, inspect or uninstall. Moving and
-                    // hiding it are still meaningful.
-                    if (app.available) {
-                        add(
-                            TvMenuEntry(context.getString(R.string.menu_open)) {
-                                startLaunch(app, cellCenter(index))
-                            },
-                        )
-                    }
-                    add(
-                        TvMenuEntry(context.getString(R.string.menu_move)) {
-                            focusIndex = index
-                            editing = true
-                            mergeVictim = null
-                            confirmIndex = null
-                            togglePickup()
-                        },
-                    )
-                    add(
-                        TvMenuEntry(context.getString(R.string.menu_move_to_folder)) {
-                            moveToFolderApp = app
-                        },
-                    )
-                    if (!own) {
-                        add(
-                            TvMenuEntry(context.getString(R.string.menu_hide)) {
-                                hideAppFromHome(app)
-                            },
-                        )
-                    }
-                    if (app.available) {
-                        add(
-                            TvMenuEntry(context.getString(R.string.menu_rename_app)) {
-                                renameApp = app
-                            },
-                        )
-                    }
-                    if (app.available &&
-                        AppLabelStore.label(context, app.packageName, prefsName) != null
-                    ) {
-                        add(
-                            TvMenuEntry(context.getString(R.string.menu_reset_app_name)) {
-                                resetAppLabel(app)
-                            },
-                        )
-                    }
-                    if (app.available) {
-                        add(
-                            TvMenuEntry(context.getString(R.string.menu_app_info)) {
-                                onAppInfo(app)
-                            },
-                        )
-                    }
-                    if (app.available && !own && !app.system) {
-                        add(
-                            TvMenuEntry(
-                                label = context.getString(R.string.menu_uninstall),
-                                destructive = true,
-                            ) {
-                                onUninstall(app)
-                            },
-                        )
-                    }
-                }
-                TvMenu(
-                    title = app.label,
-                    entries = entries,
+                val hasCustomLabel = app.available &&
+                    AppLabelStore.label(context, app.packageName, prefsName) != null
+                AppContextMenu(
+                    app = app,
+                    own = own,
+                    hasCustomLabel = hasCustomLabel,
                     anchor = cellCenter(index),
                     scale = scale,
                     suppressOkUntilRelease = menuOpenedByHold,
+                    onOpen = { startLaunch(app, cellCenter(index)) },
+                    onMove = {
+                        focusIndex = index
+                        editing = true
+                        mergeVictim = null
+                        confirmIndex = null
+                        togglePickup()
+                    },
+                    onMoveToFolder = { moveToFolderApp = app },
+                    onHide = { hideAppFromHome(app) },
+                    onRename = { renameApp = app },
+                    onResetLabel = { resetAppLabel(app) },
+                    onAppInfo = { onAppInfo(app) },
+                    onUninstall = { onUninstall(app) },
                     onDismiss = {
                         menuApp = null
                         menuOpenedByHold = false
@@ -1938,55 +1870,34 @@ fun HomeScreen(
             }
         }
 
-        // A shelf card is a real content offer: open it, keep it, or hide it.
-        // The menu is the only place favorites are added, so a recommendation
-        // can never quietly become "personalized" without the viewer's action.
         shelfMenu?.let { item ->
             val favorite = discovery.isFavorite(item.id)
-            TvMenu(
-                title = item.title,
-                entries = buildList {
-                    add(
-                        TvMenuEntry(context.getString(R.string.menu_open)) {
-                            closeShelfMenu()
-                            activateShelfCard(item)
-                        },
-                    )
-                    add(
-                        TvMenuEntry(
-                            context.getString(
-                                if (favorite) {
-                                    R.string.menu_remove_favorite
-                                } else {
-                                    R.string.menu_add_favorite
-                                },
-                            ),
-                        ) {
-                            if (favorite) {
-                                discovery.removeFavorite(item.id)
-                            } else {
-                                discovery.addFavorite(
-                                    item.copy(reason = DiscoveryReason.FAVORITE),
-                                )
-                            }
-                            closeShelfMenu()
-                            discoveryRevision++
-                        },
-                    )
-                    add(
-                        TvMenuEntry(
-                            label = context.getString(R.string.menu_hide),
-                            destructive = true,
-                        ) {
-                            discovery.hide(item)
-                            closeShelfMenu()
-                            discoveryRevision++
-                        },
-                    )
-                },
+            ShelfContextMenu(
+                item = item,
+                favorite = favorite,
                 anchor = shelfCardAnchor(),
                 scale = scale,
                 suppressOkUntilRelease = menuOpenedByHold,
+                onOpen = {
+                    closeShelfMenu()
+                    activateShelfCard(item)
+                },
+                onToggleFavorite = {
+                    if (favorite) {
+                        discovery.removeFavorite(item.id)
+                    } else {
+                        discovery.addFavorite(
+                            item.copy(reason = DiscoveryReason.FAVORITE),
+                        )
+                    }
+                    closeShelfMenu()
+                    discoveryRevision++
+                },
+                onHide = {
+                    discovery.hide(item)
+                    closeShelfMenu()
+                    discoveryRevision++
+                },
                 onDismiss = ::closeShelfMenu,
             )
         }
@@ -2000,24 +1911,12 @@ fun HomeScreen(
             val tileIndex = items.indexOfFirst {
                 it is HomeItem.AppItem && it.app.packageName == app.packageName
             }
-            TvMenu(
-                title = context.getString(R.string.move_to_folder_title),
-                entries = buildList {
-                    folders.forEach { folder ->
-                        add(
-                            TvMenuEntry(folder.name) {
-                                moveAppIntoFolder(app, folder.id)
-                            },
-                        )
-                    }
-                    add(
-                        TvMenuEntry(context.getString(R.string.new_folder_title)) {
-                            newFolderApp = app
-                        },
-                    )
-                },
+            MoveToFolderMenu(
+                folders = folders,
                 anchor = cellCenter(if (tileIndex >= 0) tileIndex else focusIndex),
                 scale = scale,
+                onMove = { folder -> moveAppIntoFolder(app, folder.id) },
+                onNewFolder = { newFolderApp = app },
                 onDismiss = { moveToFolderApp = null },
             )
         }
