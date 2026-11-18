@@ -202,167 +202,162 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ),
         )
 
-        if (!state.sourceConfigured) {
-            add(UpdateRow(stringResource(R.string.update_source_missing)))
-            add(UpdateRow(stringResource(R.string.update_source_missing_hint)))
-        } else {
-            when (state.phase) {
-                UpdatePhase.NOT_CONFIGURED -> {
-                    add(UpdateRow(stringResource(R.string.update_source_missing)))
-                }
+        when (state.phase) {
+            UpdatePhase.NOT_CONFIGURED -> {
+                add(UpdateRow(stringResource(R.string.update_source_missing)))
+            }
 
-                UpdatePhase.IDLE -> {
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_check),
-                            action = if (state.busy) null else ({ scope.launch { manager.check(force = true) } }),
-                        ),
-                    )
-                }
+            UpdatePhase.IDLE -> {
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_check),
+                        action = if (state.busy) null else ({ scope.launch { manager.check(force = true) } }),
+                    ),
+                )
+            }
 
-                UpdatePhase.CHECKING -> add(UpdateRow(stringResource(R.string.update_checking)))
+            UpdatePhase.CHECKING -> add(UpdateRow(stringResource(R.string.update_checking)))
 
-                UpdatePhase.UP_TO_DATE -> {
-                    add(UpdateRow(stringResource(R.string.update_up_to_date)))
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_check),
-                            action = { scope.launch { manager.check(force = true) } },
-                        ),
-                    )
-                }
+            UpdatePhase.UP_TO_DATE -> {
+                add(UpdateRow(stringResource(R.string.update_up_to_date)))
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_check),
+                        action = { scope.launch { manager.check(force = true) } },
+                    ),
+                )
+            }
 
-                UpdatePhase.AVAILABLE -> {
-                    if (release != null) {
-                        add(UpdateRow(stringResource(R.string.update_available)))
-                        add(UpdateRow(stringResource(R.string.update_release_date), formatDate(release.releaseDate)))
-                        add(UpdateRow(stringResource(R.string.update_size), formatSize(release.asset.sizeBytes)))
-                        add(
-                            UpdateRow(
-                                title = stringResource(R.string.update_notes),
-                                action = { notesOpen = true },
-                            ),
-                        )
-                        if (release.minSupportedVersionCode > state.installedVersionCode) {
-                            add(UpdateRow(stringResource(R.string.update_eol)))
-                        }
-                        add(
-                            UpdateRow(
-                                title = stringResource(R.string.update_download),
-                                action = {
-                                    downloadJob = scope.launch { manager.downloadCurrent() }
-                                },
-                            ),
-                        )
-                    }
-                }
-
-                UpdatePhase.DOWNLOADING -> {
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_downloading_bytes, formatSize(state.progressBytes)),
-                            value = state.totalBytes?.let {
-                                stringResource(
-                                    R.string.update_downloading,
-                                    percent(state.progressBytes, it),
-                                )
-                            },
-                        ),
-                    )
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_cancel),
-                            action = { cancelDownload() },
-                            destructive = true,
-                        ),
-                    )
-                }
-
-                UpdatePhase.VERIFYING -> add(UpdateRow(stringResource(R.string.update_verifying)))
-
-                UpdatePhase.READY -> {
-                    add(UpdateRow(stringResource(R.string.update_ready)))
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_install),
-                            action = { scope.launch { manager.installCurrent() } },
-                        ),
-                    )
+            UpdatePhase.AVAILABLE -> {
+                if (release != null) {
+                    add(UpdateRow(stringResource(R.string.update_available)))
+                    add(UpdateRow(stringResource(R.string.update_release_date), formatDate(release.releaseDate)))
+                    add(UpdateRow(stringResource(R.string.update_size), formatSize(release.asset.sizeBytes)))
                     add(
                         UpdateRow(
                             title = stringResource(R.string.update_notes),
                             action = { notesOpen = true },
                         ),
                     )
-                }
-
-                UpdatePhase.INSTALL_PENDING -> add(
-                    UpdateRow(stringResource(R.string.update_install_pending)),
-                )
-
-                UpdatePhase.INSTALLED -> {
-                    add(UpdateRow(stringResource(R.string.update_installed)))
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_check),
-                            action = { scope.launch { manager.check(force = true) } },
-                        ),
-                    )
-                }
-
-                UpdatePhase.FAILED -> {
-                    val error = state.error
-                    add(UpdateRow(errorTitle(error, state), destructive = error == UpdateError.SIGNATURE))
-                    if (error == UpdateError.PERMISSION) {
-                        add(UpdateRow(stringResource(R.string.update_permission_hint)))
-                        add(
-                            UpdateRow(
-                                title = stringResource(R.string.update_permission_open),
-                                action = { manager.openInstallPermission() },
-                            ),
-                        )
-                        if (manager.apkFile()?.isFile == true && manager.canInstall()) {
-                            add(
-                                UpdateRow(
-                                    title = stringResource(R.string.update_install),
-                                    action = { scope.launch { manager.installCurrent() } },
-                                ),
-                            )
-                        }
-                    } else {
-                        if (release != null) {
-                            add(
-                                UpdateRow(
-                                    title = stringResource(R.string.update_retry),
-                                    action = {
-                                        if (manager.apkFile()?.isFile == true) {
-                                            scope.launch { manager.installCurrent() }
-                                        } else {
-                                            downloadJob = scope.launch { manager.downloadCurrent() }
-                                        }
-                                    },
-                                ),
-                            )
-                        }
+                    if (release.minSupportedVersionCode > state.installedVersionCode) {
+                        add(UpdateRow(stringResource(R.string.update_eol)))
                     }
                     add(
                         UpdateRow(
-                            title = stringResource(R.string.update_check),
-                            action = { scope.launch { manager.check(force = true) } },
+                            title = stringResource(R.string.update_download),
+                            action = {
+                                downloadJob = scope.launch { manager.downloadCurrent() }
+                            },
                         ),
                     )
                 }
+            }
 
-                UpdatePhase.INCOMPATIBLE -> {
-                    add(UpdateRow(stringResource(R.string.update_incompatible), destructive = true))
-                    add(UpdateRow(incompatibilityText(state)))
+            UpdatePhase.DOWNLOADING -> {
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_downloading_bytes, formatSize(state.progressBytes)),
+                        value = state.totalBytes?.let {
+                            stringResource(
+                                R.string.update_downloading,
+                                percent(state.progressBytes, it),
+                            )
+                        },
+                    ),
+                )
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_cancel),
+                        action = { cancelDownload() },
+                        destructive = true,
+                    ),
+                )
+            }
+
+            UpdatePhase.VERIFYING -> add(UpdateRow(stringResource(R.string.update_verifying)))
+
+            UpdatePhase.READY -> {
+                add(UpdateRow(stringResource(R.string.update_ready)))
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_install),
+                        action = { scope.launch { manager.installCurrent() } },
+                    ),
+                )
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_notes),
+                        action = { notesOpen = true },
+                    ),
+                )
+            }
+
+            UpdatePhase.INSTALL_PENDING -> add(
+                UpdateRow(stringResource(R.string.update_install_pending)),
+            )
+
+            UpdatePhase.INSTALLED -> {
+                add(UpdateRow(stringResource(R.string.update_installed)))
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_check),
+                        action = { scope.launch { manager.check(force = true) } },
+                    ),
+                )
+            }
+
+            UpdatePhase.FAILED -> {
+                val error = state.error
+                add(UpdateRow(errorTitle(error, state), destructive = error == UpdateError.SIGNATURE))
+                if (error == UpdateError.PERMISSION) {
+                    add(UpdateRow(stringResource(R.string.update_permission_hint)))
                     add(
                         UpdateRow(
-                            title = stringResource(R.string.update_check),
-                            action = { scope.launch { manager.check(force = true) } },
+                            title = stringResource(R.string.update_permission_open),
+                            action = { manager.openInstallPermission() },
                         ),
                     )
+                    if (manager.apkFile()?.isFile == true && manager.canInstall()) {
+                        add(
+                            UpdateRow(
+                                title = stringResource(R.string.update_install),
+                                action = { scope.launch { manager.installCurrent() } },
+                            ),
+                        )
+                    }
+                } else {
+                    if (release != null) {
+                        add(
+                            UpdateRow(
+                                title = stringResource(R.string.update_retry),
+                                action = {
+                                    if (manager.apkFile()?.isFile == true) {
+                                        scope.launch { manager.installCurrent() }
+                                    } else {
+                                        downloadJob = scope.launch { manager.downloadCurrent() }
+                                    }
+                                },
+                            ),
+                        )
+                    }
                 }
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_check),
+                        action = { scope.launch { manager.check(force = true) } },
+                    ),
+                )
+            }
+
+            UpdatePhase.INCOMPATIBLE -> {
+                add(UpdateRow(stringResource(R.string.update_incompatible), destructive = true))
+                add(UpdateRow(incompatibilityText(state)))
+                add(
+                    UpdateRow(
+                        title = stringResource(R.string.update_check),
+                        action = { scope.launch { manager.check(force = true) } },
+                    ),
+                )
             }
         }
     }

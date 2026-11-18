@@ -8,7 +8,6 @@
     <string name="home_empty_title">Welcome to OVisionTV</string>
     <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings.</string>
     <string name="shelf_listings_denied">App recommendations are off. Allow Recommendations Access in Settings.</string>
-    <string name="shelf_continue">Continue Watching</string>
     <string name="discovery_section_continue">Continue Watching</string>
     <string name="discovery_section_for_you">For You</string>
     <string name="discovery_section_from_app">From %1$s</string>

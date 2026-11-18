@@ -2565,10 +2565,12 @@ private fun DockBand(
     )
     Box(
         Modifier
-            .offset(
-                x = scale.dp(TvOs.DOCK_X - grow),
-                y = scale.dp(TvOs.DOCK_Y),
-            )
+            .offset {
+                IntOffset(
+                    x = scale.dp(TvOs.DOCK_X - grow).roundToPx(),
+                    y = scale.dp(TvOs.DOCK_Y).roundToPx(),
+                )
+            }
             .size(scale.dp(TvOs.DOCK_WIDTH + grow * 2), scale.dp(TvOs.DOCK_HEIGHT))
             // tvOS draws the dock band only while the first row is at dock
             // position (dockMode == YES), so it leaves as soon as the grid

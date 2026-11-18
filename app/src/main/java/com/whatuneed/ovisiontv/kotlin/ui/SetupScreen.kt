@@ -88,6 +88,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
@@ -1760,7 +1761,12 @@ private fun SwitchMark(on: Boolean, focused: Boolean, scale: TvScale) {
         Box(
             Modifier
                 // 4-point inset on every side; 64 − 28 − 2×4 is the travel.
-                .offset(x = scale.dp(4f + knobOffset), y = scale.dp(4f))
+                .offset {
+                    IntOffset(
+                        x = scale.dp(4f + knobOffset).roundToPx(),
+                        y = scale.dp(4f).roundToPx(),
+                    )
+                }
                 .size(scale.dp(28f))
                 .clip(CircleShape)
                 .background(Color.White),

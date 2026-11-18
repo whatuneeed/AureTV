@@ -13,6 +13,8 @@
 
 | Симптом | Запись |
 |---|---|
+| Полный connected suite падает на английской локали: текст запроса совпадает с клавишей клавиатуры | 0.5.21 (locale-stable test) |
+| В `SoftwareUpdateScreen` осталась недостижимая ветка после раннего `return`; лишняя строка и порядок `modifier` | 0.5.21 (audit cleanup) |
 | Последний экран мастера — чёрный фон вместо градиента, как на остальных страницах | 0.5.20 (finish backdrop) |
 | Погода выключена, но её строки выглядят и ведут себя как активные | 0.5.19 (disabled weather rows) |
 | В Update фокус ходит по статусным строкам, а «Канал»/«Автопроверки» доступны без источника | 0.5.19 (read-only update states) |
@@ -266,6 +268,16 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.21: стабильный тестовый гейт и чистка по аудиту
+
+- **Симптом.** Полный connected suite давал **300/301**: `SearchOverlayTest.back_from_results_keeps_the_query_and_a_second_back_closes_search` на английской локали искал `onNodeWithText("a")` и находил два узла — клавишу `a` и текст в поле поиска. На русской локали тест был зелёным, поэтому дефект не был виден в обычном целевом прогоне.
+- **Причина.** Селектор теста не был привязан к полю поиска; к тому же ожидаемая буква выбиралась по языку UI (`ф` для RU), а `SearchOverlay` вставляет `nativeKeyEvent.unicodeChar`, который для `KEYCODE_A` остаётся латинским `a`.
+- **Что сделано.** Проверка идёт по узлу текста внутри `SEARCH_FIELD_TAG` через `hasAnyAncestor(hasTestTag(...))`; ожидаемая строка выводится из того же `KeyEvent`, который отправляет тест. Тест больше не зависит от локали эмулятора и не ловит клавишу клавиатуры. Удалены неиспользуемая строка `shelf_continue` (EN/RU), недостижимая ветка `!state.sourceConfigured` в `SoftwareUpdateScreen`, поправлен порядок `modifier` в `StatusCapsule`; два анимированных `offset` переведены на lambda-overload, а пять primitive-state заменены на `mutableIntStateOf` / `mutableLongStateOf` / `mutableFloatStateOf`.
+- **Файлы.** `app/src/androidTest/.../ui/components/SearchOverlayTest.kt`, `ui/SoftwareUpdateScreen.kt`, `ui/components/ControlCenter.kt`, `ui/HomeScreen.kt`, `ui/SetupScreen.kt`, `ui/components/SaverScreen.kt`, `ui/SettingsScreen.kt`, оба `strings.xml`.
+- **Чего не делать.** Не возвращать поиск по глобальному тексту и не выбирать ожидаемую букву по языку UI: аппаратный `KEYCODE_A` не меняет `unicodeChar` вместе с локалью. Не возвращать `runBlocking` в новом коде и не делать disabled/read-only строки кликабельными.
+- **Проверка.** `SearchOverlayTest` — **1/1 на EN и 1/1 на RU** (прямой `am instrument`, per-app locale). Затронутые классы `ControlCenterTest`, `SetupScreenTest`, `SoftwareUpdateScreenTest`, `HomeScreenTest` — **80/80**. Дополнительно `SettingsScreenTest#weather_subrows_are_disabled_while_weather_is_off`, `ControlCenterTest`, `SaverScreenTest` — **19/19**. Targeted unit — **80/80**. Lint — **0 errors / 15 warnings / 0 information** (остались 9 устаревших зависимостей, 5 orientation и `usesPermissionFlags`; обновления с GitHub и зависимости сознательно не трогались).
+- **Артефакт.** `assembleRelease` — успешно, `release_check.py` — PASS; **0.5.21 / vc94**, **6 584 819 B**, SHA-256 **`d96e954de4e60193822bb5715a8fd8d1b051556fac269a3e4a788c595cc1707e`**, v2, сертификат `327a5045…67d7b10`. Evidence: `RELEASE_READINESS/evidence/82-release-check-0.5.21.txt`, `83-tests-0.5.21.txt`.
 
 ### 18.11.2026 — 0.5.20: градиент на последнем экране мастера
 

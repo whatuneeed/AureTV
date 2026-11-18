@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -835,8 +836,8 @@ fun SettingsScreen(
     var weatherPlace by remember(resumeTick) { mutableStateOf(WeatherPreferences.place(context)) }
     var weatherUnits by remember(resumeTick) { mutableStateOf(WeatherPreferences.units(context)) }
     var weatherSource by remember(resumeTick) { mutableStateOf(WeatherPreferences.source(context)) }
-    var weatherRefresh by remember(resumeTick) { mutableStateOf(WeatherPreferences.refreshMinutes(context)) }
-    var weatherUpdatedAt by remember(resumeTick) { mutableStateOf(WeatherPreferences.cachedAt(context)) }
+    var weatherRefresh by remember(resumeTick) { mutableIntStateOf(WeatherPreferences.refreshMinutes(context)) }
+    var weatherUpdatedAt by remember(resumeTick) { mutableLongStateOf(WeatherPreferences.cachedAt(context)) }
     var weatherBusy by remember { mutableStateOf(false) }
     var citySearchOpen by remember { mutableStateOf(false) }
     var accessibility by remember(resumeTick) { mutableStateOf(AccessibilityStatus.state(context)) }

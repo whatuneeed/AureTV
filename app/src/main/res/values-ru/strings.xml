@@ -8,7 +8,6 @@
     <string name="home_empty_title">Добро пожаловать в OVisionTV</string>
     <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в настройках.</string>
     <string name="shelf_listings_denied">Рекомендации приложений отключены. Разрешите «Доступ к рекомендациям» в настройках.</string>
-    <string name="shelf_continue">Продолжить просмотр</string>
     <string name="discovery_section_continue">Продолжить просмотр</string>
     <string name="discovery_section_for_you">Для вас</string>
     <string name="discovery_section_from_app">Из «%1$s»</string>

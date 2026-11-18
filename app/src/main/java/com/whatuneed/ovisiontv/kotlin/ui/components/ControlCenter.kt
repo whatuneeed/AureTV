@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -230,7 +232,7 @@ internal fun rememberClockText(): String {
     // English reads 9:40 PM, Russian reads 21:40, as in the Java build.
     val pattern = clockPattern(locale.language, minutes = true)
     val format = remember(pattern, locale) { SimpleDateFormat(pattern, locale) }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
             val millis = System.currentTimeMillis()
@@ -301,11 +303,11 @@ internal fun StatusCapsule(
     network: NetworkKind,
     focusRequester: FocusRequester,
     onActivate: () -> Unit,
+    modifier: Modifier = Modifier,
     reduceMotion: Boolean = false,
     profileEmoji: String? = null,
     profileColor: Long? = null,
     profileName: String? = null,
-    modifier: Modifier = Modifier,
 ) {
     val russian = LocalConfiguration.current.locales[0]?.language == "ru"
     val avatarSpace = if (profileEmoji != null) CC_AVATAR_SPACE else 0f
@@ -499,7 +501,7 @@ internal fun ControlCenter(
         null
     }
     val volume = remember { volumePercent(context) }
-    var timerLeft by remember { mutableStateOf(SleepControls.timerLeft(context)) }
+    var timerLeft by remember { mutableIntStateOf(SleepControls.timerLeft(context)) }
     // The name needs the narrowest Wi-Fi grant each API offers; it is asked
     // for from the tile, and the panel stays open so the name appears as soon
     // as it lands.

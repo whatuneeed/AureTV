@@ -3,9 +3,10 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.view.KeyEvent
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
@@ -24,7 +25,13 @@ class SearchOverlayTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val russian = context.resources.configuration.locales[0].language == "ru"
         val label = if (russian) "Фото" else "Alpha"
-        val typed = if (russian) "ф" else "a"
+        // The overlay types the native event's unicodeChar, not the key's
+        // localized label. Derive the expectation from the same event the test
+        // sends so the check does not depend on the emulator's UI language.
+        val typed = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A)
+            .unicodeChar
+            .toChar()
+            .toString()
         var dismissals = 0
         rule.setContent {
             OVisionTheme {
@@ -46,7 +53,10 @@ class SearchOverlayTest {
         instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A))
         instrumentation.sendKeySync(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A))
         rule.waitForIdle()
-        rule.onNodeWithText(typed, useUnmergedTree = true).assertExists()
+        rule.onNode(
+            hasText(typed) and hasAnyAncestor(hasTestTag(SEARCH_FIELD_TAG)),
+            useUnmergedTree = true,
+        ).assertExists()
 
         // Walk up to the first keyboard row; one more Up enters the results.
         repeat(5) {
@@ -57,7 +67,10 @@ class SearchOverlayTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         rule.waitForIdle()
         assertEquals(0, dismissals)
-        rule.onNodeWithText(typed, useUnmergedTree = true).assertExists()
+        rule.onNode(
+            hasText(typed) and hasAnyAncestor(hasTestTag(SEARCH_FIELD_TAG)),
+            useUnmergedTree = true,
+        ).assertExists()
 
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         rule.waitForIdle()

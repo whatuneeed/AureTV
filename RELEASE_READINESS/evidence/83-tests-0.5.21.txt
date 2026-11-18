@@ -1,0 +1,14 @@
+0.5.21 / vc94 targeted verification (2026-11-18)
+
+SearchOverlayTest: 1/1 EN, 1/1 RU (direct am instrument, per-app locale ru-RU/en-US)
+Connected affected classes: ControlCenterTest, SetupScreenTest,
+  SoftwareUpdateScreenTest, HomeScreenTest - 80/80
+Connected extra: SettingsScreenTest#weather_subrows_are_disabled_while_weather_is_off,
+  ControlCenterTest, SaverScreenTest - 19/19
+Unit targeted: 80/80
+
+Lint: 0 errors / 15 warnings / 0 information
+Release: assembleRelease BUILD SUCCESSFUL; release_check.py PASS
+APK: 6 584 819 B; SHA-256 d96e954de4e60193822bb5715a8fd8d1b051556fac269a3e4a788c595cc1707e
+Signing: v2; certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10
+NOT TESTED: physical TV, 4K/HDR, HEVC decoder, TalkBack voice, IR/BT remote.
