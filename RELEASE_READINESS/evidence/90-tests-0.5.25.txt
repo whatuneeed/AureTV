@@ -1,0 +1,19 @@
+0.5.25 / vc98 — targeted verification
+Date: 18.11.2026
+Device: emulator-5554 (hume-tv, API 34 x86, 1920x1080)
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest
+  After HomeContentModals extraction: 41/41
+  After HomeTopChrome extraction: 41/41
+  After HomeGridLayer extraction: 41/41
+  0 failed, 0 skipped
+  BUILD SUCCESSFUL
+
+:app:lintDebug — BUILD SUCCESSFUL
+  0 errors / 15 warnings / 0 information
+  GradleDependency 9, DiscouragedApi 5, UnusedAttribute 1
+
+:app:assembleRelease — BUILD SUCCESSFUL
+Release APK installed on AVD and cold-started: MainActivity -> SetupActivity in 782 ms, pid alive, no FATAL EXCEPTION.
+Release package: versionCode 98, versionName 0.5.25.

@@ -14,14 +14,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +28,6 @@ import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -43,14 +39,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
@@ -72,27 +65,15 @@ import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
 import com.whatuneed.ovisiontv.kotlin.data.removeFolder
 import com.whatuneed.ovisiontv.kotlin.data.takeAppOutOfFolder
-import com.whatuneed.ovisiontv.kotlin.ui.components.AppCard
-import com.whatuneed.ovisiontv.kotlin.ui.components.CC_CAPSULE_SIDE
-import com.whatuneed.ovisiontv.kotlin.ui.components.CC_CAPSULE_TOP
 import com.whatuneed.ovisiontv.kotlin.ui.components.ControlCenter
-import com.whatuneed.ovisiontv.kotlin.ui.components.FolderCard
 import com.whatuneed.ovisiontv.kotlin.ui.components.LAUNCH_START_DELAY_MS
-import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
-import com.whatuneed.ovisiontv.kotlin.ui.components.OnlineInfoOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SearchOverlay
-import com.whatuneed.ovisiontv.kotlin.ui.components.StatusCapsule
 import com.whatuneed.ovisiontv.kotlin.ui.components.TopShelf
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenu
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenuEntry
-import com.whatuneed.ovisiontv.kotlin.ui.components.TrailerOverlay
-import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_LEFT
-import com.whatuneed.ovisiontv.kotlin.ui.components.WEATHER_CAPSULE_TOP
-import com.whatuneed.ovisiontv.kotlin.ui.components.WeatherCapsule
-import com.whatuneed.ovisiontv.kotlin.ui.components.WeatherPanel
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
@@ -1744,166 +1725,31 @@ fun HomeScreen(
             )
 
             // The library shift lives on the grid, not on every tile: reorder
-            // animation below still works on item indices, and this layer moves
-            // the dock row to the top while the shelf fades out.
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .onPlaced { gridPlaced = true }
-                    .then(
-                        // TalkBack follows the screen: while the carousel is in
-                        // charge the tiles are not on it, so they stop being
-                        // focus targets behind the poster.
-                        if (shelfFocus >= 0) Modifier.clearAndSetSemantics {} else Modifier,
-                    )
-                    .graphicsLayer {
-                        translationY = (-libraryShift.value + shelfHide) *
-                            scale.factor * density
-                    },
-            ) {
-            // 04_APP_LIBRARY: the screen is one full list, but tvOS keeps the
-            // favourites row apart from everything else, so both get a heading.
-            // Headings sit in the same shifted layer and scroll with their rows.
-            if (libraryVisible) {
-                LibraryHeading(
-                    text = stringResource(R.string.library_favorites),
-                    y = TvOs.ROW_TOP - 52f,
-                    fade = libraryFade,
-                    scale = scale,
-                )
-                LibraryHeading(
-                    text = stringResource(R.string.library_all_apps),
-                    y = TvOs.ROW_TOP + TvOs.ROW_PITCH - 52f,
-                    fade = libraryFade,
-                    scale = scale,
-                )
-            }
-            // The resting Home is the dock row only. A seventh app used to
-            // leave a 26 px white sliver at the bottom edge: a real tile, but
-            // with no room for its label or focus ring. DOWN moves the cursor
-            // into the second row first, which switches on libraryMode; the
-            // full grid is composed then, so focus never targets a missing
-            // node.
-            val visibleItems = if (libraryMode) items else items.take(columns)
-            for ((index, item) in visibleItems.withIndex()) {
-                if (pickupActive && index == pickupOrigin) continue
-                val focused = !pickupActive && index == focusIndex && shelfFocus < 0 &&
-                    !capsuleFocused && !weatherFocused
-
-                key(item.key) {
-                    val tileRequester = remember(item.key) { FocusRequester() }
-                    tileRequesters[item.key] = tileRequester
-                    // A dropped tile and every neighbour slide to their new
-                    // index instead of teleporting; 200 ms is a project value.
-                    val x by animateFloatAsState(
-                        targetValue = TvOs.SAFE_AREA + (index % columns) * TvOs.ICON_COLUMN_PITCH,
-                        animationSpec = tween(motionDuration(TILE_MOVE_MS, reduceMotion), easing = FastOutSlowInEasing),
-                        label = "tileX",
-                    )
-                    val y by animateFloatAsState(
-                        targetValue = TvOs.ROW_TOP + (index / columns) * TvOs.ROW_PITCH,
-                        animationSpec = tween(motionDuration(TILE_MOVE_MS, reduceMotion), easing = FastOutSlowInEasing),
-                        label = "tileY",
-                    )
-                    when (item) {
-                        is HomeItem.AppItem -> AppCard(
-                            app = item.app,
-                            focused = focused,
-                            scale = scale,
-                            editing = editing,
-                            confirming = confirmIndex == index,
-                            focusRequester = tileRequester,
-                            onActivate = { activate(index) },
-                            modifier = Modifier
-                                .offset { IntOffset(scale.dp(x).roundToPx(), scale.dp(y).roundToPx()) }
-                                .size(scale.dp(TvOs.ICON_WIDTH), scale.dp(TvOs.ICON_HEIGHT)),
-                        )
-
-                        is HomeItem.FolderItem -> FolderCard(
-                            folder = item,
-                            focused = focused,
-                            scale = scale,
-                            editing = editing,
-                            confirming = confirmIndex == index,
-                            stateLabel = context.resources.getQuantityString(
-                                R.plurals.folder_app_count,
-                                item.apps.size,
-                                item.apps.size,
-                            ),
-                            focusRequester = tileRequester,
-                            onActivate = { activate(index) },
-                            modifier = Modifier
-                                .offset { IntOffset(scale.dp(x).roundToPx(), scale.dp(y).roundToPx()) }
-                                .size(scale.dp(TvOs.ICON_WIDTH), scale.dp(TvOs.ICON_HEIGHT)),
-                        )
-                    }
-                }
-            }
-
-            // tvOS keeps the app name under every tile. The card semantics
-            // already announces it; this line is for the viewer, so it is
-            // decorative to TalkBack and moves with the grid layer.
-            for ((index, item) in visibleItems.withIndex()) {
-                if (pickupActive && index == pickupOrigin) continue
-                val label = when (item) {
-                    is HomeItem.AppItem -> item.app.label
-                    is HomeItem.FolderItem -> item.name
-                }
-                TileLabel(
-                    text = label,
-                    x = TvOs.SAFE_AREA + (index % columns) * TvOs.ICON_COLUMN_PITCH,
-                    y = TvOs.ROW_TOP + (index / columns) * TvOs.ROW_PITCH +
-                        TvOs.ICON_HEIGHT + 22f,
-                    scale = scale,
-                )
-            }
-
-            if (pickupActive) {
-                val origin = pickupOrigin
-                val dragged = origin?.let { items.getOrNull(it) }
-                if (origin != null && dragged != null) {
-                    key("picked:${dragged.key}") {
-                        val x by animateFloatAsState(
-                            targetValue = TvOs.SAFE_AREA +
-                                (focusIndex % columns) * TvOs.ICON_COLUMN_PITCH,
-                            animationSpec = tween(motionDuration(TILE_MOVE_MS, reduceMotion), easing = FastOutSlowInEasing),
-                            label = "pickedX",
-                        )
-                        val y by animateFloatAsState(
-                            targetValue = TvOs.ROW_TOP +
-                                (focusIndex / columns) * TvOs.ROW_PITCH,
-                            animationSpec = tween(motionDuration(TILE_MOVE_MS, reduceMotion), easing = FastOutSlowInEasing),
-                            label = "pickedY",
-                        )
-                        when (dragged) {
-                            is HomeItem.AppItem -> AppCard(
-                                app = dragged.app,
-                                focused = false,
-                                scale = scale,
-                                editing = editing,
-                                pickedUp = true,
-                                focusRequester = pickupRequester,
-                                modifier = Modifier
-                                    .offset { IntOffset(scale.dp(x).roundToPx(), scale.dp(y).roundToPx()) }
-                                    .size(scale.dp(TvOs.ICON_WIDTH), scale.dp(TvOs.ICON_HEIGHT)),
-                            )
-
-                            is HomeItem.FolderItem -> FolderCard(
-                                folder = dragged,
-                                focused = false,
-                                scale = scale,
-                                editing = editing,
-                                pickedUp = true,
-                                focusRequester = pickupRequester,
-                                modifier = Modifier
-                                    .offset { IntOffset(scale.dp(x).roundToPx(), scale.dp(y).roundToPx()) }
-                                    .size(scale.dp(TvOs.ICON_WIDTH), scale.dp(TvOs.ICON_HEIGHT)),
-                            )
-                        }
-                    }
-                }
-            }
-            }
+            // animation still works on item indices, and this layer moves the
+            // dock row to the top while the shelf fades out.
+            HomeGridLayer(
+                items = items,
+                columns = columns,
+                libraryMode = libraryMode,
+                libraryVisible = libraryVisible,
+                libraryFade = libraryFade,
+                focusIndex = focusIndex,
+                shelfFocus = shelfFocus,
+                capsuleFocused = capsuleFocused,
+                weatherFocused = weatherFocused,
+                pickupActive = pickupActive,
+                pickupOrigin = pickupOrigin,
+                editing = editing,
+                confirmIndex = confirmIndex,
+                scale = scale,
+                reduceMotion = reduceMotion,
+                context = context,
+                tileRequesters = tileRequesters,
+                pickupRequester = pickupRequester,
+                shift = { -libraryShift.value + shelfHide },
+                onPlaced = { gridPlaced = true },
+                onActivate = ::activate,
+            )
         }
 
         openFolder?.let { open ->
@@ -2255,140 +2101,82 @@ fun HomeScreen(
             )
         }
 
-        if (weatherPanelOpen) {
-            WeatherPanel(
-                scale = scale,
-                data = weatherData,
-                stale = weatherStale,
-                reduceMotion = reduceMotion,
-                onClose = {
-                    weatherPanelOpen = false
-                    // The Java popover returned to the weather card.
-                    weatherFocused = true
-                },
-            )
-        }
+        HomeTopChrome(
+            scale = scale,
+            reduceMotion = reduceMotion,
+            weatherPanelOpen = weatherPanelOpen,
+            weatherData = weatherData,
+            weatherStale = weatherStale,
+            weatherVisible = weatherVisible,
+            weatherFocused = weatherFocused,
+            weatherManual = { WeatherPreferences.manual(context) },
+            weatherRequester = weatherRequester,
+            capsuleFocused = capsuleFocused,
+            controlCenterOpen = controlCenterOpen,
+            capsuleClock = capsuleClock,
+            capsuleNetwork = capsuleNetwork,
+            capsuleRequester = capsuleRequester,
+            profileEmoji = activeProfile?.emoji?.takeIf { it.isNotBlank() },
+            profileColor = profileColor,
+            profileName = activeProfile?.name,
+            openFolder = openFolder,
+            launching = launching,
+            menuOpen = menuOpen,
+            searchOpen = searchOpen,
+            onCloseWeatherPanel = {
+                weatherPanelOpen = false
+                // The Java popover returned to the weather card.
+                weatherFocused = true
+            },
+            onWeatherActivate = {
+                weatherFromShelf = false
+                weatherFocused = true
+                weatherPanelOpen = true
+            },
+            onStatusActivate = {
+                // TalkBack has no key event: take the pill and open the
+                // panel the same way OK does.
+                capsuleFromShelf = false
+                capsuleFocused = true
+                controlCenterOpen = true
+            },
+        )
 
-        // Home chrome: the clock and the live connection in one glass pill, the
-        // same object that grows into the Control Center band. A panel, the
-        // menu, search or the launch zoom covers the screen and hides it.
-        weatherData?.takeIf { weatherVisible }?.let { data ->
-            WeatherCapsule(
-                scale = scale,
-                data = data,
-                stale = weatherStale,
-                manual = WeatherPreferences.manual(context),
-                focused = weatherFocused,
-                focusRequester = weatherRequester,
-                onActivate = {
-                    weatherFromShelf = false
-                    weatherFocused = true
-                    weatherPanelOpen = true
-                },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = scale.dp(WEATHER_CAPSULE_LEFT),
-                        y = scale.dp(WEATHER_CAPSULE_TOP),
-                    ),
-            )
-        }
-
-        if (openFolder == null && launching == null && !menuOpen && !searchOpen &&
-            !weatherPanelOpen
-        ) {
-            StatusCapsule(
-                scale = scale,
-                reduceMotion = reduceMotion,
-                focused = capsuleFocused,
-                promoted = controlCenterOpen,
-                clock = capsuleClock,
-                network = capsuleNetwork,
-                focusRequester = capsuleRequester,
-                profileEmoji = activeProfile?.emoji?.takeIf { it.isNotBlank() },
-                profileColor = profileColor,
-                profileName = activeProfile?.name,
-                onActivate = {
-                    // TalkBack has no key event: take the pill and open the
-                    // panel the same way OK does.
-                    capsuleFromShelf = false
-                    capsuleFocused = true
-                    controlCenterOpen = true
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(
-                        x = -scale.dp(CC_CAPSULE_SIDE),
-                        y = scale.dp(CC_CAPSULE_TOP),
-                    ),
-            )
-        }
-
-        playingTrailer?.let { trailer ->
-            val actionLabel = trailer.target?.let {
-                stringResource(R.string.trailer_open_in, trailer.appLabel ?: it.packageName)
-            }
-            TrailerOverlay(
-                title = trailer.title,
-                url = trailer.url,
-                synopsis = trailer.synopsis,
-                actionLabel = actionLabel,
-                onAction = trailer.target?.let { target ->
-                    {
-                        // The trailer is only a preview step. The second OK
-                        // finally opens the provider row in its own app.
-                        playingTrailer = null
-                        openShelfContent(target)
-                    }
-                },
-                onDismiss = {
-                    playingTrailer = null
-                    // Closing the preview returns to the card that opened it,
-                    // not to the dock: the modal effect lowered the shelf while
-                    // the preview played, so put its cursor back before asking
-                    // TopShelf for Android focus again.
-                    if (shelfCards.isNotEmpty()) {
-                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
-                    }
-                    shelfFocusTick++
-                },
-            )
-        }
-
-        onlineInfo?.let { card ->
-            val target = onlineInfoTarget
-            val actionLabel = target?.let {
-                stringResource(R.string.trailer_open_in, it.packageLabel ?: it.packageName)
-            }
-            OnlineInfoOverlay(
-                item = card,
-                actionLabel = actionLabel,
-                onAction = target?.let { provider ->
-                    {
-                        onlineInfo = null
-                        onlineInfoTarget = null
-                        openShelfContent(provider)
-                    }
-                },
-                onDismiss = {
-                    onlineInfo = null
-                    onlineInfoTarget = null
-                    if (shelfCards.isNotEmpty()) {
-                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
-                    }
-                    shelfFocusTick++
-                },
-            )
-        }
-
-        // Drawn last: the zoom also covers the folder panel it starts from (T5).
-        launching?.let { active ->
-            LaunchOverlay(
-                app = active.app,
-                cellCenter = active.cellCenter,
-                progress = { launchProgress.value },
-                scale = scale,
-            )
-        }
+        HomeContentModals(
+            playingTrailer = playingTrailer,
+            onlineInfo = onlineInfo,
+            onlineInfoTarget = onlineInfoTarget,
+            launching = launching,
+            launchProgress = launchProgress,
+            scale = scale,
+            onOpenTrailerTarget = { target ->
+                playingTrailer = null
+                openShelfContent(target)
+            },
+            onDismissTrailer = {
+                playingTrailer = null
+                // Closing the preview returns to the card that opened it,
+                // not to the dock: the modal effect lowered the shelf while
+                // the preview played, so put its cursor back before asking
+                // TopShelf for Android focus again.
+                if (shelfCards.isNotEmpty()) {
+                    shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                }
+                shelfFocusTick++
+            },
+            onOpenOnlineTarget = { provider ->
+                onlineInfo = null
+                onlineInfoTarget = null
+                openShelfContent(provider)
+            },
+            onDismissOnlineInfo = {
+                onlineInfo = null
+                onlineInfoTarget = null
+                if (shelfCards.isNotEmpty()) {
+                    shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                }
+                shelfFocusTick++
+            },
+        )
     }
 }

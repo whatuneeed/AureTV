@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `HomeScreen.kt` всё ещё держит сетку, top chrome и модальные окна в одном файле | 0.5.25 (Home layers) |
 | `HomeScreen.kt` разросся до 2 619 строк: док, подписи, модели и запуск лежат в одном файле | 0.5.24 (Home split) |
 | `SettingsScreen.kt` разросся до 5 250 строк: строки, карточка и группы лежат в одном файле | 0.5.23 (Settings split) |
 | После падения посреди restore приложение блокирует главный поток на копировании архива | 0.5.22 (recovery gate) |
@@ -272,6 +273,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.25: слои Home — сетка, top chrome и модальные окна
+
+- **Симптом.** После выноса chrome/моделей `HomeScreen.kt` оставался 2 394 строки: сетка приложений с подписями, погодная/статусная капсулы, панель погоды, трейлер, онлайн-карточка и зум запуска лежали в главном composable.
+- **Что сделано.** Без изменения поведения вынесены:
+  - `HomeGridLayer.kt` — сетка, заголовки библиотеки, подписи плиток и drag-proxy;
+  - `HomeTopChrome.kt` — `WeatherPanel`, `WeatherCapsule`, `StatusCapsule`; это `BoxScope`-расширение, потому что капсулы используют `Modifier.align`;
+  - `HomeModals.kt` — `TrailerOverlay`, `OnlineInfoOverlay`, `LaunchOverlay`.
+  `HomeScreen.kt` уменьшился до **2 182 строк**. Состояние по-прежнему живёт в HomeScreen, наружу переданы только значения и callbacks; логика фокуса/запуска не менялась.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeGridLayer.kt`, `ui/HomeTopChrome.kt`, `ui/HomeModals.kt`.
+- **Чего не делать.** Не делать `HomeTopChrome` обычной функцией — без `BoxScope` не разрешается `Modifier.align`. Не переносить `gridPlaced` внутрь `HomeGridLayer`: по этому флагу HomeScreen решает, можно ли запрашивать фокус. Не кэшировать `WeatherPreferences.manual(context)` в `remember`: настройка меняется в другой Activity.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv` после каждого шага. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.25 / vc98; **6 585 339 B**, SHA-256 **`ece87850a9195b3dace629d18c517701316d3f6b11905819f4a3804d0705a777`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.24: вынос chrome и моделей HomeScreen
 
