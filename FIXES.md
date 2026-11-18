@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `SettingsScreen.kt` разросся до 5 250 строк: строки, карточка и группы лежат в одном файле | 0.5.23 (Settings split) |
 | После падения посреди restore приложение блокирует главный поток на копировании архива | 0.5.22 (recovery gate) |
 | Экран может прочитать prefs до завершения rollback и показать полувосстановленные данные | 0.5.22 (recovery gate) |
 | Полный connected suite падает на английской локали: текст запроса совпадает с клавишей клавиатуры | 0.5.21 (locale-stable test) |
@@ -270,6 +271,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.23: разбиение SettingsScreen
+
+- **Симптом.** `SettingsScreen.kt` занимал 5 250 строк: модель строки, её отрисовка, геометрия списка и построители групп Device/About/Updates/Permissions/Storage лежали в одном файле. Любая правка строки требовала прокрутки через несколько тысяч строк и увеличивала риск compiler/JIT-проблемы.
+- **Что сделано.** Без изменения поведения вынесены:
+  - `SettingsMetrics.kt` — общие размеры списка (776 / 64 / 22);
+  - `SettingsRowCard.kt` — `SettingsRow`, `SettingsRowCard`, `RowCheck`;
+  - `SettingsGroupRows.kt` — `updatesRows`, `aboutInfoRows`, `permissionsRows`, `deviceRows`, `storageRows` и `CacheSizes`.
+  Функции сделаны `internal` в том же package; вызовы и UI не менялись. `SettingsScreen.kt` уменьшился до **4 802 строк**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsMetrics.kt`, `ui/SettingsRowCard.kt`, `ui/SettingsGroupRows.kt`.
+- **Чего не делать.** Не менять значения `SETTINGS_LIST_WIDTH` / `SETTINGS_ROW_HEIGHT` / `SETTINGS_ROW_PADDING` отдельно от tvOS-геометрии и не возвращать `ROW_*`-константы в общий namespace: у SetupScreen свои 880/92, и одинаковые имена уже давали конфликт компиляции.
+- **Проверка.** `SettingsScreenTest` — **59/59**; `KidsGateTest`, `BackupScreenTest`, `SoftwareUpdateScreenTest`, `SetupScreenTest` — **41/41**. До перезапуска AVD два прогона дали два разных flake: `root_shows_six_sections_without_group_headers` (`SurfaceComposerClient: Sync transaction timed out`, «No compose hierarchies») и teardown `hidden_apps_page_restores_an_app_to_the_saved_order` (`PAUSED` вместо `DESTROYED`); после чистого перезапуска AVD оба набора прошли без изменений кода. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.23 / vc96; **6 585 339 B**, SHA-256 **`04d7277f2133bf5a217c083f73bebaa635b72aeef7beb437f70a5c6f4617c5b8`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.22: recovery gate вместо блокирующего старта
 

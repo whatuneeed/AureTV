@@ -250,17 +250,11 @@ private const val ICON_PROFILE_EMOJI = TvType.glyphHero
 
 private const val LIST_LEFT = 1066f
 private const val LIST_TOP = 198f
-private const val LIST_WIDTH = 776f
 private const val LIST_BOTTOM_INSET = 44f
-private const val ROW_HEIGHT = 64f
 private const val ROW_GAP = 6f
 private const val ROW_RADIUS = 16f
-private const val ROW_PADDING = 22f
-private const val ROW_FONT = TvType.body
-private const val ROW_VALUE_FONT = TvType.callout
-private const val ROW_CHECK = 22f
 private const val FOCUS_SCALE = 1.04f
-private const val ROW_PITCH = ROW_HEIGHT + ROW_GAP
+private const val ROW_PITCH = SETTINGS_ROW_HEIGHT + ROW_GAP
 
 private const val HEADER_HEIGHT = 34f
 private const val HEADER_GAP = 6f
@@ -409,27 +403,6 @@ private enum class Section(
     ABOUT(SectionGlyph.info, R.string.settings_about_system),
 }
 
-private data class SettingsRow(
-    val title: String,
-    val value: String? = null,
-    val checked: Boolean = false,
-    // One-of-many list: TalkBack announces it as a radio button, not a plain
-    // button whose tick it has to infer from the label.
-    val choice: Boolean = false,
-    // An on/off row without a mark: null is "not a toggle", otherwise TalkBack
-    // gets a Switch role and the On/Off state instead of a bare Button.
-    val toggleState: Boolean? = null,
-    val chevron: Boolean = false,
-    val destructive: Boolean = false,
-    val action: (() -> Unit)? = null,
-    // A row whose dependency is off stays visible for context, but it is not
-    // an enabled action and must not take focus or announce a tap action.
-    val enabled: Boolean = true,
-    // TalkBack reads the click action as "double-tap to …"; a row whose title is
-    // a noun (an app name) needs the verb stated separately.
-    val actionLabel: String? = null,
-)
-
 /**
  * One holder for the discovery rows. The huge Settings composable hits a K2
  * internal error when it gains several independent states (AQ-30), so the four
@@ -564,13 +537,6 @@ private data class ChooserCategory(
     val total: Int,
 ) {
     val allHidden: Boolean get() = total > 0 && visible == 0
-}
-
-private data class CacheSizes(
-    val stills: Long,
-    val posters: Long,
-) {
-    val total: Long get() = stills + posters
 }
 
 private data class PhotoFolderState(
@@ -3125,7 +3091,7 @@ fun SettingsScreen(
         layout.filter { it.rowIndex >= 0 }.map { it.top }
     }
     val contentHeight = remember(layout) {
-        layout.lastOrNull()?.let { it.top + ROW_HEIGHT } ?: 0f
+        layout.lastOrNull()?.let { it.top + SETTINGS_ROW_HEIGHT } ?: 0f
     }
 
     val density = LocalDensity.current
@@ -3143,7 +3109,7 @@ fun SettingsScreen(
         }
         val top = rowTops.getOrNull(focusIndex) ?: return@LaunchedEffect
         val topPx = with(density) { scale.dp(top).toPx() }
-        val bottomPx = topPx + with(density) { scale.dp(ROW_HEIGHT).toPx() }
+        val bottomPx = topPx + with(density) { scale.dp(SETTINGS_ROW_HEIGHT).toPx() }
         val current = listScroll.value
         val target = when {
             topPx < current -> topPx
@@ -3776,7 +3742,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_clips_empty),
                     color = LauncherColors.textSecondary,
-                    fontSize = scale.sp(ROW_FONT),
+                    fontSize = scale.sp(SETTINGS_ROW_FONT),
                     modifier = Modifier
                         .offset(x = scale.dp(GRID_LEFT), y = scale.dp(GRID_TOP)),
                 )
@@ -3842,7 +3808,7 @@ fun SettingsScreen(
                 Box(
                     modifier = Modifier
                         .offset(x = scale.dp(LIST_LEFT))
-                        .width(scale.dp(LIST_WIDTH))
+                        .width(scale.dp(SETTINGS_LIST_WIDTH))
                         .wrapContentHeight(Alignment.Top, unbounded = true)
                         // Read in the layout phase: the scroll animation must move
                         // the list without recomposing the page every frame.
@@ -4191,149 +4157,6 @@ fun SettingsScreen(
             },
             // The recovering pad must show the stored hint, not the gate copy.
             subtitle = if (kidsEntryRecover) null else stringResource(R.string.kids_gate_settings),
-        )
-    }
-}
-
-@Composable
-private fun SettingsRowCard(
-    row: SettingsRow,
-    focused: Boolean,
-    scale: TvScale,
-    focusRequester: FocusRequester,
-    modifier: Modifier = Modifier,
-) {
-    // Rows are drawn as separate Texts; a single cleared node keeps TalkBack from
-    // stopping twice on the label and its value. Compose 1.7 does not map the
-    // `selected` semantics to AccessibilityNodeInfo, so the check is announced
-    // through stateDescription instead.
-    val announcement = listOfNotNull(row.title, row.value).joinToString(", ")
-    val selectedState = stringResource(R.string.settings_selected)
-    val onState = stringResource(R.string.settings_state_on)
-    val offState = stringResource(R.string.settings_state_off)
-
-    TvListRowSurface(
-        focused = focused && row.enabled,
-        scale = scale,
-        modifier = modifier
-            .size(scale.dp(LIST_WIDTH), scale.dp(ROW_HEIGHT))
-            .then(
-                if (row.enabled) {
-                    Modifier.focusRequester(focusRequester).focusable()
-                } else {
-                    Modifier
-                },
-            )
-            .clearAndSetSemantics {
-                contentDescription = announcement
-                if (!row.enabled) {
-                    disabled()
-                    return@clearAndSetSemantics
-                }
-                row.toggleState?.let { on ->
-                    stateDescription = if (on) onState else offState
-                    toggleableState = if (on) ToggleableState.On else ToggleableState.Off
-                }
-                if (row.checked) {
-                    stateDescription = selectedState
-                    selected = true
-                }
-                // Read-only facts must not promise an action that OK and
-                // TalkBack cannot perform.
-                row.action?.let { action ->
-                    role = when {
-                        row.toggleState != null -> Role.Switch
-                        row.choice -> Role.RadioButton
-                        row.checked -> Role.Checkbox
-                        else -> Role.Button
-                    }
-                    // TalkBack's double-tap does not reach the key handler above.
-                    onClick(label = row.actionLabel ?: row.title) { action(); true }
-                }
-            },
-    ) { focusAmount ->
-        val titleColor = when {
-            !row.enabled -> Color.White.copy(alpha = 0.35f)
-            row.destructive -> LauncherColors.destructive
-            else -> lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
-        }
-        val valueColor = if (!row.enabled) {
-            Color.White.copy(alpha = 0.3f)
-        } else {
-            lerp(
-                Color.White.copy(alpha = 0.5f),
-                Color.Black.copy(alpha = 0.6f),
-                focusAmount,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = row.title,
-                color = titleColor,
-                fontSize = scale.sp(ROW_FONT),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            row.value?.let { value ->
-                Text(
-                    text = value,
-                    color = valueColor,
-                    fontSize = scale.sp(ROW_VALUE_FONT),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(
-                        max = scale.dp(LIST_WIDTH - ROW_PADDING * 2f - 200f),
-                    ),
-                )
-            }
-            if (row.checked) {
-                Spacer(Modifier.width(scale.dp(14f)))
-                RowCheck(focused = focused, scale = scale)
-            }
-            if (row.chevron) {
-                Spacer(Modifier.width(scale.dp(10f)))
-                Image(
-                    imageVector = SectionGlyph.chevron,
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(
-                        if (!row.enabled) {
-                            Color.White.copy(alpha = 0.25f)
-                        } else {
-                            lerp(
-                                Color.White.copy(alpha = 0.5f),
-                                Color.Black.copy(alpha = 0.5f),
-                                focusAmount,
-                            )
-                        },
-                    ),
-                    modifier = Modifier.size(scale.dp(22f)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RowCheck(focused: Boolean, scale: TvScale) {
-    val fill = if (focused) Color.Black else Color.White
-    val tint = if (focused) Color.White else Color.Black
-    Box(
-        Modifier
-            .size(scale.dp(ROW_CHECK))
-            .clip(CircleShape)
-            .background(fill),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            imageVector = SectionGlyph.check,
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(tint),
-            modifier = Modifier.size(scale.dp(ROW_CHECK - 4f)),
         )
     }
 }
@@ -4758,58 +4581,6 @@ private fun aboutGroupRows(
 )
 
 @Composable
-private fun updatesRows(
-    clipCount: Int,
-    busy: Boolean,
-    @StringRes status: Int?,
-    onRefresh: () -> Unit,
-): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_catalogue_size),
-        value = pluralStringResource(R.plurals.settings_clips_count, clipCount, clipCount),
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_aerial_update),
-        value = when {
-            busy -> stringResource(R.string.settings_catalog_checking)
-            status != null -> stringResource(status)
-            else -> null
-        },
-        action = onRefresh,
-    ),
-)
-
-@Composable
-private fun aboutInfoRows(appName: String, packageName: String): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_launcher_name),
-        value = appName,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_developer),
-        value = stringResource(R.string.settings_developer_value),
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_version),
-        value = BuildConfig.VERSION_NAME,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_build),
-        value = BuildConfig.VERSION_CODE.toString(),
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_build_channel),
-        value = stringResource(
-            if (BuildConfig.DEBUG) R.string.settings_build_debug else R.string.settings_build_stable,
-        ),
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_package),
-        value = packageName,
-    ),
-)
-
-@Composable
 private fun legalRows(onOpen: (Int) -> Unit): List<SettingsRow> = listOf(
     SettingsRow(
         title = stringResource(R.string.settings_terms),
@@ -4894,84 +4665,6 @@ private fun openNetworkSettings(context: Context) {
 
 // Not every TV build has a dedicated Home-screen settings screen, so fall back
 // to the system settings entry instead of doing nothing.
-@Composable
-private fun permissionsRows(
-    accessibility: AccessibilityStatus.State,
-    openAccessibility: () -> Unit,
-    listingsAllowed: Boolean,
-    listingsPermanent: Boolean,
-    requestListings: () -> Unit,
-    powerAllowed: Boolean,
-    powerSupported: Boolean,
-    requestPower: () -> Unit,
-    homeReady: Boolean,
-    openHome: () -> Unit,
-    locationAllowed: Boolean,
-    locationPermanent: Boolean,
-    requestLocation: () -> Unit,
-    openAppInfo: () -> Unit,
-): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_perms_home_button),
-        value = stringResource(
-            when (accessibility) {
-                AccessibilityStatus.State.CONNECTED -> R.string.settings_perms_allowed
-                AccessibilityStatus.State.STALE -> R.string.settings_home_button_stale
-                AccessibilityStatus.State.OFF -> R.string.settings_perms_allow
-            },
-        ),
-        action = openAccessibility,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_perms_listings),
-        value = stringResource(
-            if (listingsAllowed) {
-                R.string.settings_perms_allowed
-            } else if (listingsPermanent) {
-                R.string.settings_perms_denied
-            } else {
-                R.string.settings_perms_allow
-            },
-        ),
-        action = if (listingsAllowed || listingsPermanent) openAppInfo else requestListings,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_perms_power),
-        value = stringResource(
-            when {
-                powerAllowed -> R.string.settings_perms_allowed
-                powerSupported -> R.string.settings_perms_allow
-                else -> R.string.settings_perms_unavailable
-            },
-        ),
-        action = when {
-            powerAllowed -> openAppInfo
-            powerSupported -> requestPower
-            else -> null
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_perms_home),
-        value = stringResource(
-            if (homeReady) R.string.settings_yes else R.string.settings_perms_setup,
-        ),
-        action = if (homeReady) null else openHome,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_perms_wifi),
-        value = stringResource(
-            if (locationAllowed) {
-                R.string.settings_perms_allowed
-            } else if (locationPermanent) {
-                R.string.settings_perms_denied
-            } else {
-                R.string.settings_perms_allow
-            },
-        ),
-        action = if (locationAllowed || locationPermanent) openAppInfo else requestLocation,
-    ),
-)
-
 private fun openDreamSettings(context: Context) {
     val opened = runCatching {
         context.startActivity(
@@ -5041,148 +4734,6 @@ private fun openAirPlay(context: Context) {
 // broken remote.
 private fun showUnavailable(context: Context) {
     Toast.makeText(context, R.string.settings_system_unavailable, Toast.LENGTH_SHORT).show()
-}
-
-@Composable
-private fun deviceRows(
-    facts: DeviceFacts?,
-    units: List<String>,
-    words: Triple<String, String, String>,
-    locale: Locale,
-): List<SettingsRow> {
-    if (facts == null) {
-        return listOf(SettingsRow(title = stringResource(R.string.settings_loading)))
-    }
-    val dash = "—"
-    // A display the system did not report is unknown, not a 0 × 0 panel.
-    val display = if (facts.screenWidth != null && facts.screenHeight != null) {
-        stringResource(
-            R.string.settings_device_display_value,
-            facts.screenWidth,
-            facts.screenHeight,
-            DeviceFormat.hertz(facts.refreshHz, locale),
-        )
-    } else {
-        dash
-    }
-    val memory = if (facts.ramFree != null && facts.ramTotal != null) {
-        stringResource(
-            R.string.settings_device_memory_value,
-            DeviceFormat.size(facts.ramFree, units, locale),
-            DeviceFormat.size(facts.ramTotal, units, locale),
-        )
-    } else {
-        dash
-    }
-    return buildList {
-        add(SettingsRow(stringResource(R.string.settings_device_manufacturer), facts.manufacturer))
-        add(SettingsRow(stringResource(R.string.settings_device_model), facts.model))
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_device_android),
-                stringResource(
-                    R.string.settings_device_android_value,
-                    facts.android,
-                    "API ${facts.api}",
-                ),
-            ),
-        )
-        add(SettingsRow(stringResource(R.string.settings_device_patch), facts.securityPatch))
-        add(SettingsRow(stringResource(R.string.settings_device_build), facts.buildDisplay))
-        add(SettingsRow(stringResource(R.string.settings_device_display), display))
-        add(SettingsRow(stringResource(R.string.settings_device_abi), facts.abis))
-        add(SettingsRow(stringResource(R.string.settings_device_memory), memory))
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_device_uptime),
-                DeviceFormat.uptime(facts.uptimeMs, words.first, words.second, words.third),
-            ),
-        )
-        add(SettingsRow(stringResource(R.string.settings_device_locale), facts.locale))
-        add(SettingsRow(stringResource(R.string.settings_device_timezone), facts.timeZone))
-        // Read-only: the profile is derived from the heap limit and the panel's
-        // thermal state, not a preference the owner could pick well.
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_device_performance),
-                stringResource(
-                    when (Adaptive.current) {
-                        PerformanceProfile.HIGH -> R.string.settings_device_performance_high
-                        PerformanceProfile.BALANCED -> R.string.settings_device_performance_balanced
-                        PerformanceProfile.LOW -> R.string.settings_device_performance_low
-                    },
-                ),
-            ),
-        )
-        if (facts.lowRam) {
-            add(
-                SettingsRow(
-                    stringResource(R.string.settings_device_low_ram),
-                    stringResource(R.string.settings_yes),
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun storageRows(
-    facts: DeviceFacts?,
-    caches: CacheSizes?,
-    units: List<String>,
-    locale: Locale,
-    onClear: () -> Unit,
-): List<SettingsRow> {
-    if (facts == null) {
-        return listOf(SettingsRow(title = stringResource(R.string.settings_loading)))
-    }
-    val dash = "—"
-    val total = facts.storageTotal
-    val free = facts.storageFree
-    return buildList {
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_storage_total),
-                total?.let { DeviceFormat.size(it, units, locale) } ?: dash,
-            ),
-        )
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_storage_free),
-                free?.let { DeviceFormat.size(it, units, locale) } ?: dash,
-            ),
-        )
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_storage_used),
-                if (total != null && free != null) {
-                    DeviceFormat.size((total - free).coerceAtLeast(0L), units, locale)
-                } else {
-                    dash
-                },
-            ),
-        )
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_storage_stills),
-                caches?.let { DeviceFormat.size(it.stills, units, locale) } ?: dash,
-            ),
-        )
-        add(
-            SettingsRow(
-                stringResource(R.string.settings_storage_posters),
-                caches?.let { DeviceFormat.size(it.posters, units, locale) } ?: dash,
-            ),
-        )
-        add(
-            SettingsRow(
-                title = stringResource(R.string.settings_storage_clear),
-                value = caches?.let { DeviceFormat.size(it.total, units, locale) },
-                destructive = true,
-                action = onClear,
-            ),
-        )
-    }
 }
 
 @Composable
