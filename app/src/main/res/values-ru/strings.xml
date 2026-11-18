@@ -345,7 +345,7 @@
     <string name="update_incompatible_version">Эта сборка не новее установленной</string>
     <string name="update_eol">Эта версия больше не поддерживается</string>
     <string name="update_source_missing">Источник обновлений ещё не настроен</string>
-    <string name="update_source_missing_hint">Лаунчер не будет обращаться к GitHub, пока не настроена страница релизов.</string>
+    <string name="update_source_missing_hint">GitHub не используется, пока нет страницы релизов.</string>
 
     <string name="settings_connection">Подключение</string>
     <string name="settings_network_wifi">Wi-Fi</string>

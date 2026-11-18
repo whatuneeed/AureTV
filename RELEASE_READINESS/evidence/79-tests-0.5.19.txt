@@ -1,0 +1,16 @@
+0.5.19 / vc92 targeted verification (2026-11-18)
+
+Unit: 120/120
+Connected (hume-tv API 34): 65/65
+  SettingsScreenTest 59/59 (incl. weather disabled rows)
+  BackupScreenTest 3/3
+  SoftwareUpdateScreenTest 3/3
+
+Visual: 1080p and 720p screenshots in
+  PRODUCT_EXPERIENCE/evidence-0.5.19/ (10 files)
+
+Lint: 0 errors / 19 warnings / 5 information
+Release: assembleRelease BUILD SUCCESSFUL; release_check.py PASS
+APK: 6 585 167 B; SHA-256 b681973a8bf80c478a97c5e5cdcd36215c7cfe6f53231ddb6355397ed8e9dd5e
+Signing: v2; certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10
+NOT TESTED: physical TV, 4K/HDR, HEVC decoder, TalkBack voice, IR/BT remote.

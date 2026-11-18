@@ -63,16 +63,21 @@ class SoftwareUpdateScreenTest {
     }
 
     @Test
-    fun dpadCanReachTheChannelAndAutomaticCheckRows() {
-        compose.onNodeWithText(compose.activity.getString(R.string.update_current))
-            .assertIsFocused()
-        compose.onNodeWithText(compose.activity.getString(R.string.update_current))
-            .performKeyInput { pressKey(Key.DirectionDown) }
+    fun anUnconfiguredSourceDoesNotOfferDeadChannelOrAutomaticCheckActions() {
+        UpdateStateStore(compose.activity).clearAll()
+        compose.activityRule.scenario.recreate()
+        compose.waitForIdle()
+
+        val current = compose.onNodeWithText(compose.activity.getString(R.string.update_current))
+        current.assertIsFocused()
         compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
-            .assertIsFocused()
-        compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
-            .performKeyInput { pressKey(Key.DirectionDown) }
+            .assertDoesNotExist()
         compose.onNodeWithText(compose.activity.getString(R.string.update_auto))
-            .assertIsFocused()
+            .assertDoesNotExist()
+
+        // The only focus owner on this page is the read-only version row; a
+        // stray Down must not move focus onto an invisible/disabled action.
+        current.performKeyInput { pressKey(Key.DirectionDown) }
+        current.assertIsFocused()
     }
 }

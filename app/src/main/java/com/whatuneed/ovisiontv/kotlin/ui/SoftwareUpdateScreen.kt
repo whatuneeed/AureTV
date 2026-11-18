@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TV_TOOL_LIST_WIDTH
+import com.whatuneed.ovisiontv.kotlin.ui.components.TV_LIST_ROW_HEIGHT
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvToolPageScaffold
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
@@ -72,6 +74,10 @@ private data class UpdateRow(
     val value: String? = null,
     val action: (() -> Unit)? = null,
     val destructive: Boolean = false,
+    // Read-only status rows stay visible but out of the focus order. A page
+    // with no actions keeps the installed-version row focusable so the remote
+    // still has an owner and TalkBack can start reading.
+    val focusable: Boolean = action != null,
 )
 
 @Composable
@@ -125,6 +131,7 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
                 state.installedVersionName.ifBlank { BuildConfig.VERSION_NAME },
                 state.installedVersionCode.takeIf { it > 0 } ?: BuildConfig.VERSION_CODE,
             ),
+            focusable = true,
         )
         if (kidsActive) {
             add(currentRow)
@@ -132,6 +139,11 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             return@buildList
         }
         add(currentRow)
+        if (!state.sourceConfigured) {
+            add(UpdateRow(stringResource(R.string.update_source_missing)))
+            add(UpdateRow(stringResource(R.string.update_source_missing_hint)))
+            return@buildList
+        }
         add(
             UpdateRow(
                 title = stringResource(R.string.update_channel),
@@ -356,7 +368,9 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     }
 
     LaunchedEffect(rows.size, state.phase) {
-        if (focusIndex !in rows.indices) focusIndex = 0
+        if (focusIndex !in rows.indices || !rows[focusIndex].focusable) {
+            focusIndex = rows.indexOfFirst { it.focusable }.coerceAtLeast(0)
+        }
     }
 
     TvToolPageScaffold(
@@ -389,12 +403,12 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
             ) {
                 itemsIndexed(rows) { index, row ->
                     val requester = remember(state.phase, index) { FocusRequester() }
-                    if (index == focusIndex) {
+                    if (row.focusable && index == focusIndex) {
                         LaunchedEffect(state.phase, index) { requester.requestWhenAttached() }
                     }
                     UpdateRowView(
                         row = row,
-                        focused = index == focusIndex,
+                        focused = row.focusable && index == focusIndex,
                         scale = scale,
                         requester = requester,
                         onFocus = { focusIndex = index },
@@ -481,25 +495,43 @@ private fun UpdateRowView(
     requester: FocusRequester,
     onFocus: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     TvListRowSurface(
         focused = focused,
         scale = scale,
         modifier = Modifier
             .width(scale.dp(TV_TOOL_LIST_WIDTH))
-            .focusRequester(requester)
-            .onFocusChanged { if (it.isFocused) onFocus() }
-            .clickable { row.action?.invoke() },
+            .height(scale.dp(TV_LIST_ROW_HEIGHT))
+            .then(
+                if (row.focusable) {
+                    Modifier
+                        .focusRequester(requester)
+                        .onFocusChanged { if (it.isFocused) onFocus() }
+                        // A read-only row still needs one focus owner on an
+                        // otherwise action-less page; its click is a no-op.
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                        ) { row.action?.invoke() }
+                } else {
+                    Modifier
+                },
+            ),
     ) { focusAmount ->
-        val titleColor = if (row.destructive) {
-            LauncherColors.destructive
-        } else {
-            lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
+        val titleColor = when {
+            !row.focusable -> Color.White.copy(alpha = 0.42f)
+            row.destructive -> LauncherColors.destructive
+            else -> lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
         }
-        val valueColor = lerp(
-            LauncherColors.textSecondary,
-            Color.Black.copy(alpha = 0.6f),
-            focusAmount,
-        )
+        val valueColor = if (!row.focusable) {
+            Color.White.copy(alpha = 0.32f)
+        } else {
+            lerp(
+                LauncherColors.textSecondary,
+                Color.Black.copy(alpha = 0.6f),
+                focusAmount,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,

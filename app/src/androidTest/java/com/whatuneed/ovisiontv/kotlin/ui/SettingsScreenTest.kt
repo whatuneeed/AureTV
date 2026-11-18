@@ -25,7 +25,9 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsSelected
@@ -350,6 +352,25 @@ class SettingsScreenTest {
             .assertExists()
         rule.onNodeWithContentDescription(string(R.string.settings_device), substring = true)
             .assertExists()
+    }
+
+    @Test
+    fun weather_subrows_are_disabled_while_weather_is_off() {
+        setSettings()
+        openWeather()
+
+        waitForRow(string(R.string.weather_location))
+        rule.onNodeWithContentDescription(string(R.string.weather_location), substring = true)
+            .assertIsNotEnabled()
+        rule.onNodeWithContentDescription(string(R.string.weather_temperature), substring = true)
+            .assertIsNotEnabled()
+        rule.onNodeWithContentDescription(string(R.string.weather_refresh_now), substring = true)
+            .assertIsNotEnabled()
+
+        // Turning the feature on restores its dependent rows immediately.
+        clickRow(string(R.string.weather_show))
+        rule.onNodeWithContentDescription(string(R.string.weather_location), substring = true)
+            .assertIsEnabled()
     }
 
     @Test

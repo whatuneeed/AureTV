@@ -13,6 +13,10 @@
 
 | Симптом | Запись |
 |---|---|
+| Погода выключена, но её строки выглядят и ведут себя как активные | 0.5.19 (disabled weather rows) |
+| В Update фокус ходит по статусным строкам, а «Канал»/«Автопроверки» доступны без источника | 0.5.19 (read-only update states) |
+| Фокусная строка Backup/Update серая вместо белой | 0.5.19 (row indication) |
+| Подсказка «Источник обновлений…» обрезается на 720p | 0.5.19 (short hint) |
 | Backup/Update выглядят как отдельные страницы: заголовок слева, список 1200, нет иконки | 0.5.18 (two-pane tool pages) |
 | Settings и Backup/Update по-разному подсвечивают строку и ставят заголовок | 0.5.17 (row surface) |
 | BackupScreenTest падает на русском UI, хотя строки существуют | 0.5.17 (test localization) |
@@ -261,6 +265,15 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.19: P1-4 — disabled/loading/pressed и закрытие Stage 6
+
+- **Симптом.** При выключенной погоде строки «Местоположение», «Температура», «Источник», «Обновлять каждые», «Последнее обновление» и «Обновить сейчас» оставались яркими и открывали подстраницы. В Software Update без настроенного источника фокус ходил по информационным строкам, а «Канал обновлений» и «Автоматические проверки» выглядели доступными, хотя ничего не делали. Фокусная строка Backup/Update была серой, а не белой, как в Settings. На 720p подсказка про GitHub обрезалась.
+- **Причина.** У `SettingsRow` не было состояния `enabled`; `moveUp/moveDown` шагали по индексам без пропуска. `UpdateRow` считал любую строку фокусной и всегда добавлял `clickable`, поэтому статусные строки становились кнопками. `clickable` рисовал focus-state-layer поверх белой заливки, из-за чего белый становился серым. Длинная подсказка была рассчитана на 1200 px, а после перехода на 776 px не помещалась.
+- **Что сделано.** `SettingsRow.enabled` + `previousEnabled(nextEnabled)`; выключенная погода делает зависимые строки неинтерактивными, приглушёнными и без `onClick` в TalkBack, но оставляет «Очистить данные погоды» доступной. `UpdateRow.focusable` отделяет действия от статуса: при `sourceConfigured=false` показываются только текущая версия и пояснение, «Канал»/«Авто»/«Последняя проверка» скрыты, статусные строки приглушены и вне фокуса; текущая версия остаётся единственным focus owner. `clickable(indication = null)` убран серый state layer. Подсказка сокращена до «GitHub не используется, пока нет страницы релизов.» / «GitHub stays unused until a release page is configured.».
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SoftwareUpdateScreen.kt`, `ui/BackupScreen.kt`, `res/values/strings.xml`, `res/values-ru/strings.xml`, `androidTest/.../SettingsScreenTest.kt`, `androidTest/.../SoftwareUpdateScreenTest.kt`.
+- **Чего не делать.** Не возвращать активные строки погоды при `weatherEnabled=false`. Не делать статусные строки Update фокусными ради «ровного списка». Не возвращать `clickable` без `indication=null` на белой focus-заливке. Не растягивать 776-колонку обратно до 1200 ради длинной подсказки. Info-строки Backup оставлены фокусными осознанно: на PREVIEW первый фокус не должен попадать на destructive «Восстановить», а страница не должна оставаться без focus owner.
+- **Проверка.** Targeted unit — **120/120**. Targeted connected на `hume-tv` API 34 — **65/65**: `SettingsScreenTest` 59/59 (добавлен `weather_subrows_are_disabled_while_weather_is_off`), `BackupScreenTest` 3/3, `SoftwareUpdateScreenTest` 3/3. Lint — **0 errors / 19 warnings / 5 information**. Визуально проверены 1080p и 720p: Home, Settings root, Device, Weather off/on, Update, Backup (`PRODUCT_EXPERIENCE/evidence-0.5.19/`). `assembleRelease` — успешно, `release_check.py` — PASS, v2, прежний сертификат. Артефакт: **6 585 167 B**, SHA-256 **`b681973a8bf80c478a97c5e5cdcd36215c7cfe6f53231ddb6355397ed8e9dd5e`**, **0.5.19 / vc92**. Физический ТВ, 4K/HDR, HEVC-декодер и TalkBack-голос не проверялись.
 
 ### 18.11.2026 — 0.5.18: Backup и Update в том же двухпанельном каркасе, что Settings
 

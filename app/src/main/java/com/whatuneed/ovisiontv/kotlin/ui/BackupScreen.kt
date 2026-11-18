@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -734,6 +735,7 @@ private fun BackupRowView(
     onFocus: () -> Unit,
     onClick: (() -> Unit)?,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     TvListRowSurface(
         focused = focused,
         scale = scale,
@@ -743,8 +745,11 @@ private fun BackupRowView(
             .onFocusChanged { if (it.isFocused) onFocus() }
             // Every row is a focus target even when it only carries a warning;
             // an info row with no action must still be reachable and must not
-            // leave the page without an initial focus owner.
-            .clickable { onClick?.invoke() },
+            // leave the page without an initial focus owner. The default
+            // indication would tint the focused white row grey.
+            .clickable(interactionSource = interactionSource, indication = null) {
+                onClick?.invoke()
+            },
     ) { focusAmount ->
         val titleColor = if (row.destructive) {
             LauncherColors.destructive

@@ -335,7 +335,7 @@
     <string name="update_incompatible_version">This build is not newer than the installed version</string>
     <string name="update_eol">This version is no longer supported</string>
     <string name="update_source_missing">Update source is not configured yet</string>
-    <string name="update_source_missing_hint">The launcher will not contact GitHub until the release page is configured.</string>
+    <string name="update_source_missing_hint">GitHub stays unused until a release page is configured.</string>
 
     <string name="settings_connection">Connection</string>
     <string name="settings_network_wifi">Wi-Fi</string>

@@ -103,6 +103,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -420,6 +421,9 @@ private data class SettingsRow(
     val chevron: Boolean = false,
     val destructive: Boolean = false,
     val action: (() -> Unit)? = null,
+    // A row whose dependency is off stays visible for context, but it is not
+    // an enabled action and must not take focus or announce a tap action.
+    val enabled: Boolean = true,
     // TalkBack reads the click action as "double-tap to …"; a row whose title is
     // a noun (an app name) needs the verb stated separately.
     val actionLabel: String? = null,
@@ -2399,12 +2403,14 @@ fun SettingsScreen(
                     stringResource(R.string.weather_automatic)
                 },
                 chevron = true,
+                enabled = weatherEnabled,
                 action = { open(PAGE_WEATHER_LOCATION, focus = if (weatherManual) 1 else 0) },
             ),
             SettingsRow(
                 title = stringResource(R.string.weather_temperature),
                 value = weatherUnitsLabel(weatherUnits),
                 chevron = true,
+                enabled = weatherEnabled,
                 action = {
                     open(PAGE_WEATHER_UNITS, focus = WEATHER_UNITS.indexOf(weatherUnits).coerceAtLeast(0))
                 },
@@ -2413,6 +2419,7 @@ fun SettingsScreen(
                 title = stringResource(R.string.weather_source),
                 value = weatherSourceLabels[weatherSource] ?: Weather.sourceName(weatherSource),
                 chevron = true,
+                enabled = weatherEnabled,
                 action = {
                     open(
                         PAGE_WEATHER_SOURCE,
@@ -2424,6 +2431,7 @@ fun SettingsScreen(
                 title = stringResource(R.string.weather_refresh_every),
                 value = stringResource(R.string.weather_minutes, weatherRefresh),
                 chevron = true,
+                enabled = weatherEnabled,
                 action = {
                     open(
                         PAGE_WEATHER_REFRESH,
@@ -2434,6 +2442,7 @@ fun SettingsScreen(
             SettingsRow(
                 title = stringResource(R.string.weather_last_updated),
                 value = weatherAge,
+                enabled = weatherEnabled,
                 action = {
                     Toast.makeText(context, weatherUpdatedDetail(), Toast.LENGTH_LONG).show()
                 },
@@ -2441,6 +2450,7 @@ fun SettingsScreen(
             SettingsRow(
                 title = stringResource(R.string.weather_refresh_now),
                 value = if (weatherBusy) stringResource(R.string.weather_refreshing_status) else null,
+                enabled = weatherEnabled,
                 action = { refreshWeatherNow() },
             ),
             SettingsRow(
@@ -3318,6 +3328,18 @@ fun SettingsScreen(
         previewClosing = false
     }
 
+    fun nextEnabled(from: Int): Int {
+        var index = from + 1
+        while (index in rows.indices && !rows[index].enabled) index++
+        return if (index in rows.indices) index else from
+    }
+
+    fun previousEnabled(from: Int): Int {
+        var index = from - 1
+        while (index >= 0 && !rows[index].enabled) index--
+        return if (index >= 0) index else from
+    }
+
     fun moveUp() {
         when {
             isDoc -> if (docFocus > 0) docFocus--
@@ -3335,7 +3357,7 @@ fun SettingsScreen(
                 }
             }
 
-            focusIndex > 0 -> focusIndex--
+            focusIndex > 0 -> focusIndex = previousEnabled(focusIndex)
         }
     }
 
@@ -3357,7 +3379,7 @@ fun SettingsScreen(
                 }
             }
 
-            focusIndex < rows.lastIndex -> focusIndex++
+            focusIndex < rows.lastIndex -> focusIndex = nextEnabled(focusIndex)
         }
     }
 
@@ -4190,14 +4212,23 @@ private fun SettingsRowCard(
     val offState = stringResource(R.string.settings_state_off)
 
     TvListRowSurface(
-        focused = focused,
+        focused = focused && row.enabled,
         scale = scale,
         modifier = modifier
             .size(scale.dp(LIST_WIDTH), scale.dp(ROW_HEIGHT))
-            .focusRequester(focusRequester)
-            .focusable()
+            .then(
+                if (row.enabled) {
+                    Modifier.focusRequester(focusRequester).focusable()
+                } else {
+                    Modifier
+                },
+            )
             .clearAndSetSemantics {
                 contentDescription = announcement
+                if (!row.enabled) {
+                    disabled()
+                    return@clearAndSetSemantics
+                }
                 row.toggleState?.let { on ->
                     stateDescription = if (on) onState else offState
                     toggleableState = if (on) ToggleableState.On else ToggleableState.Off
@@ -4220,16 +4251,20 @@ private fun SettingsRowCard(
                 }
             },
     ) { focusAmount ->
-        val titleColor = if (row.destructive) {
-            LauncherColors.destructive
-        } else {
-            lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
+        val titleColor = when {
+            !row.enabled -> Color.White.copy(alpha = 0.35f)
+            row.destructive -> LauncherColors.destructive
+            else -> lerp(Color.White.copy(alpha = 0.95f), Color.Black, focusAmount)
         }
-        val valueColor = lerp(
-            Color.White.copy(alpha = 0.5f),
-            Color.Black.copy(alpha = 0.6f),
-            focusAmount,
-        )
+        val valueColor = if (!row.enabled) {
+            Color.White.copy(alpha = 0.3f)
+        } else {
+            lerp(
+                Color.White.copy(alpha = 0.5f),
+                Color.Black.copy(alpha = 0.6f),
+                focusAmount,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
@@ -4265,11 +4300,15 @@ private fun SettingsRowCard(
                     imageVector = SectionGlyph.chevron,
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(
-                        lerp(
-                            Color.White.copy(alpha = 0.5f),
-                            Color.Black.copy(alpha = 0.5f),
-                            focusAmount,
-                        ),
+                        if (!row.enabled) {
+                            Color.White.copy(alpha = 0.25f)
+                        } else {
+                            lerp(
+                                Color.White.copy(alpha = 0.5f),
+                                Color.Black.copy(alpha = 0.5f),
+                                focusAmount,
+                            )
+                        },
                     ),
                     modifier = Modifier.size(scale.dp(22f)),
                 )
