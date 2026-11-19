@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Слои Home (backdrop, shelf, dock band, grid) собираются в HomeScreen | 0.5.35 (HomeSceneLayers) |
 | Запрос фокуса после раскладки сетки и TalkBack-повтор лежат в HomeScreen | 0.5.34 (HomeFocusRequester) |
 | Погодные эффекты и три локальных state лежат в HomeScreen | 0.5.33 (HomeWeatherState/Effects) |
 | Library-переход, clamp курсора, scroll и сохранение фокуса лежат в HomeScreen | 0.5.32 (HomeLayout/FocusEffects) |
@@ -282,6 +283,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.35: сборка слоёв Home
+
+- **Симптом.** После 0.5.34 `HomeScreen.kt` оставался 1 056 строк; backdrop, shelf, dock band, сетка и их `graphicsLayer`-сдвиги занимали ~120 строк главного composable.
+- **Что сделано.**
+  - `HomeSceneLayers` собирает `LibraryBackdrop`, `TopShelf`, `DockBand` и `HomeGridLayer` в том же порядке и с теми же сдвигами.
+  - Semantics-гейт на модальные окна остался на внешнем `Box`: TalkBack не видит плитки под панелью.
+  - HomeScreen передаёт `libraryMode`, `libraryFade`, `shelfHide`, `tileRequesters`, `onPlaced`; `density` больше не параметр — это receiver `graphicsLayer`.
+  `HomeScreen.kt` уменьшился до **978 строк** (исходно 2 619, минус ~63%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeSceneLayers.kt`.
+- **Чего не делать.** Не переносить `shelfVisible`/`libraryVisible` внутрь `HomeSceneLayers`: их считает HomeScreen из `Animatable`. Не убирать semantics-гейт: под модальным окном плитки должны быть недоступны TalkBack.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.35 / vc108; **6 601 723 B**, SHA-256 **`2d095b71eeacc653a6a6af93bedc0e655a0fa4cf69601b0be0833cd70c80df4c`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.34: запрос фокуса Home
 
