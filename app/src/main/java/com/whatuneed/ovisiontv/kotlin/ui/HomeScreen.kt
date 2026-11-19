@@ -253,34 +253,13 @@ fun HomeScreen(
         label = "shelfHide",
     )
 
-    LaunchedEffect(libraryMode) {
-        coroutineScope {
-            launch {
-                libraryShift.animateTo(
-                    targetValue = if (libraryMode) LIBRARY_SHIFT else 0f,
-                    animationSpec = tween(
-                        motionDuration(LIBRARY_MOTION_MS, reduceMotion),
-                        easing = FastOutSlowInEasing,
-                    ),
-                )
-            }
-            launch {
-                libraryFade.animateTo(
-                    targetValue = if (libraryMode) 0f else 1f,
-                    animationSpec = tween(
-                        motionDuration(LIBRARY_FADE_MS, reduceMotion),
-                        easing = FastOutSlowInEasing,
-                    ),
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(grid.items.size) {
-        if (grid.focusIndex > grid.items.lastIndex) {
-            grid.focusIndex = grid.items.lastIndex.coerceAtLeast(0)
-        }
-    }
+    HomeLayoutEffects(
+        grid = grid,
+        libraryMode = libraryMode,
+        reduceMotion = reduceMotion,
+        libraryShift = libraryShift,
+        libraryFade = libraryFade,
+    )
 
     // The cache is shown at once and the engine fetches only when the schedule
     // or the settings ask; the wait is computed, so idle time costs no wakes.
@@ -318,39 +297,17 @@ fun HomeScreen(
         libraryMode = libraryMode,
     )
 
-    LaunchedEffect(grid.focusIndex) {
-        lastFocusIndex = grid.focusIndex
-    }
-
-    // The tile itself is part of the key: deleting a folder can put another app
-    // at the same index, and a size-only key would keep the dead folder saved.
-    LaunchedEffect(grid.focusIndex, grid.items.size, grid.items.getOrNull(grid.focusIndex)) {
-        val focused = grid.items.getOrNull(grid.focusIndex) ?: return@LaunchedEffect
-        if (grid.focusIndex < columns) shelfIndex = grid.focusIndex
-
-        scroll.animateTo(
-            targetValue = scrollTargetFor(grid.focusIndex),
-            animationSpec = tween(
-                durationMillis = TvOs.SCROLL_DURATION_MS,
-                easing = FastOutSlowInEasing,
-            ),
-        )
-    }
-
-    // Phase 08: a cursor that is still moving is not a choice. Only the focus
-    // that rests for a moment is saved, so a burst of presses neither rewrites
-    // the preference on every step nor leaves a half-travelled position behind.
-    LaunchedEffect(grid.focusIndex, grid.items.getOrNull(grid.focusIndex)) {
-        val focused = grid.items.getOrNull(grid.focusIndex) ?: return@LaunchedEffect
-        lastFocusKey = homeFocusKey(focused)
-        delay(FOCUS_SAVE_MS)
-        val editor = prefs.edit()
-        editor.putString(LauncherPrefs.KEY_FOCUS_PACKAGE, homeFocusKey(focused))
-        if (focused is HomeItem.AppItem && grid.focusIndex < columns) {
-            editor.putString(LauncherPrefs.KEY_SHELF_PACKAGE, focused.app.packageName)
-        }
-        editor.apply()
-    }
+    HomeFocusEffects(
+        grid = grid,
+        scroll = scroll,
+        columns = columns,
+        shelfIndex = shelfIndex,
+        onShelfIndex = { shelfIndex = it },
+        onLastFocusIndex = { lastFocusIndex = it },
+        onLastFocusKey = { lastFocusKey = it },
+        scrollTarget = ::scrollTargetFor,
+        prefs = prefs,
+    )
 
     HomeLaunchEffects(
         grid = grid,

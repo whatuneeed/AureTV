@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Library-переход, clamp курсора, scroll и сохранение фокуса лежат в HomeScreen | 0.5.32 (HomeLayout/FocusEffects) |
 | Launch-анимация и панели Search/Control Center остаются в HomeScreen | 0.5.31 (HomeLaunchEffects/HomePanels) |
 | Discovery-refresh, показ карточек и парад hero занимают HomeScreen | 0.5.30 (HomeShelfEffects) |
 | Key-машина Home и overlay-флаги лежат внутри главного composable | 0.5.29 (HomeKeyHandler) |
@@ -279,6 +280,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.32: layout- и focus-эффекты Home
+
+- **Симптом.** После 0.5.31 `HomeScreen.kt` оставался 1 157 строк; анимация library-перехода, clamp курсора после удаления приложения, scroll к focused-плитке и debounce сохранения фокуса были в главном composable.
+- **Что сделано.**
+  - `HomeLayoutEffects` — `libraryShift`/`libraryFade` на `LIBRARY_MOTION_MS`/`LIBRARY_FADE_MS` и clamp `focusIndex` при уменьшении `items`.
+  - `HomeFocusEffects` — `lastFocusIndex`, scroll к focused-плитке, `shelfIndex` для дока и сохранение `KEY_FOCUS_PACKAGE`/`KEY_SHELF_PACKAGE` после `FOCUS_SAVE_MS`.
+  - HomeScreen передаёт `Animatable`, `prefs` и setter'ы; `scrollTargetFor` остаётся локальной функцией, потому что зависит от `libraryMode`/`maxOffset`.
+  `HomeScreen.kt` уменьшился до **1 112 строк** (исходно 2 619).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeLayoutEffects.kt`, `ui/HomeFocusEffects.kt`.
+- **Чего не делать.** Не кэшировать `scrollTargetFor` в эффекте: `libraryMode` и `maxOffset` меняются при переходе в библиотеку. Не сохранять фокус без `FOCUS_SAVE_MS`: это вернёт запись prefs на каждое нажатие.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv` (первый прогон дал teardown-flake `Activity never becomes DESTROYED / PAUSED`; повторный прогон класса — 41/41 без изменений кода). Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.32 / vc105; **6 585 339 B**, SHA-256 **`3d8f8fed48e85a4da43354bde7beaa489eceb9cb39fa1a6a4b2dbe8cb8549bc4`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.31: launch-эффекты и панели Home
 
