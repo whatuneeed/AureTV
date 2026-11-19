@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Notes/rows/formatting Update лежат в SoftwareUpdateScreen | 0.5.60 (SoftwareUpdateParts.kt) |
 | Фото/Reddit/Clock faces лежат в AmbientScreen | 0.5.59 (AmbientFaces.kt) |
 | Password/row/SAF-хелперы Backup лежат в BackupScreen | 0.5.58 (BackupScreenParts.kt) |
 | PageDots и focus-retry папки лежат в FolderOverlay | 0.5.57 (FolderOverlayParts.kt) |
@@ -307,6 +308,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.60: Stage 3.9 — Software Update presentation
+
+- **Симптом.** `SoftwareUpdateScreen.kt` держал release-notes overlay, строку списка, error-тексты и форматтеры рядом с update state.
+- **Что сделано.**
+  - `SoftwareUpdateParts.kt` — `UpdateNotesOverlay`, `UpdateRowView`, `errorTitle`, `incompatibilityText`, `formatDate`, `formatDateTime`, `formatSize`, `percent`, `requestUpdateFocusWhenAttached`.
+  - `UpdateRow` стал internal; `SoftwareUpdateScreen.kt` — **395 строк**.
+  - `UpdateManager`/install/download/state остались на экране.
+- **Файлы.** `ui/SoftwareUpdateScreen.kt`, `ui/SoftwareUpdateParts.kt`.
+- **Чего не делать.** Не менять `percent`/`formatSize` при переносе — на них завязаны progress/размер APK. `Weather.kt` не дробится до Stage 4: это единый объект с парсерами и сетью.
+- **Проверка.** `SoftwareUpdateScreenTest` — **3/3** (1 m 12 s). Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.60 / vc133; **6 618 107 B**, SHA-256 **`9c4de801d62722ecc090a82139ef85aa7cdb1f64a86b1266a2f52a791cb78d28`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.59: Stage 3.8 — Ambient faces
 
