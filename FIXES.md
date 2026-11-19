@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Меню папки, приложения, полки и «В папку…» собираются в HomeScreen | 0.5.37 (HomeContextMenus) |
 | Клавиатуры создания папки и переименования приложения лежат в HomeScreen | 0.5.36 (HomeKeyboards) |
 | Слои Home (backdrop, shelf, dock band, grid) собираются в HomeScreen | 0.5.35 (HomeSceneLayers) |
 | Запрос фокуса после раскладки сетки и TalkBack-повтор лежат в HomeScreen | 0.5.34 (HomeFocusRequester) |
@@ -284,6 +285,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.37: меню Home
+
+- **Симптом.** После 0.5.36 `HomeScreen.kt` оставался 957 строк; четыре меню — папка, подтверждение удаления, приложение, полка и «В папку…» — занимали ~140 строк главного composable.
+- **Что сделано.**
+  - `HomeContextMenus` показывает все четыре меню и клавиатуру выбора папки, закрывает их через `HomeOverlayState`.
+  - Мутации остались на HomeScreen: `openFolderAt`, `removeFolderById`, `hideAppFromHome`, `resetAppLabel`, `moveAppIntoFolder`, `activateShelfCard`.
+  - Shelf favorite/hide остались в `DiscoveryEngine`, как раньше; повторное открытие карточки идёт через `closeShelfMenu`.
+  `HomeScreen.kt` уменьшился до **839 строк** (исходно 2 619, минус ~68%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeContextMenus.kt`.
+- **Чего не делать.** Не переносить мутации в меню: закрытое меню не должно менять сетку. Не убирать `suppressOkUntilRelease`: OK, которым открыли меню, не должен сразу выбрать первый пункт.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.37 / vc110; **6 601 723 B**, SHA-256 **`6efb378c3a758201a6d998932d2fde05dfd927f9bca8029722248c36abcc694a`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.36: клавиатуры Home
 
