@@ -1,0 +1,22 @@
+0.5.65 / vc138 — Stage 4.3 single User-Agent
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: one LauncherUserAgent from BuildConfig.VERSION_NAME is now used by
+Reddit feed/images, Weather, OnlineClient, online art, shelf art, update
+metadata/APK and the ExoPlayer data source. Stale 0.5.7 and 6.2 values removed.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+LauncherUserAgentTest — 2/2
+WeatherTest — 13/13, WeatherRequestTest — 4/4
+UpdateMetadataTest — 13/13, RedditFeedTest — 5/5
+OnlineUrlPolicyTest — 3/3
+:app:testDebugUnitTest — 562/562 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 0b62cb7817adda269fbb9b62f8e26e85bf7885c1c1535411b590d4a629353f01
+versionCode 138, versionName 0.5.65, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 991 ms, second 575 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; the change is a constant and compiles into
+all call sites. No live server was inspected to confirm the received header.

@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.online.onlineImageUrlIsTrusted
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
@@ -294,7 +295,7 @@ private fun downloadArtwork(value: String): ByteArray? {
             connection.readTimeout = ART_TIMEOUT_MS
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "image/*")
-            connection.setRequestProperty("User-Agent", "OVisionTV (Android TV)")
+            connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
             val code = connection.responseCode
             if (code in 300..399) {
                 if (attempt >= ART_MAX_REDIRECTS) return null

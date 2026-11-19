@@ -2,6 +2,7 @@ package com.whatuneed.ovisiontv.kotlin.update
 
 import android.util.Log
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -33,8 +34,7 @@ internal data class MetadataFetchResult(
  * every target against the allowlist, and never falls back to HTTP.
  */
 internal class UpdateMetadataClient(
-    private val userAgent: String =
-        "OVisionTV/${BuildConfig.VERSION_NAME} (Android TV update check)",
+    private val userAgent: String = LauncherUserAgent.value,
 ) {
     suspend fun fetch(
         url: String,

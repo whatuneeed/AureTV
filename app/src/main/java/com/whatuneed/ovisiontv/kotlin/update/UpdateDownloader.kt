@@ -12,6 +12,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import java.net.URL
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
@@ -135,10 +136,7 @@ internal class UpdateDownloader(
         connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/vnd.android.package-archive")
         connection.setRequestProperty("Accept-Encoding", "identity")
-        connection.setRequestProperty(
-            "User-Agent",
-            "OVisionTV/${com.whatuneed.ovisiontv.kotlin.BuildConfig.VERSION_NAME} (Android TV update check)",
-        )
+        connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
         if (resume) {
             connection.setRequestProperty("Range", "bytes=$initial-")
             savedValidatorHeader(validator)?.let { connection.setRequestProperty("If-Range", it) }

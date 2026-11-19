@@ -2,6 +2,7 @@ package com.whatuneed.ovisiontv.kotlin.data
 
 import android.content.Context
 import android.util.Log
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -58,7 +59,6 @@ object Weather {
     const val SRC_WTTR = "wttr"
     val SOURCES = listOf(SRC_OPEN_METEO, SRC_MET, SRC_WTTR)
     val REFRESH_CHOICES = listOf(10, 15, 30, 60)
-    private const val UA = "OVisionTVLauncher/6.2 (Android TV launcher)"
     private const val CONNECT_MS = 8_000
     private const val READ_MS = 10_000
     private const val MAX_BYTES = 2 * 1024 * 1024
@@ -726,7 +726,7 @@ object Weather {
         connection.connectTimeout = 5_000
         connection.readTimeout = 5_000
         connection.instanceFollowRedirects = false
-        connection.setRequestProperty("User-Agent", UA)
+        connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
         try {
             val code = connection.responseCode
             if (code in 300..399) {
@@ -782,7 +782,7 @@ object Weather {
         connection.connectTimeout = CONNECT_MS
         connection.readTimeout = READ_MS
         connection.instanceFollowRedirects = false
-        connection.setRequestProperty("User-Agent", UA)
+        connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
         connection.setRequestProperty("Accept", "application/json")
         try {
             val code = connection.responseCode

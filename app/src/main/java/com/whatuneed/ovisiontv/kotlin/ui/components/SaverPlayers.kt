@@ -3,12 +3,12 @@ package com.whatuneed.ovisiontv.kotlin.ui.components
 import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.Player
-import androidx.media3.common.util.Util
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 
 /** The system media card follows the active player, not the slot index. */
 internal fun updateSaverPlaybackState(session: MediaSession, players: List<Player>) {
@@ -48,7 +48,7 @@ internal fun createPlayer(context: Context): ExoPlayer {
     // Clips stream straight from Apple's CDN, as in the Java launcher: nothing
     // is downloaded to disk and the saver works with a full cache partition.
     val http = DefaultHttpDataSource.Factory()
-        .setUserAgent(Util.getUserAgent(context, "OVisionTV"))
+        .setUserAgent(LauncherUserAgent.value)
         .setConnectTimeoutMs(15_000)
         .setReadTimeoutMs(15_000)
     return ExoPlayer.Builder(context)

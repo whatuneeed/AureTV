@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| User-Agent версии расходятся, Reddit шлёт `0.5.7` | 0.5.65 (единый UA из BuildConfig) |
 | Image-loader'ы следуют редиректам на любой хост | 0.5.64 (same-host policy, manual redirects) |
 | OnlineClient следует редиректам без проверки хоста | 0.5.63 (host policy + manual redirects) |
 | Weather следует редиректам без проверки хоста | 0.5.62 (manual redirect + 7-host allowlist) |
@@ -312,6 +313,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.65: Stage 4.3 — единый User-Agent
+
+- **Симптом.** Четыре разных User-Agent, включая устаревший `OVisionTV/0.5.7` и `OVisionTVLauncher/6.2`; диагностика по логам сервера не могла определить сборку.
+- **Что сделано.**
+  - `data/LauncherUserAgent.kt` — единственное значение `OVisionTV/<BuildConfig.VERSION_NAME> (Android TV launcher)`.
+  - Переведены Reddit feed/images, Weather, JustWatch/Apple, online art, shelf art, update metadata/APK и ExoPlayer data source.
+  - `LauncherUserAgentTest` проверяет совпадение с `VERSION_NAME` и отсутствие `0.5.7`.
+- **Файлы.** `data/LauncherUserAgent.kt` + 9 клиентов, `test/.../LauncherUserAgentTest.kt`, `ARCHITECTURE_REVIEW/01_NETWORK_CONTRACTS.md`.
+- **Чего не делать.** Не возвращать локальные UA-константы и не заменять версию на литерал: это снова разойдётся со следующей сборкой.
+- **Проверка.** `LauncherUserAgentTest` — **2/2**, `WeatherTest` **13/13**, `WeatherRequestTest` **4/4**, `UpdateMetadataTest` **13/13**, `RedditFeedTest` **5/5**, `OnlineUrlPolicyTest` **3/3**. Unit — **562/562**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.65 / vc138; **6 618 107 B**, SHA-256 **`0b62cb7817adda269fbb9b62f8e26e85bf7885c1c1535411b590d4a629353f01`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.64: Stage 4.2 — image redirect policy
 

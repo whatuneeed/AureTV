@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -27,7 +28,6 @@ object RedditImageStore {
     private const val MAX_BYTES = 12 * 1024 * 1024
     private const val COPY_CHUNK = 64 * 1024
     private const val MAX_REDIRECTS = 3
-    private const val USER_AGENT = "OVisionTV/0.5.7 (Android TV launcher)"
     private const val TAG = "RedditImage"
 
     private val thumbs = object : LruCache<String, Bitmap>(
@@ -106,7 +106,7 @@ object RedditImageStore {
             // A redirect is followed manually so every hop is revalidated.
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "image/*")
-            connection.setRequestProperty("User-Agent", USER_AGENT)
+            connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
             try {
                 val code = connection.responseCode
                 if (code in 300..399) {

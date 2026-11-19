@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -54,7 +55,7 @@ internal class JustWatchClient(
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             setRequestProperty("Accept", "application/json")
             setRequestProperty("Accept-Language", language)
-            setRequestProperty("User-Agent", "OVisionTV (Android TV)")
+            setRequestProperty("User-Agent", LauncherUserAgent.value)
         }
         try {
             if (!onlineUrlIsTrusted(JUSTWATCH_GRAPHQL_URL, setOf("apis.justwatch.com"))) {
@@ -134,7 +135,7 @@ internal class AppleRssClient(
             readTimeout = readTimeoutMs
             instanceFollowRedirects = false
             setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "OVisionTV (Android TV)")
+            setRequestProperty("User-Agent", LauncherUserAgent.value)
             setRequestProperty("Accept-Language", "en-US,en;q=0.8")
         }
         return try {

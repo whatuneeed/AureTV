@@ -3,6 +3,7 @@ package com.whatuneed.ovisiontv.kotlin.ambient
 import android.content.Context
 import android.util.Log
 import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
+import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -278,7 +279,6 @@ object RedditFeedLoader {
     private const val TIMEOUT_MS = 20_000
     private const val MAX_BYTES = 4 * 1024 * 1024
     private const val COPY_CHUNK = 64 * 1024
-    private const val USER_AGENT = "OVisionTV/0.5.7 (Android TV launcher)"
     private const val KEY_LAST_ATTEMPT = "ambient_reddit_last_attempt"
     private const val KEY_FAILURES = "ambient_reddit_failures"
     private const val MAX_FAILURES = 6
@@ -349,7 +349,7 @@ object RedditFeedLoader {
         connection.readTimeout = TIMEOUT_MS
         connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/atom+xml, application/xml;q=0.9")
-        connection.setRequestProperty("User-Agent", USER_AGENT)
+        connection.setRequestProperty("User-Agent", LauncherUserAgent.value)
         try {
             val code = connection.responseCode
             if (code != HttpURLConnection.HTTP_OK) {

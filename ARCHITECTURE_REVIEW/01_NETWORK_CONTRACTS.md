@@ -46,7 +46,7 @@ for `sylvan.apple.com`; every other host uses the system trust store.
 
 ## 3. Confirmed gaps
 
-### G1. Redirects are trusted by half of the clients — P1
+### G1. Redirects are trusted by half of the clients — P1 — RESOLVED 0.5.61–0.5.64
 
 `CitySearch`, `Weather`, `OnlineClient`, `OnlineInfoOverlay`, `SaverPreviewImage` and
 `TopShelfRail` use the platform default (`instanceFollowRedirects = true`).
@@ -66,31 +66,33 @@ compile-time asset endpoint; cap at 3–5; require `https`; require the same hos
 explicit suffix allowlist. Weather/geocoding fixed endpoints can keep automatic
 redirects only if the final `connection.url` is checked.
 
-### G2. User-Agent version drift — P2
+### G2. User-Agent version drift — P2 — RESOLVED 0.5.65
 
-Current values:
+Former values:
 - `OVisionTV/0.5.7 (Android TV launcher)` — Reddit feed and Reddit images;
 - `OVisionTVLauncher/6.2 (Android TV launcher)` — Weather;
 - `OVisionTV (Android TV)` — online chart, online images, shelf images;
 - `OVisionTV/<BuildConfig.VERSION_NAME> (Android TV update check)` — updates.
 
-The stale `0.5.7` is harmless for compatibility but wrong for diagnostics. A single
-`LauncherUserAgent` value built from `BuildConfig.VERSION_NAME` is the target, but it
-must be introduced after the redirect contract, not before.
+All HTTP clients, the ExoPlayer data source and the updater now use
+`LauncherUserAgent.value = "OVisionTV/<BuildConfig.VERSION_NAME> (Android TV launcher)"`.
+No client keeps its own version string. `LauncherUserAgentTest` fails if the value
+drifts from the installed `VERSION_NAME` or carries the old `0.5.7`.
 
-### G3. Missing early `Content-Length` rejection — P3
+### G3. Missing early `Content-Length` rejection — P3 — PARTIAL
 
 `CitySearch`, `Weather.get`, `Weather.reverseGeocode`, `OnlineClient` (both) and the
-three image loaders do not reject a declared oversized body before opening the stream.
+three image loaders now reject a declared oversized body before opening the stream.
+Reddit feed/image and the remaining updater paths still rely on the streaming cap.
 They still stop at the streaming cap, so this is not a memory hole; it only wastes a
 connection and some bytes. Safe to add without changing a successful request.
 
-### G4. Blocking reads are not coroutine-aware in three image loaders — P2
+### G4. Blocking reads are not coroutine-aware in three image loaders — P2 — PARTIAL
 
-`OnlineInfoOverlay`, `SaverPreviewImage` and `TopShelfRail` perform a blocking
-`HttpURLConnection` read inside `Dispatchers.IO` without `ensureActive()` in the loop.
-Cancellation is bounded by the 8–10 s read timeout, not immediate. Reddit images have
-the same shape. Do not add a shared helper before deciding whether these loaders
+`TopShelfRail` now checks `ensureActive()` in the read loop. `OnlineInfoOverlay`,
+`SaverPreviewImage` and `RedditImageStore` still perform a blocking
+`HttpURLConnection` read inside `Dispatchers.IO` without a per-chunk `ensureActive()`.
+Cancellation is bounded by the 8–12 s read timeout, not immediate. Do not add a shared helper before deciding whether these loaders
 should close the stream on cancellation.
 
 ### G5. Duplicated body-copy and redirect code — P3
