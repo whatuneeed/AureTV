@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Weather следует редиректам без проверки хоста | 0.5.62 (manual redirect + 7-host allowlist) |
 | CitySearch следует редиректам без проверки хоста | 0.5.61 (manual redirect + host check) |
 | Notes/rows/formatting Update лежат в SoftwareUpdateScreen | 0.5.60 (SoftwareUpdateParts.kt) |
 | Фото/Reddit/Clock faces лежат в AmbientScreen | 0.5.59 (AmbientFaces.kt) |
@@ -309,6 +310,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.62: Stage 4.2 — Weather redirect contract
+
+- **Симптом.** `Weather.get` и Nominatim-фолбэк шли по автоматическим редиректам; семь провайдеров были захардкожены, но конечный хост не проверялся.
+- **Что сделано.**
+  - `instanceFollowRedirects = false`, максимум 3 хопа, каждый хоп проверяется `Weather.urlIsTrusted`.
+  - Allowlist: `api.open-meteo.com`, `api.met.no`, `wttr.in`, `ipapi.co`, `ipwho.is`, `get.geojs.io`, `nominatim.openstreetmap.org`; только `https` и порт `-1`/`443`.
+  - Общий deadline `get` сохранён на цепочку; добавлен ранний `contentLengthLong` reject для forecast и geo.
+- **Файлы.** `data/Weather.kt`, `test/.../WeatherTest.kt`.
+- **Чего не делать.** Не добавлять «запасные» хосты без реального источника: каждый новый хост — это новый получатель IP/UA. Не сбрасывать deadline на редиректе.
+- **Проверка.** `WeatherTest` — **13/13**, `WeatherRequestTest` — **4/4**. Unit — **554/554**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.62 / vc135; **6 618 107 B**, SHA-256 **`f42ff4ec7d95f10e4239b4c1836a79efac75b6d56f15c891e8b8a9c2af92147f`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.61: Stage 4.2 — CitySearch redirect contract
 

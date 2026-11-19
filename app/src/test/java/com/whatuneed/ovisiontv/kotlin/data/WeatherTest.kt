@@ -316,6 +316,24 @@ class WeatherTest {
         )
     }
 
+    @Test
+    fun weatherRedirectsMayOnlyReachTheFixedHttpsProviders() {
+        assertTrue(Weather.urlIsTrusted("https://api.open-meteo.com/v1/forecast?latitude=55"))
+        assertTrue(Weather.urlIsTrusted("https://api.met.no/weatherapi/locationforecast/2.0/compact"))
+        assertTrue(Weather.urlIsTrusted("https://wttr.in/55.75,37.61?format=j1"))
+        assertTrue(Weather.urlIsTrusted("https://ipapi.co/json/"))
+        assertTrue(Weather.urlIsTrusted("https://ipwho.is/"))
+        assertTrue(Weather.urlIsTrusted("https://get.geojs.io/v1/ip/geo.json"))
+        assertTrue(Weather.urlIsTrusted("https://nominatim.openstreetmap.org/reverse?lat=55"))
+        assertTrue(Weather.urlIsTrusted("https://api.open-meteo.com:443/v1/forecast"))
+
+        assertFalse(Weather.urlIsTrusted("http://api.open-meteo.com/v1/forecast"))
+        assertFalse(Weather.urlIsTrusted("https://api.open-meteo.com.evil.test/v1/forecast"))
+        assertFalse(Weather.urlIsTrusted("https://evil.test/json"))
+        assertFalse(Weather.urlIsTrusted("https://api.open-meteo.com:444/v1/forecast"))
+        assertFalse(Weather.urlIsTrusted("not a url"))
+    }
+
     private fun utc(value: String): Long =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
             .apply { timeZone = TimeZone.getTimeZone("UTC") }

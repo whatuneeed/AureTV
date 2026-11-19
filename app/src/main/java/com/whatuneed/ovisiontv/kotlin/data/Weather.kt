@@ -12,6 +12,7 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -62,6 +63,7 @@ object Weather {
     private const val READ_MS = 10_000
     private const val MAX_BYTES = 2 * 1024 * 1024
     private const val MAX_GEO_BYTES = 512 * 1024
+    private const val MAX_REDIRECTS = 3
 
     private val busy = AtomicBoolean(false)
     private val pending = AtomicBoolean(false)
@@ -710,17 +712,32 @@ object Weather {
     }
 
     /** Nominatim fallback with a bounded body and cancellation checks. */
-    private suspend fun reverseGeocode(lat: Double, lon: Double, language: String): String? {
-        currentCoroutineContext().ensureActive()
-        val connection = URL(
+    private suspend fun reverseGeocode(lat: Double, lon: Double, language: String): String? =
+        reverseGeocodeUrl(
             "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=$language" +
                 "&lat=$lat&lon=$lon",
-        ).openConnection() as HttpURLConnection
+            redirects = 0,
+        )
+
+    private suspend fun reverseGeocodeUrl(url: String, redirects: Int): String? {
+        currentCoroutineContext().ensureActive()
+        if (!urlIsTrusted(url)) return null
+        val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = 5_000
         connection.readTimeout = 5_000
+        connection.instanceFollowRedirects = false
         connection.setRequestProperty("User-Agent", UA)
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (redirects >= MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
+                    ?: return null
+                return reverseGeocodeUrl(next, redirects + 1)
+            }
+            if (code != HttpURLConnection.HTTP_OK) return null
+            if (connection.contentLengthLong > MAX_GEO_BYTES) return null
             val out = ByteArrayOutputStream()
             connection.inputStream.use { input ->
                 val buffer = ByteArray(8 * 1024)
@@ -755,19 +772,31 @@ object Weather {
 
     // ---------------------------------------------------------------- http
 
-    internal suspend fun get(url: String): String {
+    internal suspend fun get(url: String): String =
+        getOnce(url, redirects = 0, deadline = System.nanoTime() + READ_MS * 1_000_000L)
+
+    private suspend fun getOnce(url: String, redirects: Int, deadline: Long): String {
         currentCoroutineContext().ensureActive()
+        if (!urlIsTrusted(url)) error("Untrusted weather URL")
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_MS
         connection.readTimeout = READ_MS
+        connection.instanceFollowRedirects = false
         connection.setRequestProperty("User-Agent", UA)
         connection.setRequestProperty("Accept", "application/json")
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                error("HTTP ${connection.responseCode}")
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (redirects >= MAX_REDIRECTS) error("Too many weather redirects")
+                val location = connection.getHeaderField("Location")
+                    ?: error("Weather redirect without Location")
+                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
+                    ?: error("Bad weather redirect")
+                return getOnce(next, redirects + 1, deadline)
             }
+            if (code != HttpURLConnection.HTTP_OK) error("HTTP $code")
+            if (connection.contentLengthLong > MAX_BYTES) error("Response too large")
             val out = ByteArrayOutputStream()
-            val deadline = System.nanoTime() + READ_MS * 1_000_000L
             connection.inputStream.use { input: InputStream ->
                 val buffer = ByteArray(8 * 1024)
                 while (true) {
@@ -784,4 +813,22 @@ object Weather {
             connection.disconnect()
         }
     }
+
+    /** Weather requests may only go to the fixed HTTPS providers. */
+    internal fun urlIsTrusted(raw: String): Boolean {
+        val uri = runCatching { URI(raw) }.getOrNull() ?: return false
+        if (uri.scheme?.equals("https", ignoreCase = true) != true) return false
+        if (uri.port != -1 && uri.port != 443) return false
+        return uri.host?.lowercase() in TRUSTED_HOSTS
+    }
+
+    private val TRUSTED_HOSTS = setOf(
+        "api.open-meteo.com",
+        "api.met.no",
+        "wttr.in",
+        "ipapi.co",
+        "ipwho.is",
+        "get.geojs.io",
+        "nominatim.openstreetmap.org",
+    )
 }
