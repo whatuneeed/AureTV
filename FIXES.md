@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Карточки и кнопки строк Setup лежат в SetupScreen | 0.5.51 (SetupControls.kt) |
 | WeatherCitySearch (~300 строк) лежит в SetupScreen | 0.5.50 (WeatherCitySearch.kt) |
 | Шесть страниц Setup лежат в SetupScreen | 0.5.49 (SetupPages) |
 | Mode-блоки главного Saver (Photos/Reddit/Aerial/Clock) лежат в SettingsScreen | 0.5.48 (SettingsSaverMainSections) |
@@ -298,6 +299,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.51: Stage 2.10 — контролы Setup
+
+- **Симптом.** После 0.5.50 `SetupScreen.kt` оставался 1 276 строк; карточка строки, переключатель, радиометка и кнопка занимали ~265 строк.
+- **Что сделано.**
+  - `SetupControls.kt` — `SetupRowCard`, `SwitchMark`, `SelectMark`, `SetupButton` и `SETUP_ROW_*`/`BUTTON_*` константы.
+  - Геометрия списка namespaced `SETUP_ROW_*`, потому что `SettingsScreen` уже объявляет `ROW_GAP`/`ROW_RADIUS` в том же пакете.
+  - `SetupScreen.kt` уменьшился до **977 строк** после удаления 15 импортов.
+- **Файлы.** `ui/SetupScreen.kt`, `ui/SetupControls.kt`.
+- **Чего не делать.** Не публиковать `ROW_*` без префикса — конфликт с `SettingsScreen`; не переносить `LIST_WIDTH`/`ROW_GAP` экрана в контролы, они нужны обоим.
+- **Проверка.** `SetupScreenTest` — **27/27** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.51 / vc124; **6 618 103 B**, SHA-256 **`30bb63ce610d4c4af2f3ec0eb13d225e0fed1963bf52829a21361529c2f20cbb`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.50: Stage 2.9 — WeatherCitySearch
 
