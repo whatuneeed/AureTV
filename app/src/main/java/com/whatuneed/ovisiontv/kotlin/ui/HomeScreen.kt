@@ -81,7 +81,6 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
-import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySnapshot
 import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.providerTargetForOnline
 import com.whatuneed.ovisiontv.kotlin.online.onlinePreviewUri
@@ -187,51 +186,11 @@ fun HomeScreen(
     val previewAutoplay = remember(prefsName, resumeTick) {
         discovery.previewAutoplay()
     }
-    var discoverySnapshot by remember { mutableStateOf(DiscoverySnapshot.EMPTY) }
-    // The dock app's own rail is the tvOS default; every other rail is one Up
-    // away. The selected rail is a string so rememberSaveable survives a
-    // process restore without an enum serializer.
-    var discoverySection by rememberSaveable { mutableStateOf<String?>(null) }
-    var sectionFocused by remember { mutableStateOf(false) }
-    var discoveryRevision by remember { mutableIntStateOf(0) }
-    var shelfMenu by remember { mutableStateOf<DiscoveryItem?>(null) }
-    var playingTrailer by remember { mutableStateOf<PlayingTrailer?>(null) }
-    var onlineInfo by remember { mutableStateOf<DiscoveryItem?>(null) }
-    var onlineInfoTarget by remember { mutableStateOf<DiscoveryItem?>(null) }
-    val sectionCardMemory = remember { mutableStateMapOf<String, Int>() }
-    var lastShelfPackage by remember { mutableStateOf<String?>(null) }
-    val rails = discoverySnapshot.rails
-    val currentSection = rails.firstOrNull { it.section.name == discoverySection }?.section
-        ?: defaultDiscoverySection(rails)
-    val currentRail = rails.firstOrNull { it.section == currentSection }
-    val shelfCards = currentRail?.items.orEmpty()
-    var shelfFocus by remember { mutableIntStateOf(-1) }
-    // A resume, a closed menu or a closed search removes the node that held
-    // Android focus. TopShelf owns the card targets, so it gets a tick.
-    var shelfFocusTick by remember { mutableIntStateOf(0) }
-    // Which recommendation fills the screen; focusedCard says whether the
-    // rail owns the remote. They move together while the shelf has focus.
-    var shelfSelected by remember { mutableIntStateOf(0) }
-
-    fun selectDiscoverySection(section: DiscoverySection) {
-        val previous = currentSection
-        if (previous != null) sectionCardMemory[previous.name] = shelfSelected
-        discoverySection = section.name
-        val rail = rails.firstOrNull { it.section == section } ?: return
-        shelfSelected = (sectionCardMemory[section.name] ?: 0)
-            .coerceIn(0, rail.items.lastIndex.coerceAtLeast(0))
-        if (shelfFocus >= 0) shelfFocus = shelfSelected
-    }
-
-    fun enterShelf() {
-        if (rails.isEmpty()) return
-        val target = currentSection ?: defaultDiscoverySection(rails) ?: return
-        discoverySection = target.name
-        sectionFocused = false
-        val rail = rails.firstOrNull { it.section == target } ?: return
-        shelfSelected = shelfSelected.coerceIn(0, rail.items.lastIndex.coerceAtLeast(0))
-        shelfFocus = shelfSelected
-    }
+    val discoverySection = rememberSaveable { mutableStateOf<String?>(null) }
+    val shelf = remember { HomeShelfState(discoverySection) }
+    val rails = shelf.rails
+    val currentSection = shelf.currentSection
+    val shelfCards = shelf.shelfCards
     var pickupActive by remember { mutableStateOf(false) }
     var pickupOrigin by remember { mutableStateOf<Int?>(null) }
     // Order before the drag: BACK during a pickup puts every tile back, since
@@ -343,8 +302,8 @@ fun HomeScreen(
     // The pill keeps the carousel engaged while it is focused from above, so
     // opening the Control Center does not slide the whole grid up behind it.
     val shelfHeld = (
-        shelfFocus >= 0 ||
-            sectionFocused ||
+        shelf.focus >= 0 ||
+            shelf.sectionFocused ||
             (capsuleFocused && capsuleFromShelf) ||
             (weatherFocused && weatherFromShelf)
         ) && !libraryMode
@@ -419,7 +378,7 @@ fun HomeScreen(
         resumeTick,
         items,
         kidsMode,
-        discoveryRevision,
+        shelf.revision,
     ) {
         val hiddenPackages = items
             .filterIsInstance<HomeItem.FolderItem>()
@@ -429,54 +388,54 @@ fun HomeScreen(
         val apps = homeApps(items).filterNot { it.packageName in hiddenPackages }
         // A refresh must keep the card, not the index: a provider row can move
         // when another app publishes something newer.
-        val selectedId = shelfCards.getOrNull(shelfSelected)?.id
+        val selectedId = shelfCards.getOrNull(shelf.selected)?.id
         val snapshot = discovery.refresh(
             currentPackage = shelfApp?.packageName,
             apps = apps,
             visiblePackages = apps.mapTo(HashSet()) { it.packageName },
             kidsMode = kidsMode,
         )
-        discoverySnapshot = snapshot
-        val previous = lastShelfPackage
-        lastShelfPackage = shelfApp?.packageName
+        shelf.snapshot = snapshot
+        val previous = shelf.lastShelfPackage
+        shelf.lastShelfPackage = shelfApp?.packageName
         val appRail = snapshot.rails.firstOrNull { it.section == DiscoverySection.FROM_APP }
         val wanted = when {
-            appRail != null && (previous != shelfApp?.packageName || discoverySection == null) ->
+            appRail != null && (previous != shelfApp?.packageName || shelf.sectionName.value == null) ->
                 DiscoverySection.FROM_APP
-            else -> snapshot.rails.firstOrNull { it.section.name == discoverySection }?.section
+            else -> snapshot.rails.firstOrNull { it.section.name == shelf.sectionName.value }?.section
                 ?: defaultDiscoverySection(snapshot.rails)
         }
         if (wanted == null) {
-            discoverySection = null
-            shelfSelected = 0
-            shelfFocus = -1
-            sectionFocused = false
+            shelf.sectionName.value = null
+            shelf.selected = 0
+            shelf.focus = -1
+            shelf.sectionFocused = false
             return@LaunchedEffect
         }
-        discoverySection = wanted.name
+        shelf.sectionName.value = wanted.name
         val rail = snapshot.rails.firstOrNull { it.section == wanted }
         val last = rail?.items?.lastIndex?.coerceAtLeast(0) ?: 0
         if (previous != shelfApp?.packageName) {
-            shelfSelected = 0
-            if (shelfFocus >= 0) shelfFocus = 0
-            sectionCardMemory.clear()
+            shelf.selected = 0
+            if (shelf.focus >= 0) shelf.focus = 0
+            shelf.sectionCardMemory.clear()
         } else {
             val restored = rail?.items?.indexOfFirst { it.id == selectedId } ?: -1
-            shelfSelected = if (restored >= 0) {
+            shelf.selected = if (restored >= 0) {
                 restored
             } else {
-                shelfSelected.coerceIn(0, last)
+                shelf.selected.coerceIn(0, last)
             }
-            if (shelfFocus >= 0) shelfFocus = shelfSelected
+            if (shelf.focus >= 0) shelf.focus = shelf.selected
         }
     }
 
     // Remember only the hero the viewer actually saw. Marking a whole rail
     // would demote cards that never entered the viewport.
-    LaunchedEffect(currentSection, shelfCards, shelfSelected, discoveryRevision) {
+    LaunchedEffect(currentSection, shelfCards, shelf.selected, shelf.revision) {
         val section = currentSection ?: return@LaunchedEffect
         delay(SHOWN_SETTLE_MS)
-        shelfCards.getOrNull(shelfSelected)?.let { discovery.markShown(section, it) }
+        shelfCards.getOrNull(shelf.selected)?.let { discovery.markShown(section, it) }
     }
 
     LaunchedEffect(
@@ -492,32 +451,32 @@ fun HomeScreen(
         searchOpen,
         controlCenterOpen,
         weatherPanelOpen,
-        playingTrailer,
-        onlineInfo,
+        shelf.playingTrailer,
+        shelf.onlineInfo,
     ) {
         if (editing || openFolder != null || launching != null ||
             menuFolderId != null || folderDeleteId != null || menuApp != null ||
             moveToFolderApp != null || newFolderApp != null || renameApp != null || searchOpen ||
-            controlCenterOpen || weatherPanelOpen || playingTrailer != null ||
-            onlineInfo != null
+            controlCenterOpen || weatherPanelOpen || shelf.playingTrailer != null ||
+            shelf.onlineInfo != null
         ) {
-            shelfFocus = -1
-            sectionFocused = false
+            shelf.focus = -1
+            shelf.sectionFocused = false
         }
     }
 
     // The Java hero advanced every 8 s and restarted that clock on any click;
-    // stepping the carousel changes shelfSelected, which restarts this timer.
+    // stepping the carousel changes shelf.selected, which restarts this timer.
     // The pill and the panel stop it: a page turn under the focused status row
     // would change what Down returns to.
     LaunchedEffect(
         shelfApp?.packageName,
         currentSection,
         shelfCards,
-        shelfSelected,
-        shelfFocus,
-        sectionFocused,
-        shelfMenu,
+        shelf.selected,
+        shelf.focus,
+        shelf.sectionFocused,
+        shelf.menu,
         libraryMode,
         editing,
         openFolder,
@@ -532,21 +491,21 @@ fun HomeScreen(
         capsuleFocused,
         weatherFocused,
         weatherPanelOpen,
-        playingTrailer,
-        onlineInfo,
+        shelf.playingTrailer,
+        shelf.onlineInfo,
     ) {
-        if (shelfCards.size <= 1 || sectionFocused || shelfFocus >= 0 ||
-            shelfMenu != null || libraryMode || editing || openFolder != null ||
+        if (shelfCards.size <= 1 || shelf.sectionFocused || shelf.focus >= 0 ||
+            shelf.menu != null || libraryMode || editing || openFolder != null ||
             launching != null || menuFolderId != null || folderDeleteId != null ||
             menuApp != null || moveToFolderApp != null || newFolderApp != null ||
             renameApp != null || searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
-            weatherPanelOpen || playingTrailer != null || onlineInfo != null
+            weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
         ) {
             return@LaunchedEffect
         }
         delay(SHELF_ADVANCE_MS)
-        shelfSelected = (shelfSelected + 1) % shelfCards.size
-        if (shelfFocus >= 0) shelfFocus = shelfSelected
+        shelf.selected = (shelf.selected + 1) % shelfCards.size
+        if (shelf.focus >= 0) shelf.focus = shelf.selected
     }
 
     LaunchedEffect(focusIndex) {
@@ -828,10 +787,10 @@ fun HomeScreen(
     // A provider deep link is opened only when it resolves back to the app that
     // published it; otherwise the app itself opens, never a foreign package.
     fun closeShelfMenu() {
-        shelfMenu = null
+        shelf.menu = null
         menuOpenedByHold = false
-        shelfFocus = shelfSelected
-        shelfFocusTick++
+        shelf.focus = shelf.selected
+        shelf.focusTick++
     }
 
     fun openShelfContent(card: DiscoveryItem) {
@@ -872,10 +831,10 @@ fun HomeScreen(
             // If the same film exists in an installed app's Watch Next, the
             // online card can do more than describe it: trailer → OK → open
             // that app. Without a target it stays an honest information card.
-            val target = providerTargetForOnline(card, discoverySnapshot.rails)
+            val target = providerTargetForOnline(card, shelf.snapshot.rails)
             val trailerUrl = card.trailerUri
             if (target != null && !trailerUrl.isNullOrBlank()) {
-                playingTrailer = PlayingTrailer(
+                shelf.playingTrailer = PlayingTrailer(
                     title = card.title,
                     url = trailerUrl,
                     target = target,
@@ -883,8 +842,8 @@ fun HomeScreen(
                     synopsis = card.synopsis,
                 )
             } else {
-                onlineInfo = card
-                onlineInfoTarget = target
+                shelf.onlineInfo = card
+                shelf.onlineInfoTarget = target
             }
             return
         }
@@ -894,7 +853,7 @@ fun HomeScreen(
         }
         val trailerUrl = card.trailerUri
         if (!trailerUrl.isNullOrBlank()) {
-            playingTrailer = PlayingTrailer(
+            shelf.playingTrailer = PlayingTrailer(
                 title = card.title,
                 url = trailerUrl,
                 target = card,
@@ -1111,11 +1070,11 @@ fun HomeScreen(
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
         openFolder == null && launching == null && !menuOpen && renameApp == null &&
-        !searchOpen && !controlCenterOpen && !weatherPanelOpen && shelfFocus < 0 &&
-        !sectionFocused
+        !searchOpen && !controlCenterOpen && !weatherPanelOpen && shelf.focus < 0 &&
+        !shelf.sectionFocused
     val gridModal = openFolder != null || launching != null || menuOpen ||
         newFolderApp != null || renameApp != null || searchOpen || controlCenterOpen ||
-        weatherPanelOpen || playingTrailer != null || onlineInfo != null
+        weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
     // Layout gate instead of a blind delay: once the grid is placed every tile's
     // FocusRequester is attached, so the cursor can move on the first frame.
     var gridPlaced by remember { mutableStateOf(false) }
@@ -1130,13 +1089,13 @@ fun HomeScreen(
         editing,
         pickupActive,
         gridPlaced,
-        shelfFocus,
-        sectionFocused,
+        shelf.focus,
+        shelf.sectionFocused,
     ) {
         if (gridModal || !gridPlaced) return@LaunchedEffect
         // TopShelf owns the real target while the carousel or its section bar
         // has the cursor; the grid must not pull focus back underneath it.
-        if (shelfFocus >= 0 || sectionFocused) return@LaunchedEffect
+        if (shelf.focus >= 0 || shelf.sectionFocused) return@LaunchedEffect
         // The pill sits outside the grid; while it owns the cursor the grid must
         // not take the focus back (the panel requests its own tile).
         if (capsuleFocused) {
@@ -1212,7 +1171,7 @@ fun HomeScreen(
                 // focused tile already consumed its own keys.
                 if (controlCenterOpen) return@onKeyEvent true
                 // A shelf card menu is its own focus surface.
-                if (shelfMenu != null) return@onKeyEvent true
+                if (shelf.menu != null) return@onKeyEvent true
                 // The forecast panel has its own focus and Back handler.
                 if (weatherPanelOpen) return@onKeyEvent true
                 // A context menu owns the remote. A hold that opened it keeps
@@ -1247,7 +1206,7 @@ fun HomeScreen(
                                     weatherFocused = false
                                     weatherFromShelf = false
                                     if (fromShelf && shelfCards.isNotEmpty() && !editing) {
-                                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                                        shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                                     }
                                     true
                                 }
@@ -1279,7 +1238,7 @@ fun HomeScreen(
                                     capsuleFocused = false
                                     capsuleFromShelf = false
                                     if (fromShelf && shelfCards.isNotEmpty() && !editing) {
-                                        shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                                        shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                                     }
                                     true
                                 }
@@ -1315,13 +1274,13 @@ fun HomeScreen(
                         }
                         // The section bar sits above the rail: Left/Right
                         // switch the rail, Down/Back return to the cards.
-                        if (sectionFocused && rails.size > 1 && !editing) {
+                        if (shelf.sectionFocused && rails.size > 1 && !editing) {
                             val index = rails.indexOfFirst { it.section == currentSection }
                             val handled = when (event.key) {
                                 Key.DirectionLeft -> {
                                     if (rails.isNotEmpty()) {
                                         val next = (index - 1 + rails.size) % rails.size
-                                        selectDiscoverySection(rails[next].section)
+                                        shelf.selectSection(rails[next].section)
                                     }
                                     true
                                 }
@@ -1329,7 +1288,7 @@ fun HomeScreen(
                                 Key.DirectionRight -> {
                                     if (rails.isNotEmpty()) {
                                         val next = (index + 1) % rails.size
-                                        selectDiscoverySection(rails[next].section)
+                                        shelf.selectSection(rails[next].section)
                                     }
                                     true
                                 }
@@ -1337,8 +1296,8 @@ fun HomeScreen(
                                 Key.DirectionDown, Key.Back,
                                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
                                 -> {
-                                    sectionFocused = false
-                                    shelfFocus = shelfSelected.coerceIn(
+                                    shelf.sectionFocused = false
+                                    shelf.focus = shelf.selected.coerceIn(
                                         0,
                                         shelfCards.lastIndex.coerceAtLeast(0),
                                     )
@@ -1346,7 +1305,7 @@ fun HomeScreen(
                                 }
 
                                 Key.DirectionUp -> {
-                                    sectionFocused = false
+                                    shelf.sectionFocused = false
                                     focusCapsule(fromShelf = true)
                                     true
                                 }
@@ -1363,37 +1322,37 @@ fun HomeScreen(
                         }
                         // The rail owns the remote while a card is focused so
                         // the grid cursor underneath cannot move.
-                        if (shelfFocus >= 0 && shelfCards.isNotEmpty() && !editing) {
-                            val held = shelfCards.getOrNull(shelfFocus)
+                        if (shelf.focus >= 0 && shelfCards.isNotEmpty() && !editing) {
+                            val held = shelfCards.getOrNull(shelf.focus)
                             val handled = when (event.key) {
                                 Key.DirectionLeft -> {
-                                    if (shelfFocus > 0) {
-                                        shelfFocus--
-                                        shelfSelected = shelfFocus
+                                    if (shelf.focus > 0) {
+                                        shelf.focus--
+                                        shelf.selected = shelf.focus
                                     }
                                     true
                                 }
 
                                 Key.DirectionRight -> {
-                                    if (shelfFocus < shelfCards.lastIndex) {
-                                        shelfFocus++
-                                        shelfSelected = shelfFocus
+                                    if (shelf.focus < shelfCards.lastIndex) {
+                                        shelf.focus++
+                                        shelf.selected = shelf.focus
                                     }
                                     true
                                 }
 
                                 Key.DirectionDown, Key.Back -> {
-                                    shelfFocus = -1
-                                    sectionFocused = false
+                                    shelf.focus = -1
+                                    shelf.sectionFocused = false
                                     true
                                 }
 
                                 Key.DirectionUp -> {
                                     // Up reaches the section bar when there is
                                     // one; otherwise it is the status pill.
-                                    shelfFocus = -1
+                                    shelf.focus = -1
                                     if (rails.size > 1) {
-                                        sectionFocused = true
+                                        shelf.sectionFocused = true
                                     } else {
                                         focusCapsule(fromShelf = true)
                                     }
@@ -1412,7 +1371,7 @@ fun HomeScreen(
                                         longPressHandled = true
                                         okDown = false
                                         menuOpenedByHold = true
-                                        shelfMenu = held
+                                        shelf.menu = held
                                     }
                                     true
                                 }
@@ -1423,7 +1382,7 @@ fun HomeScreen(
                                     okDown = false
                                     longPressHandled = true
                                     menuOpenedByHold = false
-                                    shelfMenu = held
+                                    shelf.menu = held
                                     true
                                 }
 
@@ -1447,7 +1406,7 @@ fun HomeScreen(
                             Key.DirectionUp -> {
                                 if (focusIndex < columns && !editing && !pickupActive) {
                                     if (rails.isNotEmpty()) {
-                                        enterShelf()
+                                        shelf.enterShelf()
                                     } else {
                                         // No recommendations: the row above the
                                         // dock is the status pill (Java focusTop).
@@ -1614,11 +1573,11 @@ fun HomeScreen(
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                             holdJob?.cancel()
                             holdJob = null
-                            if (!editing && shelfFocus >= 0 && okDown && !longPressHandled) {
-                                shelfCards.getOrNull(shelfFocus)?.let(::activateShelfCard)
+                            if (!editing && shelf.focus >= 0 && okDown && !longPressHandled) {
+                                shelfCards.getOrNull(shelf.focus)?.let(::activateShelfCard)
                             } else if (editing && pickupActive) {
                                 if (okDown && !longPressHandled) dropPickup()
-                            } else if (!editing && okDown && !longPressHandled && shelfFocus < 0) {
+                            } else if (!editing && okDown && !longPressHandled && shelf.focus < 0) {
                                 when (val item = items.getOrNull(focusIndex)) {
                                     is HomeItem.AppItem -> startLaunch(item.app, cellCenter(focusIndex))
                                     is HomeItem.FolderItem -> openFolderAt(focusIndex)
@@ -1649,8 +1608,8 @@ fun HomeScreen(
                 .then(
                     if (openFolder != null || launching != null || menuOpen ||
                         newFolderApp != null || renameApp != null || searchOpen ||
-                        controlCenterOpen || weatherPanelOpen || shelfMenu != null ||
-                        playingTrailer != null || onlineInfo != null
+                        controlCenterOpen || weatherPanelOpen || shelf.menu != null ||
+                        shelf.playingTrailer != null || shelf.onlineInfo != null
                     ) {
                         Modifier.clearAndSetSemantics {}
                     } else {
@@ -1677,13 +1636,13 @@ fun HomeScreen(
                         app = shelfApp,
                         rails = rails,
                         selectedSection = currentSection,
-                        selectedCard = shelfSelected,
-                        focusedCard = shelfFocus,
-                        sectionFocused = sectionFocused,
+                        selectedCard = shelf.selected,
+                        focusedCard = shelf.focus,
+                        sectionFocused = shelf.sectionFocused,
                         onCardActivate = ::activateShelfCard,
-                        onSectionActivate = ::selectDiscoverySection,
+                        onSectionActivate = shelf::selectSection,
                         scale = scale,
-                        providerState = discoverySnapshot.providerState,
+                        providerState = shelf.snapshot.providerState,
                         reduceMotion = reduceMotion,
                         // The online card's official preview becomes the
                         // motion hero. It is not tied to the shelf cursor:
@@ -1691,21 +1650,21 @@ fun HomeScreen(
                         // selected title. Every modal and Kids Mode removes
                         // the URL so no video plays underneath a panel.
                         heroPreviewUri = onlinePreviewUri(
-                            item = shelfCards.getOrNull(shelfSelected),
+                            item = shelfCards.getOrNull(shelf.selected),
                             enabled = previewAutoplay && !kidsMode && !reduceMotion &&
                                 !libraryMode && !editing && !pickupActive &&
                                 !saverVisible && openFolder == null && launching == null &&
                                 !menuOpen && newFolderApp == null && renameApp == null &&
                                 !searchOpen && !controlCenterOpen && !weatherPanelOpen &&
-                                shelfMenu == null &&
-                                playingTrailer == null && onlineInfo == null,
+                                shelf.menu == null &&
+                                shelf.playingTrailer == null && shelf.onlineInfo == null,
                         ),
                         // The weather pill owns the top-left corner. On the
                         // browsing Home the title moves below it instead of
                         // printing through the forecast; inside the shelf the
                         // pill is hidden and the tvOS title position returns.
                         headingTop = if (weatherVisible) 150f else 57f,
-                        focusTick = focusTick + shelfFocusTick,
+                        focusTick = focusTick + shelf.focusTick,
                     )
                 }
             }
@@ -1717,7 +1676,7 @@ fun HomeScreen(
                 reduceMotion = reduceMotion,
                 scroll = scroll,
                 shift = { libraryShift.value - shelfHide },
-                focused = focusIndex < columns && shelfFocus < 0 && !capsuleFocused &&
+                focused = focusIndex < columns && shelf.focus < 0 && !capsuleFocused &&
                     !weatherFocused,
                 fade = { libraryFade.value },
             )
@@ -1732,7 +1691,7 @@ fun HomeScreen(
                 libraryVisible = libraryVisible,
                 libraryFade = libraryFade,
                 focusIndex = focusIndex,
-                shelfFocus = shelfFocus,
+                shelfFocus = shelf.focus,
                 capsuleFocused = capsuleFocused,
                 weatherFocused = weatherFocused,
                 pickupActive = pickupActive,
@@ -1870,7 +1829,7 @@ fun HomeScreen(
             }
         }
 
-        shelfMenu?.let { item ->
+        shelf.menu?.let { item ->
             val favorite = discovery.isFavorite(item.id)
             ShelfContextMenu(
                 item = item,
@@ -1891,12 +1850,12 @@ fun HomeScreen(
                         )
                     }
                     closeShelfMenu()
-                    discoveryRevision++
+                    shelf.revision++
                 },
                 onHide = {
                     discovery.hide(item)
                     closeShelfMenu()
-                    discoveryRevision++
+                    shelf.revision++
                 },
                 onDismiss = ::closeShelfMenu,
             )
@@ -1955,7 +1914,7 @@ fun HomeScreen(
                 reduceMotion = reduceMotion,
                 onClose = {
                     searchOpen = false
-                    if (shelfFocus >= 0) shelfFocusTick++
+                    if (shelf.focus >= 0) shelf.focusTick++
                 },
                 // A failed start shows its own toast; the panel stays so the
                 // query and the chosen app are not lost.
@@ -2042,39 +2001,39 @@ fun HomeScreen(
         )
 
         HomeContentModals(
-            playingTrailer = playingTrailer,
-            onlineInfo = onlineInfo,
-            onlineInfoTarget = onlineInfoTarget,
+            playingTrailer = shelf.playingTrailer,
+            onlineInfo = shelf.onlineInfo,
+            onlineInfoTarget = shelf.onlineInfoTarget,
             launching = launching,
             launchProgress = launchProgress,
             scale = scale,
             onOpenTrailerTarget = { target ->
-                playingTrailer = null
+                shelf.playingTrailer = null
                 openShelfContent(target)
             },
             onDismissTrailer = {
-                playingTrailer = null
+                shelf.playingTrailer = null
                 // Closing the preview returns to the card that opened it,
                 // not to the dock: the modal effect lowered the shelf while
                 // the preview played, so put its cursor back before asking
                 // TopShelf for Android focus again.
                 if (shelfCards.isNotEmpty()) {
-                    shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                    shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                 }
-                shelfFocusTick++
+                shelf.focusTick++
             },
             onOpenOnlineTarget = { provider ->
-                onlineInfo = null
-                onlineInfoTarget = null
+                shelf.onlineInfo = null
+                shelf.onlineInfoTarget = null
                 openShelfContent(provider)
             },
             onDismissOnlineInfo = {
-                onlineInfo = null
-                onlineInfoTarget = null
+                shelf.onlineInfo = null
+                shelf.onlineInfoTarget = null
                 if (shelfCards.isNotEmpty()) {
-                    shelfFocus = shelfSelected.coerceIn(0, shelfCards.lastIndex)
+                    shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                 }
-                shelfFocusTick++
+                shelf.focusTick++
             },
         )
     }

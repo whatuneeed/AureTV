@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Состояние полки и выбранной секции разбросано по HomeScreen и смешано с grid/input | 0.5.27 (HomeShelfState) |
 | Меню папки, приложения, полки и выбора папки лежат внутри главного composable Home | 0.5.26 (Home menus) |
 | `HomeScreen.kt` всё ещё держит сетку, top chrome и модальные окна в одном файле | 0.5.25 (Home layers) |
 | `HomeScreen.kt` разросся до 2 619 строк: док, подписи, модели и запуск лежат в одном файле | 0.5.24 (Home split) |
@@ -274,6 +275,20 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.27: HomeShelfState вместо россыпи shelf-переменных
+
+- **Симптом.** `HomeScreen.kt` держал 17 отдельных `remember`-переменных полки: snapshot, выбранную секцию, фокус карточки, меню, трейлер, онлайн-инфо, память карточек по секциям и счётчик перерисовок. Переключение секций и восстановление карточки были локальными функциями внутри composable.
+- **Что сделано.** Добавлен `HomeShelfState`:
+  - владеет `snapshot`, `sectionFocused`, `revision`, `menu`, `selected`, `focus`, `focusTick`, `sectionCardMemory`, `lastShelfPackage`, `playingTrailer`, `onlineInfo`, `onlineInfoTarget`;
+  - `sectionName` остаётся `rememberSaveable` и передаётся в state holder, поэтому process-restore не изменился;
+  - `selectSection`, `enterShelf` перенесены в класс; HomeScreen использует `shelf.selectSection(...)`/`shelf.enterShelf()`;
+  - `rails`, `currentSection`, `shelfCards` стали вычисляемыми свойствами.
+  `HomeScreen.kt` уменьшился до **2 040 строк**. Состояние сетки, drag и input пока остаются в HomeScreen.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeShelfState.kt`, `app/src/test/.../ui/HomeShelfStateTest.kt`.
+- **Чего не делать.** Не делать `sectionName` обычной переменной класса: она должна оставаться `rememberSaveable`, иначе после смерти процесса полка вернётся на чужую секцию. Не переносить `closeShelfMenu` внутрь класса без доступа к `menuOpenedByHold`; сейчас он остаётся в HomeScreen и вызывает `shelf.menu`/`shelf.focus`/`shelf.focusTick`.
+- **Проверка.** `HomeShelfStateTest` — **4/4** (память карточки по секциям, clamp при короткой полке, `enterShelf`, пустой snapshot). `HomeScreenTest` — **41/41**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.27 / vc100; **6 585 339 B**, SHA-256 **`537de4ec2addb10e0d44df4e78884c69cfd04995a9e918eeb3f2589414beccba`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.26: меню Home вынесены в отдельные компоненты
 
