@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Страница System с Home-button/startup/AirPlay лежит в SettingsScreen | 0.5.43 (SettingsSystemPage) |
 | Device/About/Legal row builders лежат в SettingsScreen | 0.5.42 (SettingsAboutGroupRows) |
 | После серии split'ов остались мёртвые импорты в HomeScreen/SettingsScreen | 0.5.41 (20 imports removed) |
 | Preview/main key-обработчик Home собирается в HomeScreen | 0.5.40 (homeKeyInput) |
@@ -290,6 +291,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.43: Stage 2.2 — страница System
+
+- **Симптом.** После 0.5.42 `SettingsScreen.kt` оставался 4 667 строк; ветка `PAGE_SYSTEM` с Home-button, startup-приложением, AirPlay и accessibility-переходами занимала ~185 строк.
+- **Что сделано.**
+  - `SettingsSystemPage.kt` — `settingsSystemRows`; сохранены все условия `defaultHome`/`homeOverride`/`accessibility`, те же строки и `actionLabel`.
+  - `SettingsScreen` оставил запись prefs: `onSetHomeOverride` вызывает `StartupPreferences.setHomeOverride`; навигация `open(PAGE_STARTUP/PAGE_STARTUP_WHEN)`, `openSystemSettings`, `openAirPlay` остались в экране.
+  - `SettingsScreen.kt` уменьшился до **4 591 строки**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsSystemPage.kt`.
+- **Чего не делать.** Не переносить запись `StartupPreferences` внутрь builder: экран остаётся владельцем persistence. Не менять порядок Home-button перехода: сначала preference, затем системный accessibility-switch.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.43 / vc116; **6 601 723 B**, SHA-256 **`b28c5a72cc323e6c873b7d3bcfcddc054b22b85220698ee26db696d836dad355`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.42: Stage 2.1 — About/Device rows
 

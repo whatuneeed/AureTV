@@ -2557,115 +2557,25 @@ fun SettingsScreen(
             ),
         )
 
-        PAGE_SYSTEM -> {
-            val defaultHome = facts?.defaultHome == true
-            // Two steps, as in Java: the row turns the preference on, and the
-            // next press sends the user to the switch it still needs.
-            val homeAction: (() -> Unit)? = when {
-                defaultHome -> null
-                !homeOverride ->
-                    ({ homeOverride = true; StartupPreferences.setHomeOverride(context, true) })
-                accessibility != AccessibilityStatus.State.CONNECTED ->
-                    ({ AccessibilityStatus.open(context) })
-                else ->
-                    ({ homeOverride = false; StartupPreferences.setHomeOverride(context, false) })
-            }
-            listOfNotNull(
-                SettingsRow(
-                    title = stringResource(R.string.settings_system_home),
-                    value = facts?.let {
-                        stringResource(if (it.defaultHome) R.string.settings_yes else R.string.settings_no)
-                    } ?: stringResource(R.string.settings_loading),
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_system_open),
-                    chevron = true,
-                    action = { openSystemSettings(context) },
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_home_button),
-                    value = stringResource(
-                        when {
-                            defaultHome -> R.string.settings_home_button_not_needed
-                            !homeOverride -> R.string.settings_home_button_off
-                            accessibility == AccessibilityStatus.State.CONNECTED ->
-                                R.string.settings_home_button_on
-                            accessibility == AccessibilityStatus.State.STALE ->
-                                R.string.settings_home_button_stale
-                            else -> R.string.settings_home_button_allow
-                        },
-                    ),
-                    action = homeAction,
-                ),
-                SettingsRow(
-                    title = stringResource(R.string.settings_start_open),
-                    value = startupLabel,
-                    chevron = true,
-                    action = {
-                        val apps = catalog.orEmpty().filter {
-                            it.packageName.isNotEmpty() && it.packageName != context.packageName
-                        }
-                        val current = StartupPreferences.appPackage(startupTarget)
-                        val index = apps.indexOfFirst { it.packageName == current }
-                        open(PAGE_STARTUP, focus = if (index < 0) 0 else index + 1)
-                    },
-                ),
-                if (startupTarget.isNotEmpty()) {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_start_when),
-                        value = stringResource(
-                            if (startupOnWake) {
-                                R.string.settings_start_when_wake
-                            } else {
-                                R.string.settings_start_when_boot
-                            },
-                        ),
-                        chevron = true,
-                        action = { open(PAGE_STARTUP_WHEN, focus = if (startupOnWake) 1 else 0) },
-                    )
-                } else {
-                    null
-                },
-                // A wake launch needs the same switch as the Home override.
-                if (startupTarget.isNotEmpty() &&
-                    startupOnWake &&
-                    accessibility != AccessibilityStatus.State.CONNECTED
-                ) {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_start_wake),
-                        value = stringResource(
-                            if (accessibility == AccessibilityStatus.State.STALE) {
-                                R.string.settings_home_button_stale
-                            } else {
-                                R.string.settings_home_button_allow
-                            },
-                        ),
-                        action = { AccessibilityStatus.open(context) },
-                    )
-                } else {
-                    null
-                },
-                SettingsRow(
-                    title = stringResource(R.string.settings_system_airplay),
-                    value = facts?.let {
-                        stringResource(
-                            if (it.airplayInstalled) {
-                                R.string.settings_airplay_installed
-                            } else {
-                                R.string.settings_airplay_missing
-                            },
-                        )
-                    } ?: stringResource(R.string.settings_loading),
-                    chevron = facts?.airplayInstalled == true,
-                    action = if (facts?.airplayInstalled == true) {
-                        { openAirPlay(context) }
-                    } else {
-                        null
-                    },
-                    actionLabel = stringResource(R.string.settings_airplay_open),
-                ),
-            )
-        }
+        PAGE_SYSTEM -> settingsSystemRows(
+            facts = facts,
+            accessibility = accessibility,
+            homeOverride = homeOverride,
+            startupLabel = startupLabel,
+            startupTarget = startupTarget,
+            startupOnWake = startupOnWake,
+            catalog = catalog,
+            context = context,
+            onSetHomeOverride = { enabled ->
+                homeOverride = enabled
+                StartupPreferences.setHomeOverride(context, enabled)
+            },
+            onOpenAccessibility = { AccessibilityStatus.open(context) },
+            onOpenStartup = { focus -> open(PAGE_STARTUP, focus = focus) },
+            onOpenStartupWhen = { focus -> open(PAGE_STARTUP_WHEN, focus = focus) },
+            onOpenSystemSettings = { openSystemSettings(context) },
+            onAirPlay = { openAirPlay(context) },
+        )
 
         PAGE_PERMISSIONS -> {
             val powerSupported = SleepControls.adminSupported(context)
