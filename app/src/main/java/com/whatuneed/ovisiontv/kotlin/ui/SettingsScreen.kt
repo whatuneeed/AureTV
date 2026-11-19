@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -85,7 +84,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -104,7 +102,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -112,8 +109,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -125,7 +120,6 @@ import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SetupActivity
 import com.whatuneed.ovisiontv.kotlin.SoftwareUpdateActivity
-import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.AerialClipCache
 import com.whatuneed.ovisiontv.kotlin.data.AerialDeviceCapabilities
 import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
@@ -154,7 +148,6 @@ import com.whatuneed.ovisiontv.kotlin.data.isPermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.isWifiNamePermanentDenial
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.NetworkKind
-import com.whatuneed.ovisiontv.kotlin.data.PerformanceProfile
 import com.whatuneed.ovisiontv.kotlin.data.PermissionSummary
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
@@ -173,7 +166,6 @@ import com.whatuneed.ovisiontv.kotlin.ambient.RedditFeedStore
 import com.whatuneed.ovisiontv.kotlin.ambient.RedditImageStore
 import com.whatuneed.ovisiontv.kotlin.ambient.RedditRefresh
 import com.whatuneed.ovisiontv.kotlin.ambient.RedditSelection
-import com.whatuneed.ovisiontv.kotlin.ambient.RedditWallpaper
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySettings
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryStore
@@ -202,7 +194,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
 import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientDimLabel

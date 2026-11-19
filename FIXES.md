@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| После серии split'ов остались мёртвые импорты в HomeScreen/SettingsScreen | 0.5.41 (20 imports removed) |
 | Preview/main key-обработчик Home собирается в HomeScreen | 0.5.40 (homeKeyInput) |
 | Overlay открытой папки собирается в HomeScreen | 0.5.39 (HomeFolderHost) |
 | Верхний chrome и модальные окна полки собираются в HomeScreen | 0.5.38 (HomeChromeHost) |
@@ -288,6 +289,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.41: baseline и безопасная чистка импортов
+
+- **Симптом.** После серии выносов `HomeScreen.kt` и `SettingsScreen.kt` остались импорты, которые больше нигде не использовались.
+- **Что сделано.**
+  - Зафиксирован baseline: **552/552 unit**, **302/302 connected**, lint **0 errors / 15 warnings / 0 information**.
+  - Удалены **20 подтверждённых неиспользуемых импортов**: 11 в `HomeScreen.kt`, 9 в `SettingsScreen.kt`.
+  - Поведение не менялось; логика, prefs-ключи, теги и строки не тронуты.
+  - Добавлен `ARCHITECTURE_REVIEW/00_INVENTORY_AND_PLAN.md` с инвентаризацией, целевой структурой и поэтапным планом.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/SettingsScreen.kt`, `ARCHITECTURE_REVIEW/00_INVENTORY_AND_PLAN.md`.
+- **Чего не делать.** Не удалять импорты `getValue`/`setValue` у Kotlin-делегатов: текстовый поиск их не видит. Не начинать перенос пакетов до выноса крупных экранов.
+- **Проверка.** Unit — **552/552**. Connected baseline — **302/302**. После чистки: compile OK, повторный unit **552/552**, `HomeScreenTest`+`SettingsScreenTest` **100 тестов**, один teardown-flake `Activity never becomes DESTROYED` (изолированный повтор 1/1). Lint — **0 errors / 15 warnings / 0 information**. Полный connected повторно не запускался после import-only изменения.
+- **Артефакт.** 0.5.41 / vc114; **6 601 723 B**, SHA-256 **`7d12ee515a1fe597c1b50fe042eae9e4afa163eef2cf03756074b80c105cc242`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.40: key-обработчик Home
 
