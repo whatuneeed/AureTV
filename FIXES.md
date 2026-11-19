@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Weather- и Discovery-страницы лежат в SettingsScreen | 0.5.46 (SettingsWeather/DiscoveryPages) |
 | Permissions и Device group страницы лежат в SettingsScreen | 0.5.45 (SettingsPermissions/DeviceGroup) |
 | Startup/Startup-when страницы лежат в SettingsScreen | 0.5.44 (SettingsStartupPages) |
 | Страница System с Home-button/startup/AirPlay лежит в SettingsScreen | 0.5.43 (SettingsSystemPage) |
@@ -293,6 +294,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.46: Stage 2.5 — Weather и Discovery pages
+
+- **Симптом.** После 0.5.45 `SettingsScreen.kt` оставался 4 530 строк; шесть Weather-страниц и три Discovery-страницы занимали ~230 строк.
+- **Что сделано.**
+  - `SettingsWeatherPages.kt` — main Weather, clear, location, units, source, refresh; `SETTINGS_WEATHER_UNITS` и `settingsWeatherUnitsLabel` перенесены вместе с ними.
+  - `SettingsDiscoveryPages.kt` — `DiscoveryUi`, `discoverySettingsRows`, `discoveryHiddenRows`, `discoveryClearRows`.
+  - Все `WeatherPreferences.set*`, `reloadWeather`, `Toast`, `citySearchOpen` и `open()` остались в `SettingsScreen`.
+  - `SettingsScreen.kt` уменьшился до **4 334 строк**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsWeatherPages.kt`, `ui/SettingsDiscoveryPages.kt`.
+- **Чего не делать.** Не переносить запись weather-prefs в builders. Не делать `WEATHER_UNITS` публичным: используется namespaced `SETTINGS_WEATHER_UNITS`.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.46 / vc119; **6 618 107 B**, SHA-256 **`7df27f2e6bf0ef142f1fbadde5b54f0f6dab2cb3b0efbe62b2eeebb2eb73b6a1`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.45: Stage 2.4 — Permissions и Device group
 

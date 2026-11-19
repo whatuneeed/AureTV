@@ -358,6 +358,11 @@ internal const val SETTINGS_PAGE_DOC_TERMS = PAGE_DOC_TERMS
 internal const val SETTINGS_PAGE_DOC_PRIVACY = PAGE_DOC_PRIVACY
 internal const val SETTINGS_PAGE_DOC_AERIAL = PAGE_DOC_AERIAL
 internal const val SETTINGS_PAGE_DOC_LICENSES = PAGE_DOC_LICENSES
+internal const val SETTINGS_PAGE_WEATHER_LOCATION = PAGE_WEATHER_LOCATION
+internal const val SETTINGS_PAGE_WEATHER_UNITS = PAGE_WEATHER_UNITS
+internal const val SETTINGS_PAGE_WEATHER_SOURCE = PAGE_WEATHER_SOURCE
+internal const val SETTINGS_PAGE_WEATHER_REFRESH = PAGE_WEATHER_REFRESH
+internal const val SETTINGS_PAGE_WEATHER_CLEAR = PAGE_WEATHER_CLEAR
 
 private val PROFILE_PAGES = setOf(
     PAGE_PROFILES,
@@ -386,12 +391,6 @@ private val LANGUAGE_OPTIONS = listOf(
     LocalePreference.ENGLISH,
 )
 
-private val WEATHER_UNITS = listOf(
-    WeatherPreferences.UNIT_AUTO,
-    WeatherPreferences.UNIT_C,
-    WeatherPreferences.UNIT_F,
-)
-
 /**
  * Root sections. Six rows fit one screen, so there are no group headers any
  * more: a header over three rows added a level without adding meaning.
@@ -413,120 +412,6 @@ private enum class Section(
  * internal error when it gains several independent states (AQ-30), so the four
  * values travel together and are replaced with copy() instead.
  */
-private data class DiscoveryUi(
-    val recommendations: Boolean,
-    val online: Boolean,
-    val previewAutoplay: Boolean,
-    val continueWatching: Boolean,
-    val personalization: Boolean,
-    val hidden: List<DiscoveryItem>,
-)
-
-@Composable
-private fun discoverySettingsRows(
-    ui: DiscoveryUi,
-    onUiChange: (DiscoveryUi) -> Unit,
-    settings: DiscoverySettings,
-    onOpenHidden: () -> Unit,
-    onOpenClear: () -> Unit,
-): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_recommendations),
-        value = stringResource(if (ui.recommendations) R.string.saver_on else R.string.saver_off),
-        toggleState = ui.recommendations,
-        action = {
-            val next = ui.copy(recommendations = !ui.recommendations)
-            onUiChange(next)
-            settings.setRecommendations(next.recommendations)
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.discovery_online),
-        value = stringResource(if (ui.online) R.string.saver_on else R.string.saver_off),
-        toggleState = ui.online,
-        action = {
-            val next = ui.copy(online = !ui.online)
-            onUiChange(next)
-            settings.setOnline(next.online)
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.discovery_preview_autoplay),
-        value = stringResource(if (ui.previewAutoplay) R.string.saver_on else R.string.saver_off),
-        toggleState = ui.previewAutoplay,
-        action = {
-            val next = ui.copy(previewAutoplay = !ui.previewAutoplay)
-            onUiChange(next)
-            settings.setPreviewAutoplay(next.previewAutoplay)
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_continue_watching),
-        value = stringResource(if (ui.continueWatching) R.string.saver_on else R.string.saver_off),
-        toggleState = ui.continueWatching,
-        action = {
-            val next = ui.copy(continueWatching = !ui.continueWatching)
-            onUiChange(next)
-            settings.setContinueWatching(next.continueWatching)
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.discovery_personalization),
-        value = stringResource(if (ui.personalization) R.string.saver_on else R.string.saver_off),
-        toggleState = ui.personalization,
-        action = {
-            val next = ui.copy(personalization = !ui.personalization)
-            onUiChange(next)
-            settings.setPersonalization(next.personalization)
-        },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.discovery_hidden),
-        value = ui.hidden.size.toString(),
-        chevron = true,
-        action = onOpenHidden,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.discovery_clear),
-        chevron = true,
-        action = onOpenClear,
-    ),
-)
-
-@Composable
-private fun discoveryHiddenRows(
-    hidden: List<DiscoveryItem>,
-    onRestore: (DiscoveryItem) -> Unit,
-): List<SettingsRow> = if (hidden.isEmpty()) {
-    listOf(SettingsRow(title = stringResource(R.string.discovery_hidden_empty)))
-} else {
-    hidden.map { item ->
-        SettingsRow(
-            title = item.title,
-            value = item.packageLabel ?: item.packageName,
-            chevron = true,
-            actionLabel = stringResource(R.string.discovery_restore),
-            action = { onRestore(item) },
-        )
-    }
-}
-
-@Composable
-private fun discoveryClearRows(
-    onClear: () -> Unit,
-    onCancel: () -> Unit,
-): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.discovery_clear_confirm),
-        destructive = true,
-        action = onClear,
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_cancel),
-        action = onCancel,
-    ),
-)
-
 private data class ListEntry(
     val top: Float,
     val header: String? = null,
@@ -2355,169 +2240,97 @@ fun SettingsScreen(
             )
         }
 
-        PAGE_WEATHER -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.weather_show),
-                value = stringResource(if (weatherEnabled) R.string.saver_on else R.string.saver_off),
-                toggleState = weatherEnabled,
-                action = {
-                    weatherEnabled = !weatherEnabled
-                    WeatherPreferences.setEnabled(context, weatherEnabled)
-                    WeatherPreferences.changed(context)
-                    if (weatherEnabled) reloadWeather()
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_location),
-                value = if (weatherManual) {
-                    weatherPlace
-                } else {
-                    stringResource(R.string.weather_automatic)
-                },
-                chevron = true,
-                enabled = weatherEnabled,
-                action = { open(PAGE_WEATHER_LOCATION, focus = if (weatherManual) 1 else 0) },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_temperature),
-                value = weatherUnitsLabel(weatherUnits),
-                chevron = true,
-                enabled = weatherEnabled,
-                action = {
-                    open(PAGE_WEATHER_UNITS, focus = WEATHER_UNITS.indexOf(weatherUnits).coerceAtLeast(0))
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_source),
-                value = weatherSourceLabels[weatherSource] ?: Weather.sourceName(weatherSource),
-                chevron = true,
-                enabled = weatherEnabled,
-                action = {
-                    open(
-                        PAGE_WEATHER_SOURCE,
-                        focus = Weather.SOURCES.indexOf(weatherSource).coerceAtLeast(0),
-                    )
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_refresh_every),
-                value = stringResource(R.string.weather_minutes, weatherRefresh),
-                chevron = true,
-                enabled = weatherEnabled,
-                action = {
-                    open(
-                        PAGE_WEATHER_REFRESH,
-                        focus = Weather.REFRESH_CHOICES.indexOf(weatherRefresh).coerceAtLeast(0),
-                    )
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_last_updated),
-                value = weatherAge,
-                enabled = weatherEnabled,
-                action = {
-                    Toast.makeText(context, weatherUpdatedDetail(), Toast.LENGTH_LONG).show()
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_refresh_now),
-                value = if (weatherBusy) stringResource(R.string.weather_refreshing_status) else null,
-                enabled = weatherEnabled,
-                action = { refreshWeatherNow() },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_clear_data),
-                chevron = true,
-                // Cancel is the safe default on the confirmation page.
-                action = { open(PAGE_WEATHER_CLEAR, focus = 1) },
-            ),
+        PAGE_WEATHER -> settingsWeatherRows(
+            enabled = weatherEnabled,
+            manual = weatherManual,
+            place = weatherPlace,
+            units = weatherUnits,
+            source = weatherSource,
+            refreshMinutes = weatherRefresh,
+            age = weatherAge,
+            busy = weatherBusy,
+            sourceLabels = weatherSourceLabels,
+            onToggle = {
+                weatherEnabled = !weatherEnabled
+                WeatherPreferences.setEnabled(context, weatherEnabled)
+                WeatherPreferences.changed(context)
+                if (weatherEnabled) reloadWeather()
+            },
+            onOpenLocation = {
+                open(SETTINGS_PAGE_WEATHER_LOCATION, focus = if (weatherManual) 1 else 0)
+            },
+            onOpenUnits = {
+                open(
+                    SETTINGS_PAGE_WEATHER_UNITS,
+                    focus = SETTINGS_WEATHER_UNITS.indexOf(weatherUnits).coerceAtLeast(0),
+                )
+            },
+            onOpenSource = {
+                open(
+                    SETTINGS_PAGE_WEATHER_SOURCE,
+                    focus = Weather.SOURCES.indexOf(weatherSource).coerceAtLeast(0),
+                )
+            },
+            onOpenRefresh = {
+                open(
+                    SETTINGS_PAGE_WEATHER_REFRESH,
+                    focus = Weather.REFRESH_CHOICES.indexOf(weatherRefresh).coerceAtLeast(0),
+                )
+            },
+            onShowUpdated = {
+                Toast.makeText(context, weatherUpdatedDetail(), Toast.LENGTH_LONG).show()
+            },
+            onRefreshNow = { refreshWeatherNow() },
+            onClear = { open(SETTINGS_PAGE_WEATHER_CLEAR, focus = 1) },
         )
 
-        PAGE_WEATHER_CLEAR -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.weather_clear_confirm),
-                destructive = true,
-                action = { clearWeatherData() },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.settings_cancel),
-                action = { back() },
-            ),
+        PAGE_WEATHER_CLEAR -> settingsWeatherClearRows(
+            onClear = { clearWeatherData() },
+            onCancel = { back() },
         )
 
-        PAGE_WEATHER_LOCATION -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.weather_automatic),
-                checked = !weatherManual,
-                choice = true,
-                action = {
-                    WeatherPreferences.clearPlace(context)
-                    weatherEnabled = true
-                    weatherManual = false
-                    weatherPlace = ""
-                    weatherUpdatedAt = WeatherPreferences.cachedAt(context)
-                    reloadWeather()
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.weather_choose_city),
-                value = if (weatherManual) weatherPlace else null,
-                checked = weatherManual,
-                choice = true,
-                action = { citySearchOpen = true },
-            ),
+        PAGE_WEATHER_LOCATION -> settingsWeatherLocationRows(
+            manual = weatherManual,
+            place = weatherPlace,
+            onAutomatic = {
+                WeatherPreferences.clearPlace(context)
+                weatherEnabled = true
+                weatherManual = false
+                weatherPlace = ""
+                weatherUpdatedAt = WeatherPreferences.cachedAt(context)
+                reloadWeather()
+            },
+            onChooseCity = { citySearchOpen = true },
         )
 
-        PAGE_WEATHER_UNITS -> WEATHER_UNITS.map { unit ->
-            SettingsRow(
-                title = weatherUnitsLabel(unit),
-                checked = weatherUnits == unit,
-                choice = true,
-                action = {
-                    if (weatherUnits != unit) {
-                        weatherUnits = unit
-                        WeatherPreferences.setUnits(context, unit)
-                        WeatherPreferences.changed(context)
-                        reloadWeather()
-                    }
-                },
-            )
-        }
+        PAGE_WEATHER_UNITS -> settingsWeatherUnitsRows(
+            selected = weatherUnits,
+            onSelect = { unit ->
+                weatherUnits = unit
+                WeatherPreferences.setUnits(context, unit)
+                WeatherPreferences.changed(context)
+                reloadWeather()
+            },
+        )
 
-        PAGE_WEATHER_SOURCE -> Weather.SOURCES.map { source ->
-            SettingsRow(
-                title = weatherSourceLabels[source] ?: Weather.sourceName(source),
-                checked = weatherSource == source,
-                choice = true,
-                action = {
-                    if (weatherSource != source) {
-                        weatherSource = source
-                        WeatherPreferences.setSource(context, source)
-                        WeatherPreferences.changed(context)
-                        reloadWeather()
-                    }
-                },
-            )
-        }
+        PAGE_WEATHER_SOURCE -> settingsWeatherSourceRows(
+            selected = weatherSource,
+            labels = weatherSourceLabels,
+            onSelect = { source ->
+                weatherSource = source
+                WeatherPreferences.setSource(context, source)
+                WeatherPreferences.changed(context)
+                reloadWeather()
+            },
+        )
 
-        PAGE_WEATHER_REFRESH -> Weather.REFRESH_CHOICES.map { minutes ->
-            SettingsRow(
-                title = stringResource(
-                    if (minutes == WeatherPreferences.DEFAULT_REFRESH) {
-                        R.string.weather_minutes_default
-                    } else {
-                        R.string.weather_minutes
-                    },
-                    minutes,
-                ),
-                checked = weatherRefresh == minutes,
-                choice = true,
-                action = {
-                    weatherRefresh = minutes
-                    WeatherPreferences.setRefresh(context, minutes)
-                },
-            )
-        }
+        PAGE_WEATHER_REFRESH -> settingsWeatherRefreshRows(
+            selected = weatherRefresh,
+            onSelect = { minutes ->
+                weatherRefresh = minutes
+                WeatherPreferences.setRefresh(context, minutes)
+            },
+        )
 
         PAGE_NETWORK -> listOf(
             SettingsRow(
@@ -4481,15 +4294,6 @@ private fun languageLabel(language: String): String = stringResource(
         LocalePreference.RUSSIAN -> R.string.settings_language_russian
         LocalePreference.ENGLISH -> R.string.settings_language_english
         else -> R.string.settings_language_system
-    },
-)
-
-@Composable
-private fun weatherUnitsLabel(unit: String): String = stringResource(
-    when (unit) {
-        WeatherPreferences.UNIT_C -> R.string.weather_units_c
-        WeatherPreferences.UNIT_F -> R.string.weather_units_f
-        else -> R.string.weather_automatic
     },
 )
 
