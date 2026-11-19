@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Mode-блоки главного Saver (Photos/Reddit/Aerial/Clock) лежат в SettingsScreen | 0.5.48 (SettingsSaverMainSections) |
 | Saver subpages (mode/delay/dim/session/themes/refresh/clock) лежат в SettingsScreen | 0.5.47 (SettingsSaverChoicePages) |
 | Weather- и Discovery-страницы лежат в SettingsScreen | 0.5.46 (SettingsWeather/DiscoveryPages) |
 | Permissions и Device group страницы лежат в SettingsScreen | 0.5.45 (SettingsPermissions/DeviceGroup) |
@@ -295,6 +296,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.48: Stage 2.7 — mode-секции главного Saver
+
+- **Симптом.** После 0.5.47 `SettingsScreen.kt` оставался 4 271 строка; главная Saver-страница содержала Photos, Reddit, Aerial, Clock и Weather-overlay блоки.
+- **Что сделано.**
+  - `SettingsSaverMainSections.kt` — `saverPhotoRows`, `saverRedditRows`, `saverAerialRows`, `saverClockRows`, `saverWeatherOverlayRows`.
+  - `AmbientPhotoStore`, `AmbientRedditStore`, `AmbientSettingsStore`, `SaverPreferences` и `Toast` остались в `SettingsScreen`.
+  - `SettingsScreen.kt` уменьшился до **4 122 строк**.
+- **Найденная и исправленная регрессия.** При вставке Weather-overlay был случайно перезаписан Clock-блок и удалён Dim/Session. `SettingsScreenTest` упал на `the_clock_page_sets_a_12_24_format_and_pixel_shift` и `the_clock_page_sets_dim_and_max_session`; блоки восстановлены, повторный прогон 59/59.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsSaverMainSections.kt`.
+- **Чего не делать.** Не вставлять Weather-overlay через повторный поиск `if (ambientMode == CLOCK)` — в файле два таких блока. Clock, Dim/Session и Weather идут строго в этом порядке.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.48 / vc121; **6 618 107 B**, SHA-256 **`1ec73f14de70afd7526c3e4c6674ba50b649873fa2e27fb13307036755a596af`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.47: Stage 2.6 — Saver subpages
 

@@ -1367,25 +1367,17 @@ fun SettingsScreen(
             // Clock has two behaviours that Aerial and Minimal do not: the
             // hour format and the anti-burn-in shift of the bright text.
             if (ambientMode == AmbientMode.CLOCK) {
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_clock_format),
-                        value = ambientClockFormatLabel(ambientClockFormat),
-                        chevron = true,
-                        action = {
+                addAll(
+                    saverClockRows(
+                        format = ambientClockFormat,
+                        pixelShift = ambientPixelShift,
+                        onOpenFormat = {
                             open(
                                 PAGE_SAVER_CLOCK_FORMAT,
                                 focus = AmbientClockFormat.entries.indexOf(ambientClockFormat),
                             )
                         },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_pixel_shift),
-                        value = stringResource(if (ambientPixelShift) R.string.saver_on else R.string.saver_off),
-                        toggleState = ambientPixelShift,
-                        action = {
+                        onTogglePixelShift = {
                             ambientPixelShift = !ambientPixelShift
                             AmbientSettingsStore.setPixelShift(context, ambientPixelShift)
                         },
@@ -1419,63 +1411,29 @@ fun SettingsScreen(
                     ),
                 )
             }
-            // Weather is an overlay on Clock, not a new content source. It
-            // only appears when the existing opt-in Weather setting is on;
-            // otherwise the row opens that setting instead of pretending.
             if (ambientMode == AmbientMode.CLOCK) {
-                if (weatherEnabled) {
-                    add(
-                        SettingsRow(
-                            title = stringResource(R.string.saver_show_weather),
-                            value = stringResource(
-                                if (ambientShowWeather) R.string.saver_on else R.string.saver_off,
-                            ),
-                            toggleState = ambientShowWeather,
-                            action = {
-                                ambientShowWeather = !ambientShowWeather
-                                AmbientSettingsStore.setShowWeather(context, ambientShowWeather)
-                            },
-                        ),
-                    )
-                } else {
-                    add(
-                        SettingsRow(
-                            title = stringResource(R.string.saver_show_weather),
-                            value = stringResource(R.string.saver_weather_off),
-                            chevron = true,
-                            action = { open(PAGE_WEATHER) },
-                        ),
-                    )
-                }
+                addAll(
+                    saverWeatherOverlayRows(
+                        weatherEnabled = weatherEnabled,
+                        showWeather = ambientShowWeather,
+                        onToggleWeather = {
+                            ambientShowWeather = !ambientShowWeather
+                            AmbientSettingsStore.setShowWeather(context, ambientShowWeather)
+                        },
+                        onOpenWeather = { open(PAGE_WEATHER) },
+                    ),
+                )
             }
-            // Photos have one source at a time: a folder or individual photos
-            // granted by the system picker. The grant is persisted by the
-            // provider, not a broad permission.
             if (ambientMode == AmbientMode.PHOTOS) {
                 val canPickFolder = AmbientPhotoStore.canPickFolder(context)
                 val canPickPhotos = AmbientPhotoStore.canPickPhotos(context)
-                add(
-                    SettingsRow(
-                        title = stringResource(
-                            if (canPickFolder) {
-                                R.string.saver_photos_folder
-                            } else {
-                                R.string.saver_photos_selected_title
-                            },
-                        ),
-                        value = when {
-                            photoFolder.label != null -> photoFolder.label.orEmpty()
-                            photoFolder.selected > 0 -> pluralStringResource(
-                                R.plurals.saver_photos_selected,
-                                photoFolder.selected,
-                                photoFolder.selected,
-                            )
-                            canPickFolder || canPickPhotos ->
-                                stringResource(R.string.saver_photos_none)
-                            else -> stringResource(R.string.saver_photos_unavailable_short)
-                        },
-                        chevron = true,
-                        action = {
+                addAll(
+                    saverPhotoRows(
+                        label = photoFolder.label,
+                        selected = photoFolder.selected,
+                        canPickFolder = canPickFolder,
+                        canPickPhotos = canPickPhotos,
+                        onPick = {
                             when {
                                 canPickFolder -> choosePhotoFolder()
                                 canPickPhotos -> choosePhotos()
@@ -1486,70 +1444,40 @@ fun SettingsScreen(
                                 ).show()
                             }
                         },
+                        onForget = {
+                            AmbientPhotoStore.clear(context)
+                            photoFolder = PhotoFolderState(emptyList(), null)
+                            ambientMode = AmbientMode.AERIAL
+                            AmbientSettingsStore.setMode(context, AmbientMode.AERIAL)
+                            Toast.makeText(
+                                context,
+                                R.string.saver_photos_cleared,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
                     ),
                 )
-                if (photoFolder.label != null || photoFolder.selected > 0) {
-                    add(
-                        SettingsRow(
-                            title = stringResource(
-                                if (photoFolder.label != null) {
-                                    R.string.saver_photos_forget
-                                } else {
-                                    R.string.saver_photos_forget_photos
-                                },
-                            ),
-                            chevron = true,
-                            action = {
-                                AmbientPhotoStore.clear(context)
-                                photoFolder = PhotoFolderState(emptyList(), null)
-                                ambientMode = AmbientMode.AERIAL
-                                AmbientSettingsStore.setMode(context, AmbientMode.AERIAL)
-                                Toast.makeText(
-                                    context,
-                                    R.string.saver_photos_cleared,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            },
-                        ),
-                    )
-                }
             }
             if (ambientMode == AmbientMode.REDDIT) {
                 val redditItems = redditFeed?.items.orEmpty()
                 val selectedCount = redditSelected.count { id -> redditItems.any { it.id == id } }
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_subreddit),
-                        value = "r/$redditSubreddit",
-                        chevron = true,
-                        action = { redditNameEditorOpen = true },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_refresh),
-                        value = stringResource(settingsRedditRefreshRes(redditRefresh)),
-                        chevron = true,
-                        action = {
+                addAll(
+                    saverRedditRows(
+                        subreddit = redditSubreddit,
+                        refresh = redditRefresh,
+                        selection = redditSelection,
+                        itemCount = redditItems.size,
+                        selectedCount = selectedCount,
+                        loading = redditLoading,
+                        stale = redditFeed?.stale == true,
+                        onEditName = { redditNameEditorOpen = true },
+                        onOpenRefresh = {
                             open(
                                 PAGE_SAVER_REDDIT_REFRESH,
                                 focus = RedditRefresh.entries.indexOf(redditRefresh),
                             )
                         },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_all),
-                        value = stringResource(
-                            if (redditSelection == RedditSelection.ALL) {
-                                R.string.saver_on
-                            } else {
-                                R.string.saver_off
-                            },
-                        ),
-                        toggleState = redditSelection == RedditSelection.ALL,
-                        action = {
+                        onToggleAll = {
                             val useAll = redditSelection != RedditSelection.ALL
                             redditSelection = if (useAll) {
                                 RedditSelection.ALL
@@ -1559,59 +1487,14 @@ fun SettingsScreen(
                             AmbientRedditStore.setSelection(context, redditSelection)
                             if (!useAll && redditSelected.isEmpty()) redditCatalogOpen = true
                         },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_catalog),
-                        value = when {
-                            redditLoading -> stringResource(R.string.saver_reddit_loading)
-                            redditItems.isEmpty() -> stringResource(R.string.saver_reddit_unavailable)
-                            redditSelection == RedditSelection.ALL -> pluralStringResource(
-                                R.plurals.saver_reddit_images,
-                                redditItems.size,
-                                redditItems.size,
-                            )
-                            else -> pluralStringResource(
-                                R.plurals.saver_reddit_selected,
-                                selectedCount,
-                                selectedCount,
-                            )
-                        },
-                        chevron = true,
-                        action = { redditCatalogOpen = true },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_refresh_now),
-                        value = if (redditLoading) {
-                            stringResource(R.string.saver_reddit_loading)
-                        } else {
-                            null
-                        },
-                        chevron = true,
-                        action = {
+                        onOpenCatalog = { redditCatalogOpen = true },
+                        onRefreshNow = {
                             if (!redditLoading) {
                                 redditForce = true
                                 redditRequest++
                             }
                         },
-                    ),
-                )
-                if (redditFeed?.stale == true) {
-                    add(
-                        SettingsRow(
-                            title = stringResource(R.string.saver_reddit_stale),
-                            value = null,
-                        ),
-                    )
-                }
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_reddit_forget),
-                        chevron = true,
-                        action = {
+                        onForget = {
                             AmbientRedditStore.clear(context)
                             RedditFeedStore.clear(context)
                             RedditFeedLoader.clearBackoff(context)
@@ -1632,26 +1515,15 @@ fun SettingsScreen(
                     ),
                 )
             }
-            // The Aerial catalogue only matters to the Aerial mode. Hiding
-            // these rows in Clock/Minimal keeps the page honest instead of
-            // offering themes that would never be drawn.
             if (ambientMode == AmbientMode.AERIAL) {
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_aerial_quality),
-                        value = when {
-                            aerialQuality == AerialQuality.COMPATIBLE ->
-                                stringResource(R.string.saver_aerial_quality_1080)
-                            aerialCapabilities.uhd && aerialCapabilities.hdr ->
-                                stringResource(R.string.saver_aerial_quality_best)
-                            aerialCapabilities.uhd ->
-                                stringResource(R.string.saver_aerial_quality_4k)
-                            aerialCapabilities.hdr ->
-                                stringResource(R.string.saver_aerial_quality_hdr)
-                            else -> stringResource(R.string.saver_aerial_quality_limited)
-                        },
-                        toggleState = aerialQuality == AerialQuality.BEST,
-                        action = {
+                addAll(
+                    saverAerialRows(
+                        quality = aerialQuality,
+                        uhd = aerialCapabilities.uhd,
+                        hdr = aerialCapabilities.hdr,
+                        themeSummary = themeSummary,
+                        refresh = saverRefresh,
+                        onToggleQuality = {
                             aerialQuality = if (aerialQuality == AerialQuality.BEST) {
                                 AerialQuality.COMPATIBLE
                             } else {
@@ -1659,30 +1531,9 @@ fun SettingsScreen(
                             }
                             AmbientSettingsStore.setAerialQuality(context, aerialQuality)
                         },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_choose),
-                        value = stringResource(R.string.saver_aerials),
-                        chevron = true,
-                        action = { open(PAGE_SAVER_CHOOSER) },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_themes),
-                        value = themeSummary,
-                        chevron = true,
-                        action = { open(PAGE_SAVER_THEMES) },
-                    ),
-                )
-                add(
-                    SettingsRow(
-                        title = stringResource(R.string.saver_refresh),
-                        value = settingsSaverRefreshLabel(saverRefresh),
-                        chevron = true,
-                        action = {
+                        onOpenChooser = { open(PAGE_SAVER_CHOOSER) },
+                        onOpenThemes = { open(PAGE_SAVER_THEMES) },
+                        onOpenRefresh = {
                             open(
                                 PAGE_SAVER_REFRESH,
                                 focus = SaverRefresh.entries.indexOf(saverRefresh),
