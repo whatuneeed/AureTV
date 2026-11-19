@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| CitySearch следует редиректам без проверки хоста | 0.5.61 (manual redirect + host check) |
 | Notes/rows/formatting Update лежат в SoftwareUpdateScreen | 0.5.60 (SoftwareUpdateParts.kt) |
 | Фото/Reddit/Clock faces лежат в AmbientScreen | 0.5.59 (AmbientFaces.kt) |
 | Password/row/SAF-хелперы Backup лежат в BackupScreen | 0.5.58 (BackupScreenParts.kt) |
@@ -308,6 +309,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.61: Stage 4.2 — CitySearch redirect contract
+
+- **Симптом.** `CitySearch` использовал `instanceFollowRedirects = true`; Open-Meteo мог увести запрос на любой HTTPS-хост, и конечный адрес не проверялся.
+- **Что сделано.**
+  - `instanceFollowRedirects = false`, максимум 3 хопа, каждый хоп проверяется `citySearchUrlIsTrusted`.
+  - Разрешены только `https`, `geocoding-api.open-meteo.com` и порт `-1`/`443`.
+  - Общий deadline 15 s сохранён на всю цепочку; добавлен ранний `contentLengthLong > 512 KiB` reject.
+- **Файлы.** `data/CitySearch.kt`, `test/.../CitySearchTest.kt`.
+- **Чего не делать.** Не разрешать поддомены/редиректы на другие хосты «на всякий случай»: это снова открывает утечку IP/UA на произвольный сервер. Не сбрасывать deadline на каждом хопе.
+- **Проверка.** `CitySearchTest` — **6/6**. Unit — **553/553**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.61 / vc134; **6 618 107 B**, SHA-256 **`47bdb1599a6641371186dc7ee4f5ffe27592187d2d99aef34ad14fc00549576a`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.60: Stage 3.9 — Software Update presentation
 

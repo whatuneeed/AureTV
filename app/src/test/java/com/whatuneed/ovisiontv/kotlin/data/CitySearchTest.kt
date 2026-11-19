@@ -1,6 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -67,6 +68,18 @@ class CitySearchTest {
     fun parseReturnsEmptyWithoutResults() {
         assertTrue(CitySearch.parse("{}").isEmpty())
         assertTrue(CitySearch.parse("""{"results":[]}""").isEmpty())
+    }
+
+    @Test
+    fun redirectTargetMustStayOnTheGeocoderHttpsHost() {
+        assertTrue(citySearchUrlIsTrusted("https://geocoding-api.open-meteo.com/v1/search?name=Sochi"))
+        assertTrue(citySearchUrlIsTrusted("https://geocoding-api.open-meteo.com:443/v1/search"))
+
+        assertFalse(citySearchUrlIsTrusted("http://geocoding-api.open-meteo.com/v1/search"))
+        assertFalse(citySearchUrlIsTrusted("https://geocoding-api.open-meteo.com.evil.test/v1/search"))
+        assertFalse(citySearchUrlIsTrusted("https://evil.test/v1/search"))
+        assertFalse(citySearchUrlIsTrusted("https://geocoding-api.open-meteo.com:444/v1/search"))
+        assertFalse(citySearchUrlIsTrusted("not a url"))
     }
 
     @Test

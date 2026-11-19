@@ -1,0 +1,19 @@
+0.5.61 / vc134 — Stage 4.2 CitySearch redirect contract
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: CitySearch download uses manual redirects (max 3), https + exact host
+geocoding-api.open-meteo.com, ports -1/443, shared 15 s deadline, early
+contentLengthLong 512 KiB reject. New test citySearchUrlIsTrusted.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+CitySearchTest — 6/6 (including redirect host test)
+:app:testDebugUnitTest — 553/553 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 47bdb1599a6641371186dc7ee4f5ffe27592187d2d99aef34ad14fc00549576a
+versionCode 134, versionName 0.5.61, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 1286 ms, second 1016 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; network behavior covered by unit test only.
+Live Open-Meteo redirect behavior was not exercised on this emulator run.

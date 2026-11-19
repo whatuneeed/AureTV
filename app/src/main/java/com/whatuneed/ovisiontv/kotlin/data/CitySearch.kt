@@ -8,6 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 
@@ -31,6 +32,8 @@ object CitySearch {
     private const val TIMEOUT_MS = 10_000
     private const val MAX_TOTAL_MS = 15_000L
     private const val MAX_BYTES = 512 * 1024
+    private const val MAX_REDIRECTS = 3
+    internal const val HOST = "geocoding-api.open-meteo.com"
 
     /** Open-Meteo lists villages that share a name and a country as separate rows; on
      *  screen they read as one and the same city repeated, so keep the first of each. */
@@ -85,7 +88,7 @@ object CitySearch {
 
     private suspend fun download(url: String): String? {
         return try {
-            downloadOnce(url)
+            downloadOnce(url, redirects = 0, deadline = System.nanoTime() + MAX_TOTAL_MS * 1_000_000L)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -94,15 +97,27 @@ object CitySearch {
         }
     }
 
-    private suspend fun downloadOnce(url: String): String? {
+    private suspend fun downloadOnce(url: String, redirects: Int, deadline: Long): String? {
         currentCoroutineContext().ensureActive()
+        if (!citySearchUrlIsTrusted(url)) return null
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
+        // Every hop is revalidated: the geocoder has no reason to send us
+        // anywhere except its own HTTPS host.
+        connection.instanceFollowRedirects = false
         connection.setRequestProperty("Accept", "application/json")
-        val deadline = System.nanoTime() + MAX_TOTAL_MS * 1_000_000L
         try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (redirects >= MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
+                    ?: return null
+                return downloadOnce(next, redirects + 1, deadline)
+            }
+            if (code != HttpURLConnection.HTTP_OK) return null
+            if (connection.contentLengthLong > MAX_BYTES) return null
             val out = ByteArrayOutputStream()
             connection.inputStream.use { input ->
                 val buffer = ByteArray(8 * 1024)
@@ -122,4 +137,12 @@ object CitySearch {
         }
     }
 
+}
+
+/** Redirects may only stay on the geocoder's own HTTPS host. */
+internal fun citySearchUrlIsTrusted(raw: String): Boolean {
+    val uri = runCatching { URI(raw) }.getOrNull() ?: return false
+    if (uri.scheme?.equals("https", ignoreCase = true) != true) return false
+    if (uri.host?.equals(CitySearch.HOST, ignoreCase = true) != true) return false
+    return uri.port == -1 || uri.port == 443
 }
