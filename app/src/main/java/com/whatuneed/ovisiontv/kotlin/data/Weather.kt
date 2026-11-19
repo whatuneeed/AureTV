@@ -732,8 +732,7 @@ object Weather {
             if (code in 300..399) {
                 if (redirects >= MAX_REDIRECTS) return null
                 val location = connection.getHeaderField("Location") ?: return null
-                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
-                    ?: return null
+                val next = resolveRedirectUrl(url, location) ?: return null
                 return reverseGeocodeUrl(next, redirects + 1)
             }
             if (code != HttpURLConnection.HTTP_OK) return null
@@ -790,7 +789,7 @@ object Weather {
                 if (redirects >= MAX_REDIRECTS) error("Too many weather redirects")
                 val location = connection.getHeaderField("Location")
                     ?: error("Weather redirect without Location")
-                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
+                val next = resolveRedirectUrl(url, location)
                     ?: error("Bad weather redirect")
                 return getOnce(next, redirects + 1, deadline)
             }

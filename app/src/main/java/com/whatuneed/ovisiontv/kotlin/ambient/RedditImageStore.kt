@@ -7,6 +7,7 @@ import android.util.Log
 import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
+import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import com.whatuneed.ovisiontv.kotlin.ui.components.readAtMost
 import kotlinx.coroutines.CancellationException
@@ -113,8 +114,7 @@ object RedditImageStore {
                 if (code in 300..399) {
                     if (attempt >= MAX_REDIRECTS) return null
                     val location = connection.getHeaderField("Location") ?: return null
-                    val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
-                        ?: return null
+                    val next = resolveRedirectUrl(current, location) ?: return null
                     current = RedditFeedParser.safeImageUrl(next) ?: return null
                     return@repeat
                 }

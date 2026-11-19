@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -598,8 +599,7 @@ private suspend fun readHttpArt(value: String): ByteArray? {
             if (code in 300..399) {
                 if (attempt >= SHELF_ART_MAX_REDIRECTS) return null
                 val location = connection.getHeaderField("Location") ?: return null
-                val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
-                    ?: return null
+                val next = resolveRedirectUrl(current, location) ?: return null
                 if (!imageRedirectIsTrusted(current, next)) return null
                 current = next
                 return@repeat

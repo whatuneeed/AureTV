@@ -192,6 +192,6 @@ internal fun trustedCatalogueUrl(url: String): Boolean {
 
 /** Resolves a redirect against the current URL and rejects an untrusted target. */
 internal fun resolveCatalogueRedirect(current: String, location: String): String? {
-    val next = runCatching { URL(URL(current), location).toString() }.getOrNull() ?: return null
+    val next = resolveRedirectUrl(current, location) ?: return null
     return next.takeIf(::trustedCatalogueUrl)
 }

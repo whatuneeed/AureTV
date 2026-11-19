@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.online
 
+import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -143,8 +144,7 @@ internal class AppleRssClient(
             if (code in 300..399) {
                 if (redirects >= MAX_REDIRECTS) return null
                 val location = connection.getHeaderField("Location") ?: return null
-                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
-                    ?: return null
+                val next = resolveRedirectUrl(url, location) ?: return null
                 return fetch(next, redirects + 1)
             }
             if (code !in 200..299) return null

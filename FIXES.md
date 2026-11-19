@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Разбор `Location` продублирован в 9 клиентах | 0.5.67 (общий `resolveRedirectUrl`) |
 | Отмена не прерывает чтение картинок | 0.5.66 (общий bounded-read + ensureActive) |
 | User-Agent версии расходятся, Reddit шлёт `0.5.7` | 0.5.65 (единый UA из BuildConfig) |
 | Image-loader'ы следуют редиректам на любой хост | 0.5.64 (same-host policy, manual redirects) |
@@ -314,6 +315,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.67: Stage 4.5 — общий redirect resolver
+
+- **Симптом.** Девять клиентов повторяли `URL(URL(current), location)` с разными проверками blank/размера; пустой `Location` мог резолвиться в тот же URL.
+- **Что сделано.**
+  - `data/RedirectUrl.kt` — `resolveRedirectUrl(current, location)`: trim, отказ для blank, лимит 4096 символов, безопасный разбор относительного/абсолютного адреса.
+  - Переведены Reddit images, Aerial refresh, CitySearch, Weather (оба запроса), Apple RSS, online art, saver preview, shelf art, update metadata.
+  - Политика хоста/схемы осталась в каждом клиенте, включая `UpdateUrlPolicy` и `imageRedirectIsTrusted`.
+- **Файлы.** `data/RedirectUrl.kt` + 9 клиентов, `test/.../RedirectUrlTest.kt`, network-документ.
+- **Чего не делать.** Не переносить allowlist внутрь resolver: у Aerial, Reddit, Apple и обновлений разные допустимые хосты. Не разрешать пустой `Location`.
+- **Проверка.** `RedirectUrlTest` — **4/4**, `CitySearchTest` **6/6**, `WeatherTest` **13/13**, `WeatherRequestTest` **4/4**, `UpdateMetadataTest` **13/13**, Aerial catalog — **17/17**, image/online policy — **6/6**. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.67 / vc140; **6 618 107 B**, SHA-256 **`eb05dc4320de50e0d91843729db3b409f5990059151bb455d8b1639c40f572e5`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.66: Stage 4.4 — отмена и общий bounded-read
 

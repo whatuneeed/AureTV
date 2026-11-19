@@ -93,10 +93,12 @@ All four image loaders now read through `BoundedRead.readAtMost`, which checks
 deterministically and asserts the `CancellationException`; it also covers the cap. Do not add a shared helper before deciding whether these loaders
 should close the stream on cancellation.
 
-### G5. Duplicated body-copy and redirect code — P3 — PARTIAL
+### G5. Duplicated body-copy and redirect code — P3 — RESOLVED 0.5.67
 
-The body copy is now one helper (`ui/components/BoundedRead.kt`). Four redirect
-implementations remain. They differ in:
+One body copy (`ui/components/BoundedRead.kt`) and one `Location` resolver
+(`data/RedirectUrl.kt`) now serve every client. Each loop still keeps its own
+allowlist, hop limit and error mapping, which is intentional: those are policy,
+not duplicated parsing. They differ in:
 - cap accounting (`ByteArrayOutputStream` vs `contentLengthLong`);
 - deadline handling (`Weather`, `CitySearch` use a wall-clock deadline; others only
   socket timeouts);

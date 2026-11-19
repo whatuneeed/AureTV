@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -184,8 +185,7 @@ internal object AerialPreviewStore {
                     if (code in 300..399) {
                         if (attempt >= MAX_REDIRECTS) return null
                         val location = connection.getHeaderField("Location") ?: return null
-                        val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
-                            ?: return null
+                        val next = resolveRedirectUrl(current, location) ?: return null
                         if (!isAerialMediaUrl(next) || !imageRedirectIsTrusted(current, next)) {
                             return null
                         }

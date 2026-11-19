@@ -112,8 +112,7 @@ object CitySearch {
             if (code in 300..399) {
                 if (redirects >= MAX_REDIRECTS) return null
                 val location = connection.getHeaderField("Location") ?: return null
-                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
-                    ?: return null
+                val next = resolveRedirectUrl(url, location) ?: return null
                 return downloadOnce(next, redirects + 1, deadline)
             }
             if (code != HttpURLConnection.HTTP_OK) return null

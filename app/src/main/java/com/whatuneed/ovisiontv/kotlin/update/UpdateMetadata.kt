@@ -1,7 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.update
 
+import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import java.net.URI
-import java.net.URL
 import java.time.Instant
 
 /**
@@ -54,8 +54,7 @@ internal object UpdateUrlPolicy {
     }
 
     fun resolveRedirect(current: String, location: String): String? {
-        val resolved = runCatching { URL(URL(current), location).toString() }.getOrNull()
-            ?: return null
+        val resolved = resolveRedirectUrl(current, location) ?: return null
         return resolved.takeIf { isHttps(parse(it) ?: return@takeIf false) }
     }
 }
