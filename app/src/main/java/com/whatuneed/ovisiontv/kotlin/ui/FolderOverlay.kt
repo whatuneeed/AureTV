@@ -231,7 +231,7 @@ fun FolderOverlay(
     }
 
     LaunchedEffect(folder.id) {
-        focusRequester.requestWhenAttached()
+        focusRequester.requestFolderFocusWhenAttached()
         progress.animateTo(
             1f,
             tween(motionDuration(OPEN_MS, reduceMotion), easing = TravelEasing),
@@ -260,10 +260,10 @@ fun FolderOverlay(
         when {
             // The proxy is the tile under the cursor while it is being moved;
             // neighbouring tiles stay silent.
-            pickupActive -> pickupRequester.requestWhenAttached()
-            titleFocused -> titleRequester.requestWhenAttached()
-            else -> tileRequesters[focusIndex]?.requestWhenAttached()
-                ?: focusRequester.requestWhenAttached()
+            pickupActive -> pickupRequester.requestFolderFocusWhenAttached()
+            titleFocused -> titleRequester.requestFolderFocusWhenAttached()
+            else -> tileRequesters[focusIndex]?.requestFolderFocusWhenAttached()
+                ?: focusRequester.requestFolderFocusWhenAttached()
         }
     }
 
@@ -801,41 +801,4 @@ fun FolderOverlay(
             )
         }
     }
-}
-
-@Composable
-private fun PageDots(
-    pageCount: Int,
-    current: Int,
-    scale: TvScale,
-) {
-    Box(
-        Modifier
-            .size(
-                width = scale.dp(pageCount * 20f),
-                height = scale.dp(10f),
-            ),
-    ) {
-        for (index in 0 until pageCount) {
-            Box(
-                Modifier
-                    .offset(x = scale.dp(index * 20f))
-                    .size(scale.dp(8f))
-                    .clip(CircleShape)
-                    .background(
-                        Color.White.copy(alpha = if (index == current) 0.85f else 0.30f),
-                    ),
-            )
-        }
-    }
-}
-
-// The panel's tiles enter with a frame-delayed layout; retry against the
-// composition clock instead of guessing a delay in milliseconds.
-private suspend fun FocusRequester.requestWhenAttached(): Boolean {
-    repeat(3) {
-        if (runCatching { requestFocus() }.isSuccess) return true
-        withFrameNanos { }
-    }
-    return false
 }

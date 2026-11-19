@@ -1,0 +1,19 @@
+0.5.57 / vc130 — Stage 3.6 FolderOverlay parts
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: FolderOverlay.kt 841 -> 804 lines
+New: FolderOverlayParts.kt (51 lines): PageDots, requestFolderFocusWhenAttached.
+Hold/pickup, rename, paging, drag and mutations stayed in FolderOverlay.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest class=HomeScreenTest — 41/41 passed (1m 52s)
+:app:testDebugUnitTest — 552/552 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618103 B, sha256 c9849970d071497136e31ef87685f3f78267dbf7620c45437eb0b9a6fee05df5
+versionCode 130, versionName 0.5.57, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 4690 ms (emulator loaded after test run)
+ second 750 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; only HomeScreenTest.

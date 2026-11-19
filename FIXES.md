@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| PageDots и focus-retry папки лежат в FolderOverlay | 0.5.57 (FolderOverlayParts.kt) |
 | Package-intents и error states лежат в LauncherRoot | 0.5.56 (LauncherRootParts.kt) |
 | Плееры и caption saver лежат в SaverScreen | 0.5.55 (SaverPlayers/SaverCaption) |
 | Геометрия и status capsule лежат в ControlCenter | 0.5.54 (ControlCenterGeometry/Status) |
@@ -304,6 +305,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.57: Stage 3.6 — FolderOverlay parts
+
+- **Симптом.** `FolderOverlay.kt` был 841 строка; `PageDots` и focus-retry не относились к state-machine папки.
+- **Что сделано.**
+  - `FolderOverlayParts.kt` — `PageDots` и `requestFolderFocusWhenAttached`.
+  - `FolderOverlay.kt` — **804 строки**; hold/pickup, rename, paging, drag и мутации не тронуты.
+  - Extension переименован, чтобы не конкурировать с `requestWhenAttached` из Home/Setup/Shelf.
+- **Файлы.** `ui/FolderOverlay.kt`, `ui/FolderOverlayParts.kt`.
+- **Чего не делать.** В `FolderOverlay` остаётся один большой state-machine composable; не выносить `titleFocused`/`pickupActive`/`focusIndex` по отдельности без отдельного этапа и тестов на drag/hold.
+- **Проверка.** `HomeScreenTest` — **41/41** (1 m 52 s). Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.57 / vc130; **6 618 103 B**, SHA-256 **`c9849970d071497136e31ef87685f3f78267dbf7620c45437eb0b9a6fee05df5`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.56: Stage 3.5 — LauncherRoot helpers
 
