@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Верхний chrome и модальные окна полки собираются в HomeScreen | 0.5.38 (HomeChromeHost) |
 | Меню папки, приложения, полки и «В папку…» собираются в HomeScreen | 0.5.37 (HomeContextMenus) |
 | Клавиатуры создания папки и переименования приложения лежат в HomeScreen | 0.5.36 (HomeKeyboards) |
 | Слои Home (backdrop, shelf, dock band, grid) собираются в HomeScreen | 0.5.35 (HomeSceneLayers) |
@@ -285,6 +286,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.38: chrome и модальные окна Home
+
+- **Симптом.** После 0.5.37 `HomeScreen.kt` оставался 839 строк; вызовы `HomeTopChrome` и `HomeContentModals` с их колбэками занимали ~105 строк главного composable.
+- **Что сделано.**
+  - `HomeChromeHost` — `BoxScope`-расширение: weather pill, status pill, trailer/online modals.
+  - Pill'ы меняют только `HomeOverlayState`; модальные окна закрывают свой target и возвращают карточку в `onOpenShelfContent`.
+  - `HomeChromeHost` обязан быть `BoxScope`-расширением: `HomeTopChrome` использует `Modifier.align`.
+  `HomeScreen.kt` уменьшился до **782 строк** (исходно 2 619, минус ~70%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeChromeHost.kt`.
+- **Чего не делать.** Не делать `HomeChromeHost` обычной функцией: `HomeTopChrome` не скомпилируется без `BoxScope`. Не переносить `openShelfContent` внутрь: он открывает trailer/Flux и зависит от `DiscoveryEngine`.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.38 / vc111; **6 601 723 B**, SHA-256 **`af8445fd06ee3be25fc6ca8d8fef5970ef35b5cbe65b3fc4b7e9fe27fde06e7b`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.37: меню Home
 

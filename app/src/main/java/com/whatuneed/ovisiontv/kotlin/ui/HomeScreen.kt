@@ -757,82 +757,26 @@ fun HomeScreen(
             onOpenSystem = onOpenSystem,
         )
 
-        HomeTopChrome(
+        HomeChromeHost(
+            overlays = overlays,
+            weather = weather,
+            grid = grid,
+            shelf = shelf,
+            shelfCards = shelfCards,
             scale = scale,
             reduceMotion = reduceMotion,
-            weatherPanelOpen = overlays.weatherPanelOpen,
-            weatherData = weather.data,
-            weatherStale = weather.stale,
             weatherVisible = weatherVisible,
-            weatherFocused = overlays.weatherFocused,
-            weatherManual = { WeatherPreferences.manual(context) },
+            menuOpen = menuOpen,
+            context = context,
             weatherRequester = weatherRequester,
-            capsuleFocused = overlays.capsuleFocused,
-            controlCenterOpen = overlays.controlCenterOpen,
+            capsuleRequester = capsuleRequester,
             capsuleClock = capsuleClock,
             capsuleNetwork = capsuleNetwork,
-            capsuleRequester = capsuleRequester,
             profileEmoji = activeProfile?.emoji?.takeIf { it.isNotBlank() },
             profileColor = profileColor,
             profileName = activeProfile?.name,
-            openFolder = grid.openFolder,
-            launching = grid.launching,
-            menuOpen = menuOpen,
-            searchOpen = overlays.searchOpen,
-            onCloseWeatherPanel = {
-                overlays.weatherPanelOpen = false
-                // The Java popover returned to the weather card.
-                overlays.weatherFocused = true
-            },
-            onWeatherActivate = {
-                overlays.weatherFromShelf = false
-                overlays.weatherFocused = true
-                overlays.weatherPanelOpen = true
-            },
-            onStatusActivate = {
-                // TalkBack has no key event: take the pill and open the
-                // panel the same way OK does.
-                overlays.capsuleFromShelf = false
-                overlays.capsuleFocused = true
-                overlays.controlCenterOpen = true
-            },
-        )
-
-        HomeContentModals(
-            playingTrailer = shelf.playingTrailer,
-            onlineInfo = shelf.onlineInfo,
-            onlineInfoTarget = shelf.onlineInfoTarget,
-            launching = grid.launching,
             launchProgress = launchProgress,
-            scale = scale,
-            onOpenTrailerTarget = { target ->
-                shelf.playingTrailer = null
-                openShelfContent(target)
-            },
-            onDismissTrailer = {
-                shelf.playingTrailer = null
-                // Closing the preview returns to the card that opened it,
-                // not to the dock: the modal effect lowered the shelf while
-                // the preview played, so put its cursor back before asking
-                // TopShelf for Android focus again.
-                if (shelfCards.isNotEmpty()) {
-                    shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
-                }
-                shelf.focusTick++
-            },
-            onOpenOnlineTarget = { provider ->
-                shelf.onlineInfo = null
-                shelf.onlineInfoTarget = null
-                openShelfContent(provider)
-            },
-            onDismissOnlineInfo = {
-                shelf.onlineInfo = null
-                shelf.onlineInfoTarget = null
-                if (shelfCards.isNotEmpty()) {
-                    shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
-                }
-                shelf.focusTick++
-            },
+            onOpenShelfContent = ::openShelfContent,
         )
     }
 }
