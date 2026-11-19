@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Overlay открытой папки собирается в HomeScreen | 0.5.39 (HomeFolderHost) |
 | Верхний chrome и модальные окна полки собираются в HomeScreen | 0.5.38 (HomeChromeHost) |
 | Меню папки, приложения, полки и «В папку…» собираются в HomeScreen | 0.5.37 (HomeContextMenus) |
 | Клавиатуры создания папки и переименования приложения лежат в HomeScreen | 0.5.36 (HomeKeyboards) |
@@ -286,6 +287,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.39: overlay папки Home
+
+- **Симптом.** После 0.5.38 `HomeScreen.kt` оставался 782 строки; `FolderOverlay` с focus-key, закрытием и мутациями занимал ~40 строк главного composable.
+- **Что сделано.**
+  - `HomeFolderHost` показывает `FolderOverlay` по `grid.openFolder`.
+  - Focus-key папки, запуск, переименование, перенос на Home и удаление остались на HomeScreen.
+  `HomeScreen.kt` уменьшился до **766 строк** (исходно 2 619, минус ~71%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeFolderHost.kt`.
+- **Чего не делать.** Не переносить `updateFolderApps`/`renameFolder`/`moveAppToHome` в host: они меняют `DiscoveryEngine` и `HomeGridState`.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.39 / vc112; **6 601 723 B**, SHA-256 **`61a375424cf3ca502e8256afeaf52a7a1922425e3fd1480fbb55b286972cadb9`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.38: chrome и модальные окна Home
 

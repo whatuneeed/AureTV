@@ -669,35 +669,19 @@ fun HomeScreen(
             onPlaced = { gridPlaced = true },
         )
 
-        grid.openFolder?.let { open ->
-            FolderOverlay(
-                folder = open.folder,
-                tileCenter = Offset(open.tileX, open.tileY),
-                scale = scale,
-                launching = grid.launching != null,
-                initialFocusKey = folderFocus[open.folder.id],
-                onFocusKeyChanged = { key ->
-                    if (key == null) {
-                        folderFocus.remove(open.folder.id)
-                    } else {
-                        folderFocus[open.folder.id] = key
-                    }
-                },
-                onLaunch = { app, center -> startLaunch(app, center) },
-                onClosing = { grid.folderClosing = true },
-                onClose = {
-                    grid.openFolder = null
-                    grid.folderClosing = false
-                },
-                onAppsChanged = { apps -> updateFolderApps(open.folder.id, apps) },
-                onRename = { name -> renameFolder(open.folder.id, name) },
-                onMoveToHome = { app -> moveAppToHome(open.folder.id, app) },
-                onAppInfo = onAppInfo,
-                onUninstall = onUninstall,
-                reduceMotion = reduceMotion,
-                kidsMode = kidsMode,
-            )
-        }
+        HomeFolderHost(
+            grid = grid,
+            folderFocus = folderFocus,
+            scale = scale,
+            reduceMotion = reduceMotion,
+            kidsMode = kidsMode,
+            startLaunch = ::startLaunch,
+            updateFolderApps = ::updateFolderApps,
+            renameFolder = ::renameFolder,
+            moveAppToHome = ::moveAppToHome,
+            onAppInfo = onAppInfo,
+            onUninstall = onUninstall,
+        )
 
         HomeContextMenus(
             overlays = overlays,
