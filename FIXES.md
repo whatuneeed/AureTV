@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Шесть страниц Setup лежат в SetupScreen | 0.5.49 (SetupPages) |
 | Mode-блоки главного Saver (Photos/Reddit/Aerial/Clock) лежат в SettingsScreen | 0.5.48 (SettingsSaverMainSections) |
 | Saver subpages (mode/delay/dim/session/themes/refresh/clock) лежат в SettingsScreen | 0.5.47 (SettingsSaverChoicePages) |
 | Weather- и Discovery-страницы лежат в SettingsScreen | 0.5.46 (SettingsWeather/DiscoveryPages) |
@@ -296,6 +297,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.49: Stage 2.8 — страницы Setup
+
+- **Симптом.** После 0.5.48 `SetupScreen.kt` оставался 1 867 строк; welcome, personal, home, saver, access и finish строились внутри `buildPage()`.
+- **Что сделано.**
+  - `SetupPages.kt` — шесть page-builders; `SetupPage`/`SetupRow`/`RowKind`/`SETUP_AMBIENT_MODES` стали internal.
+  - `buildPage()` оставлен навигатором и передаёт callbacks; все `ContentPreferences`/`WeatherPreferences`/`AmbientSettingsStore`/`SaverPreferences` записи остались в `SetupScreen`.
+  - `SetupScreen.kt` уменьшился до **1 691 строки**.
+- **Файлы.** `ui/SetupScreen.kt`, `ui/SetupPages.kt`.
+- **Чего не делать.** Не переносить persistence в page-builders. Не делать `PAGE_*` из Settings внутренними — конфликт с `SetupScreen` уже случался.
+- **Проверка.** `SetupScreenTest` — **27/27** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.49 / vc122; **6 618 107 B**, SHA-256 **`ec33a8df1652776930c7a35b80a8bc9550dac43753c59e3318a2409538d402db`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.48: Stage 2.7 — mode-секции главного Saver
 

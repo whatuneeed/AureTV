@@ -159,7 +159,7 @@ private const val TITLE_GAP = 20f
 private const val SUBTITLE_LIST_GAP = 44f
 // Java raised the greeting to 64 units and its hint to 17.
 private const val GREETING_FONT = TvType.display
-private const val GREETING_HINT_FONT = TvType.subhead
+internal const val GREETING_HINT_FONT = TvType.subhead
 // Java's finish disc: 64 units across, the tick stroked at 9% of it.
 private const val FINISH_DISC = 128f
 private const val FINISH_DISC_GAP = 36f
@@ -221,15 +221,15 @@ private const val PAGE_COUNT = 6
 // The three ambient modes that need no extra permission or folder. Photos and
 // Reddit stay in Settings: choosing them here would hand the viewer an empty
 // or unconfigured surface at the exact moment the saver first starts.
-private val SETUP_AMBIENT_MODES = listOf(
+internal val SETUP_AMBIENT_MODES = listOf(
     AmbientMode.AERIAL,
     AmbientMode.CLOCK,
     AmbientMode.MINIMAL,
 )
 
-private enum class RowKind { TOGGLE, RADIO, ACTION }
+internal enum class RowKind { TOGGLE, RADIO, ACTION }
 
-private data class SetupRow(
+internal data class SetupRow(
     val title: String,
     val detail: String?,
     val kind: RowKind,
@@ -244,7 +244,7 @@ private data class SetupRow(
     val action: (() -> Unit)? = null,
 )
 
-private data class SetupPage(
+internal data class SetupPage(
     val title: String,
     val subtitle: String,
     val rows: List<SetupRow>,
@@ -416,257 +416,85 @@ fun SetupScreen(
 
     @Composable
     fun buildPage(): SetupPage = when (page) {
-        PAGE_WELCOME -> SetupPage(
-            title = stringResource(R.string.setup_welcome_title),
-            subtitle = stringResource(R.string.setup_welcome_hint),
-            primary = "",
-            onPrimary = ::next,
-            pressAnywhere = true,
-            centered = true,
-            subtitleFont = GREETING_HINT_FONT,
-            rows = emptyList(),
+        PAGE_WELCOME -> setupWelcomePage(onNext = ::next)
+
+        PAGE_PERSONAL -> setupPersonalPage(
+            language = language,
+            profile = profile,
+            systemLanguage = systemLanguage(),
+            onChooseLanguage = ::chooseLanguage,
+            onOpenAvatar = { profileAvatarOpen = true },
+            onOpenName = { profileNameOpen = true },
+            onNext = ::next,
         )
 
-        PAGE_PERSONAL -> SetupPage(
-            // Language and identity are one decision: both describe the person
-            // using this TV and both are edited in the same two launcher
-            // surfaces. Separate pages made the first minute longer without
-            // asking a different question.
-            title = stringResource(R.string.setup_personal_title),
-            subtitle = stringResource(R.string.setup_personal_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            rows = listOf(
-                SetupRow(
-                    title = stringResource(R.string.setup_language_system),
-                    detail = systemLanguage(),
-                    kind = RowKind.RADIO,
-                    checked = language == LocalePreference.SYSTEM,
-                    action = { chooseLanguage(LocalePreference.SYSTEM) },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.settings_language_russian),
-                    detail = null,
-                    kind = RowKind.RADIO,
-                    checked = language == LocalePreference.RUSSIAN,
-                    action = { chooseLanguage(LocalePreference.RUSSIAN) },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.settings_language_english),
-                    detail = null,
-                    kind = RowKind.RADIO,
-                    checked = language == LocalePreference.ENGLISH,
-                    action = { chooseLanguage(LocalePreference.ENGLISH) },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.profile_avatar),
-                    detail = null,
-                    kind = RowKind.ACTION,
-                    value = profile.emoji.ifEmpty { ProfileCatalog.initials(profile.name) }
-                        .ifEmpty { stringResource(R.string.profile_avatar_placeholder) },
-                    action = { profileAvatarOpen = true },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.profile_name),
-                    detail = null,
-                    kind = RowKind.ACTION,
-                    value = profile.name,
-                    action = { profileNameOpen = true },
-                ),
-            ),
-            initialFocus = when (language) {
-                LocalePreference.RUSSIAN -> 1
-                LocalePreference.ENGLISH -> 2
-                else -> 0
+        PAGE_HOME -> setupHomePage(
+            recommendations = recommendations,
+            continueWatching = continueWatching,
+            weatherEnabled = weatherEnabled,
+            weatherManual = weatherManual,
+            weatherPlace = weatherPlace,
+            onToggleRecommendations = {
+                recommendations = !recommendations
+                ContentPreferences.setRecommendations(context, recommendations)
             },
+            onToggleContinueWatching = {
+                continueWatching = !continueWatching
+                ContentPreferences.setContinueWatching(context, continueWatching)
+            },
+            onWeatherAutomatic = {
+                WeatherPreferences.clearPlace(context)
+                weatherEnabled = true
+                weatherManual = false
+                weatherPlace = ""
+            },
+            onWeatherCity = { citySearchOpen = true },
+            onWeatherOff = {
+                WeatherPreferences.setEnabled(context, false)
+                weatherEnabled = false
+            },
+            onNext = ::next,
         )
 
-        PAGE_HOME -> SetupPage(
-            // One content question: what appears above the tiles. The weather
-            // radio group follows the two shelf switches, so the page reads
-            // from "what" to "where the extra card comes from".
-            title = stringResource(R.string.setup_home_weather_title),
-            subtitle = stringResource(R.string.setup_home_weather_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            rows = listOf(
-                SetupRow(
-                    title = stringResource(R.string.settings_recommendations),
-                    detail = stringResource(R.string.setup_recommendations_detail),
-                    kind = RowKind.TOGGLE,
-                    checked = recommendations,
-                    action = {
-                        recommendations = !recommendations
-                        ContentPreferences.setRecommendations(context, recommendations)
-                    },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.settings_continue_watching),
-                    detail = stringResource(R.string.setup_continue_detail),
-                    kind = RowKind.TOGGLE,
-                    checked = continueWatching,
-                    action = {
-                        continueWatching = !continueWatching
-                        ContentPreferences.setContinueWatching(context, continueWatching)
-                    },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.setup_weather_auto),
-                    detail = null,
-                    kind = RowKind.RADIO,
-                    // The two shelf switches and the three weather choices are
-                    // different questions; the hairline keeps them from reading
-                    // as one five-row list.
-                    dividerBefore = true,
-                    checked = weatherEnabled && !weatherManual,
-                    action = {
-                        WeatherPreferences.clearPlace(context)
-                        weatherEnabled = true
-                        weatherManual = false
-                        weatherPlace = ""
-                    },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.setup_weather_city),
-                    detail = if (weatherManual) weatherPlace else null,
-                    kind = RowKind.RADIO,
-                    checked = weatherEnabled && weatherManual,
-                    action = { citySearchOpen = true },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.setup_weather_off),
-                    detail = null,
-                    kind = RowKind.RADIO,
-                    checked = !weatherEnabled,
-                    action = {
-                        WeatherPreferences.setEnabled(context, false)
-                        weatherEnabled = false
-                    },
-                ),
+        PAGE_SAVER -> setupSaverPage(
+            ambientMode = ambientMode,
+            delay = delay,
+            saverMusic = saverMusic,
+            onSelectMode = { mode ->
+                ambientMode = mode
+                AmbientSettingsStore.setMode(context, mode)
+            },
+            onCycleDelay = {
+                val next = SaverDelay.entries[
+                    (delay.ordinal + 1) % SaverDelay.entries.size
+                ]
+                delay = next
+                SaverPreferences.setDelay(context, next)
+            },
+            onToggleMusic = {
+                saverMusic = !saverMusic
+                SaverPreferences.setMusic(context, saverMusic)
+            },
+            onNext = ::next,
+        )
+
+        PAGE_ACCESS -> setupAccessPage(
+            defaultHome = defaultHome,
+            accessibility = accessibility,
+            listingsGranted = listingsGranted,
+            listingsPermanent = isPermanentDenial(
+                context,
+                ContentPreferences.READ_TV_LISTINGS,
+                listingsAsked,
             ),
+            onOpenHome = { openHomeSettings(context) },
+            onOpenAccessibility = { AccessibilityStatus.open(context) },
+            onRequestAccess = ::requestAccess,
+            onNext = ::next,
         )
 
-        PAGE_SAVER -> SetupPage(
-            // One ambient page instead of "when" plus "themes". The mode is
-            // the decision a first run needs; the delay is a single cycling
-            // action, and themes/Photos/Reddit remain in Settings where they
-            // have their own previews and warnings.
-            title = stringResource(R.string.setup_saver_title),
-            subtitle = stringResource(R.string.setup_saver_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            rows = SETUP_AMBIENT_MODES.map { mode ->
-                SetupRow(
-                    title = ambientModeLabel(mode),
-                    detail = null,
-                    kind = RowKind.RADIO,
-                    checked = ambientMode == mode,
-                    action = {
-                        ambientMode = mode
-                        AmbientSettingsStore.setMode(context, mode)
-                    },
-                )
-            } + listOf(
-                SetupRow(
-                    title = stringResource(R.string.setup_saver_delay),
-                    detail = stringResource(R.string.setup_saver_delay_hint),
-                    kind = RowKind.ACTION,
-                    value = delayLabel(delay),
-                    action = {
-                        val next = SaverDelay.entries[
-                            (delay.ordinal + 1) % SaverDelay.entries.size
-                        ]
-                        delay = next
-                        SaverPreferences.setDelay(context, next)
-                    },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.saver_during_music),
-                    detail = stringResource(R.string.setup_saver_music_hint),
-                    kind = RowKind.TOGGLE,
-                    checked = saverMusic,
-                    action = {
-                        saverMusic = !saverMusic
-                        SaverPreferences.setMusic(context, saverMusic)
-                    },
-                ),
-            ),
-            initialFocus = SETUP_AMBIENT_MODES.indexOf(ambientMode).coerceAtLeast(0),
-        )
-
-        PAGE_ACCESS -> SetupPage(
-            title = stringResource(R.string.setup_access_title),
-            subtitle = stringResource(R.string.setup_access_hint),
-            primary = stringResource(R.string.setup_continue),
-            onPrimary = ::next,
-            // Three optional rows do not fill the canvas; centering them keeps
-            // the page from hanging from the top edge.
-            centered = true,
-            rows = listOf(
-                SetupRow(
-                    title = stringResource(R.string.setup_home_app),
-                    detail = stringResource(R.string.setup_home_app_detail),
-                    kind = RowKind.ACTION,
-                    ok = defaultHome,
-                    value = stringResource(
-                        if (defaultHome) R.string.setup_state_done else R.string.setup_home_setup,
-                    ),
-                    action = {
-                        // Read back on resume: the system Home picker runs in
-                        // another activity, so the old value is still current
-                        // for a moment after this returns.
-                        openHomeSettings(context)
-                    },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.setup_accessibility),
-                    detail = stringResource(R.string.setup_accessibility_detail),
-                    kind = RowKind.ACTION,
-                    ok = accessibility == AccessibilityStatus.State.CONNECTED,
-                    value = stringResource(
-                        when (accessibility) {
-                            AccessibilityStatus.State.CONNECTED -> R.string.setup_accessibility_on
-                            AccessibilityStatus.State.STALE -> R.string.setup_accessibility_stale
-                            AccessibilityStatus.State.OFF -> R.string.setup_allow_action
-                        },
-                    ),
-                    action = { AccessibilityStatus.open(context) },
-                ),
-                SetupRow(
-                    title = stringResource(R.string.settings_listings_access),
-                    detail = stringResource(
-                        if (isPermanentDenial(
-                                context,
-                                ContentPreferences.READ_TV_LISTINGS,
-                                listingsAsked,
-                            )
-                        ) {
-                            R.string.setup_access_permanent
-                        } else {
-                            R.string.setup_access_detail
-                        },
-                    ),
-                    kind = RowKind.ACTION,
-                    ok = listingsGranted,
-                    value = stringResource(
-                        when {
-                            listingsGranted -> R.string.settings_listings_granted
-                            isPermanentDenial(
-                                context,
-                                ContentPreferences.READ_TV_LISTINGS,
-                                listingsAsked,
-                            ) -> R.string.settings_listings_denied
-                            else -> R.string.setup_allow_action
-                        },
-                    ),
-                    action = ::requestAccess,
-                ),
-            ),
-        )
-
-        else -> SetupPage(
-            title = stringResource(R.string.setup_done_title),
-            subtitle = finishSummary(
+        else -> setupFinishPage(
+            summary = finishSummary(
                 language = language,
                 recommendations = recommendations,
                 continueWatching = continueWatching,
@@ -677,12 +505,8 @@ fun SetupScreen(
                 ambientMode = ambientMode,
                 saverMusic = saverMusic,
             ),
-            primary = stringResource(
-                if (rerun) R.string.setup_close else R.string.setup_open_home,
-            ),
-            onPrimary = { finish(context, onFinish) },
-            centered = true,
-            rows = emptyList(),
+            rerun = rerun,
+            onFinish = { finish(context, onFinish) },
         )
     }
 
@@ -1530,7 +1354,7 @@ private fun CityResultRow(
 }
 
 @Composable
-private fun delayLabel(delay: SaverDelay): String = when (delay) {
+internal fun delayLabel(delay: SaverDelay): String = when (delay) {
     SaverDelay.TWO -> stringResource(R.string.saver_delay_2)
     SaverDelay.FIVE -> stringResource(R.string.saver_delay_5)
     SaverDelay.TEN -> stringResource(R.string.saver_delay_10)
@@ -1539,7 +1363,7 @@ private fun delayLabel(delay: SaverDelay): String = when (delay) {
 }
 
 @Composable
-private fun ambientModeLabel(mode: AmbientMode): String = when (mode) {
+internal fun ambientModeLabel(mode: AmbientMode): String = when (mode) {
     AmbientMode.AERIAL -> stringResource(R.string.saver_mode_aerial)
     AmbientMode.CLOCK -> stringResource(R.string.saver_mode_clock)
     AmbientMode.MINIMAL -> stringResource(R.string.saver_mode_minimal)
