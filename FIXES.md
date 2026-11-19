@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Погодные эффекты и три локальных state лежат в HomeScreen | 0.5.33 (HomeWeatherState/Effects) |
 | Library-переход, clamp курсора, scroll и сохранение фокуса лежат в HomeScreen | 0.5.32 (HomeLayout/FocusEffects) |
 | Launch-анимация и панели Search/Control Center остаются в HomeScreen | 0.5.31 (HomeLaunchEffects/HomePanels) |
 | Discovery-refresh, показ карточек и парад hero занимают HomeScreen | 0.5.30 (HomeShelfEffects) |
@@ -280,6 +281,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.33: погодные эффекты Home
+
+- **Симптом.** После 0.5.32 `HomeScreen.kt` оставался 1 112 строк; `weatherEnabled`/`weatherData`/`weatherStale` и два `LaunchedEffect` (цикл обновления и refresh при открытии панели) жили в главном composable.
+- **Что сделано.**
+  - `HomeWeatherState` — три состояния погоды в одном holder'е.
+  - `HomeWeatherEffects` — цикл `Weather.refresh` → `cached` → `refreshDelay`, сброс кэша при выключенной погоде и refresh при открытии панели. `foreground` останавливает цикл, как раньше.
+  - HomeScreen передаёт `context`, `resumeTick`, `foreground`, `weatherPanelOpen`.
+  `HomeScreen.kt` уменьшился до **1 093 строк** (исходно 2 619).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeWeatherState.kt`, `ui/HomeWeatherEffects.kt`.
+- **Чего не делать.** Не кэшировать `WeatherPreferences.manual(context)` в `remember`: настройка пишется из другого Activity. Не запускать refresh-цикл без `foreground`: это лишние wake'ы в фоне.
+- **Проверка.** `HomeScreenTest` — **41/41** на перезапущенном AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.33 / vc106; **6 585 339 B**, SHA-256 **`bd14f223c971feaf1169f18c9dc4e28cdac789d25dca889344b8cf0b016a0bdd`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.32: layout- и focus-эффекты Home
 

@@ -53,7 +53,6 @@ import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
-import com.whatuneed.ovisiontv.kotlin.data.Weather
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import com.whatuneed.ovisiontv.kotlin.data.homeApps
 import com.whatuneed.ovisiontv.kotlin.data.homeFocusKey
@@ -191,9 +190,7 @@ fun HomeScreen(
     val capsuleRequester = remember { FocusRequester() }
     val capsuleClock = rememberClockText()
     val capsuleNetwork = rememberNetworkKind()
-    var weatherEnabled by remember { mutableStateOf(WeatherPreferences.enabled(context)) }
-    var weatherData by remember { mutableStateOf<Weather.Data?>(null) }
-    var weatherStale by remember { mutableStateOf(false) }
+    val weather = remember { HomeWeatherState(WeatherPreferences.enabled(context)) }
     val weatherRequester = remember { FocusRequester() }
     val keyRepeat = rememberTvKeyRepeat()
     val launchProgress = remember { Animatable(0f) }
@@ -261,30 +258,13 @@ fun HomeScreen(
         libraryFade = libraryFade,
     )
 
-    // The cache is shown at once and the engine fetches only when the schedule
-    // or the settings ask; the wait is computed, so idle time costs no wakes.
-    LaunchedEffect(resumeTick, foreground) {
-        weatherEnabled = WeatherPreferences.enabled(context)
-        if (!foreground) return@LaunchedEffect
-        if (!weatherEnabled) {
-            weatherData = null
-            weatherStale = false
-            return@LaunchedEffect
-        }
-        while (true) {
-            Weather.refresh(context, false)
-            weatherData = Weather.cached(context)
-            weatherStale = Weather.stale(context)
-            delay(Weather.refreshDelay(context))
-        }
-    }
-
-    LaunchedEffect(overlays.weatherPanelOpen) {
-        if (!overlays.weatherPanelOpen) return@LaunchedEffect
-        Weather.refresh(context, false)
-        weatherData = Weather.cached(context)
-        weatherStale = Weather.stale(context)
-    }
+    HomeWeatherEffects(
+        weather = weather,
+        context = context,
+        resumeTick = resumeTick,
+        foreground = foreground,
+        weatherPanelOpen = overlays.weatherPanelOpen,
+    )
 
     HomeShelfEffects(
         shelf = shelf,
@@ -561,7 +541,7 @@ fun HomeScreen(
     val menuOpen = overlays.menuFolderId != null || overlays.folderDeleteId != null ||
         overlays.menuApp != null || overlays.moveToFolderApp != null
     // The Java launcher hid the pill over a folder, the library and every panel.
-    val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
+    val weatherVisible = weather.enabled && weather.data != null && !libraryMode &&
         grid.openFolder == null && grid.launching == null && !menuOpen && overlays.renameApp == null &&
         !overlays.searchOpen && !overlays.controlCenterOpen && !overlays.weatherPanelOpen && shelf.focus < 0 &&
         !shelf.sectionFocused
@@ -625,12 +605,12 @@ fun HomeScreen(
     // Weather turned off in Settings, or the pill left the screen: the cursor
     // must not sit on a node that no longer exists. While the forecast panel is
     // open the pill is hidden but keeps the return target for Back.
-    LaunchedEffect(weatherVisible, overlays.weatherPanelOpen, weatherEnabled) {
+    LaunchedEffect(weatherVisible, overlays.weatherPanelOpen, weather.enabled) {
         if (!weatherVisible && overlays.weatherFocused && !overlays.weatherPanelOpen) {
             overlays.weatherFocused = false
             overlays.weatherFromShelf = false
         }
-        if (!weatherEnabled) {
+        if (!weather.enabled) {
             overlays.weatherPanelOpen = false
             overlays.weatherFromShelf = false
         }
@@ -1035,8 +1015,8 @@ fun HomeScreen(
             scale = scale,
             reduceMotion = reduceMotion,
             weatherPanelOpen = overlays.weatherPanelOpen,
-            weatherData = weatherData,
-            weatherStale = weatherStale,
+            weatherData = weather.data,
+            weatherStale = weather.stale,
             weatherVisible = weatherVisible,
             weatherFocused = overlays.weatherFocused,
             weatherManual = { WeatherPreferences.manual(context) },
