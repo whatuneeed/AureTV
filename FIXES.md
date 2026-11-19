@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Пустые состояния и подписи полки лежат в TopShelf | 0.5.52 (TopShelfParts.kt) |
 | Карточки и кнопки строк Setup лежат в SetupScreen | 0.5.51 (SetupControls.kt) |
 | WeatherCitySearch (~300 строк) лежит в SetupScreen | 0.5.50 (WeatherCitySearch.kt) |
 | Шесть страниц Setup лежат в SetupScreen | 0.5.49 (SetupPages) |
@@ -299,6 +300,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.52: Stage 3.1 — TopShelf presentation parts
+
+- **Симптом.** `TopShelf.kt` был 1 247 строк; приветствие, заголовок полки, подписи секций и info-блок не зависели от кэша и фокуса, но лежали в одном файле с rail-логикой.
+- **Что сделано.**
+  - `TopShelfParts.kt` — `EmptyHome`, `TopShelfHeading`, `sectionLabel`, `RecommendationInfo`, `reasonLabel` и `INFO_BOTTOM`.
+  - `SectionBar`/`ShelfRail`/`RailCard` и кэш обложек остались в `TopShelf.kt`: они используют private `requestWhenAttached`, `shelfArtCache` и `shelfArtEpoch`.
+  - `TopShelf.kt` уменьшился до **1 050 строк**.
+- **Файлы.** `ui/components/TopShelf.kt`, `ui/components/TopShelfParts.kt`.
+- **Чего не делать.** Не выносить `SectionBar` без namespaced focus-хелпера: он завязан на `requestWhenAttached` и requester-map. Не менять тексты пустого Home — это нейтральное приветствие, не фиктивные рекомендации.
+- **Проверка.** `TopShelfTest` — **12/12** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.52 / vc125; **6 618 107 B**, SHA-256 **`90077798e363f0c616a639c2afcd909bfa19dab588261eb87303250d70c6222d`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.51: Stage 2.10 — контролы Setup
 

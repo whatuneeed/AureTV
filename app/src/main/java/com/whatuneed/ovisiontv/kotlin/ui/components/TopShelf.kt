@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -63,7 +62,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,7 +81,6 @@ import com.whatuneed.ovisiontv.kotlin.data.loadShelfBanner
 import com.whatuneed.ovisiontv.kotlin.data.trimmedCapacity
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
-import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryReason
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySourceState
@@ -91,7 +88,6 @@ import com.whatuneed.ovisiontv.kotlin.discovery.artUri
 import com.whatuneed.ovisiontv.kotlin.ui.ArtEasing
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
-import com.whatuneed.ovisiontv.kotlin.ui.TvLeading
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
@@ -126,7 +122,6 @@ internal fun shelfCardAnchor(): Offset = Offset(
     TvOs.SAFE_AREA + CARD_WIDTH / 2f,
     TvOs.SCREEN_HEIGHT - RAIL_BOTTOM - CARD_HEIGHT / 2f,
 )
-private const val INFO_BOTTOM = 340f
 private const val SECTION_BAR_TOP = 270f
 private const val SECTION_BAR_HEIGHT = 68f
 private const val SECTION_GAP = 12f
@@ -364,91 +359,6 @@ fun TopShelf(
 
 /** Neutral first screen when no app publishes a banner or a recommendation. */
 @Composable
-private fun EmptyHome(scale: TvScale, listingsDenied: Boolean) {
-    Column(
-        Modifier
-            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(300f))
-            .width(scale.dp(1000f)),
-    ) {
-        Text(
-            text = stringResource(R.string.home_empty_title),
-            color = Color.White,
-            fontSize = scale.sp(TvType.largeTitle),
-            lineHeight = scale.sp(64f),
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(scale.dp(18f)))
-        Text(
-            text = stringResource(R.string.home_empty_body),
-            color = Color.White.copy(alpha = 0.62f),
-            fontSize = scale.sp(TvType.subhead),
-            lineHeight = scale.sp(42f),
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (listingsDenied) {
-            Spacer(Modifier.height(scale.dp(18f)))
-            Text(
-                text = stringResource(R.string.shelf_listings_denied),
-                color = Color.White.copy(alpha = 0.62f),
-                fontSize = scale.sp(TvType.body),
-                lineHeight = scale.sp(TvType.body * 1.3f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TopShelfHeading(
-    app: TvApp?,
-    selected: DiscoveryItem?,
-    scale: TvScale,
-    top: Float,
-    listingsDenied: Boolean = false,
-) {
-    // tvOS captions the shelf with the selected content, not with the app
-    // category. The old "APPLICATION" line was product metadata leaking into
-    // the most prominent corner of Home.
-    val title = selected?.title?.takeIf { it.isNotBlank() }
-        ?: app?.label
-        ?: selected?.packageLabel
-        ?: stringResource(R.string.shelf_context)
-    Column(
-        Modifier
-            .padding(start = scale.dp(TvOs.SAFE_AREA), top = scale.dp(top))
-            .width(scale.dp(900f)),
-    ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = scale.sp(TvType.hero),
-            lineHeight = scale.sp(78f),
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = TextStyle(
-                shadow = Shadow(color = Color.Black.copy(alpha = 0.55f), blurRadius = 30f),
-            ),
-        )
-        if (listingsDenied) {
-            Spacer(Modifier.height(scale.dp(12f)))
-            Text(
-                text = stringResource(R.string.shelf_listings_denied),
-                color = Color.White.copy(alpha = 0.66f),
-                fontSize = scale.sp(TvType.callout),
-                lineHeight = scale.sp(TvType.callout * 1.3f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
 private fun SectionBar(
     rails: List<DiscoveryRail>,
     selected: DiscoverySection,
@@ -529,20 +439,6 @@ private fun SectionBar(
             }
         }
     }
-}
-
-@Composable
-private fun sectionLabel(section: DiscoverySection, appLabel: String?): String = when (section) {
-    DiscoverySection.CONTINUE -> stringResource(R.string.discovery_section_continue)
-    DiscoverySection.ONLINE -> stringResource(R.string.discovery_section_online)
-    DiscoverySection.FOR_YOU -> stringResource(R.string.discovery_section_for_you)
-    DiscoverySection.FROM_APP -> if (appLabel.isNullOrBlank()) {
-        stringResource(R.string.discovery_section_from_current)
-    } else {
-        stringResource(R.string.discovery_section_from_app, appLabel)
-    }
-    DiscoverySection.RECENT -> stringResource(R.string.discovery_section_recent)
-    DiscoverySection.FAVORITES -> stringResource(R.string.discovery_section_favorites)
 }
 
 @Composable
@@ -837,99 +733,6 @@ private fun RailCard(
         }
     }
 }
-
-@Composable
-private fun RecommendationInfo(card: DiscoveryItem, scale: TvScale) {
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .padding(
-                    start = scale.dp(TvOs.SAFE_AREA),
-                    bottom = scale.dp(INFO_BOTTOM),
-                )
-                .width(scale.dp(900f)),
-            verticalArrangement = Arrangement.Bottom,
-        ) {
-            card.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                Spacer(Modifier.height(scale.dp(6f)))
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = scale.sp(TvType.callout),
-                    lineHeight = scale.sp(TvLeading.infoSubtitle),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            card.synopsis?.takeIf { it.isNotBlank() }?.let { synopsis ->
-                Spacer(Modifier.height(scale.dp(6f)))
-                Text(
-                    text = synopsis,
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = scale.sp(TvType.caption),
-                    lineHeight = scale.sp(TvType.caption * 1.3f),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            card.remainingMinutes?.let { minutes ->
-                Spacer(Modifier.height(scale.dp(4f)))
-                Text(
-                    text = stringResource(R.string.watch_next_minutes_left, minutes),
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = scale.sp(TvType.caption),
-                    maxLines = 1,
-                )
-            }
-            Spacer(Modifier.height(scale.dp(8f)))
-            Text(
-                text = reasonLabel(card.reason),
-                color = Color.White.copy(alpha = 0.8f),
-                fontSize = scale.sp(TvType.caption),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val progress = card.progress
-            if (progress != null && progress > 0f) {
-                Spacer(Modifier.height(scale.dp(TvSpace.md)))
-                Box(
-                    Modifier
-                        .width(scale.dp(360f))
-                        .height(scale.dp(4f))
-                        .background(Color.White.copy(alpha = 0.28f)),
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(progress.coerceIn(0f, 1f))
-                            .height(scale.dp(4f))
-                            .background(Color.White.copy(alpha = 0.9f)),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun reasonLabel(reason: DiscoveryReason): String = when (reason) {
-    DiscoveryReason.CONTINUE_WATCHING -> stringResource(R.string.discovery_reason_continue)
-    DiscoveryReason.RECENTLY_LAUNCHED -> stringResource(R.string.discovery_reason_recent)
-    DiscoveryReason.FAVORITE -> stringResource(R.string.discovery_reason_favorite)
-    DiscoveryReason.NEW_FROM_APP -> stringResource(R.string.discovery_reason_new)
-    DiscoveryReason.OFTEN_USED -> stringResource(R.string.discovery_reason_often)
-    DiscoveryReason.FROM_CURRENT_APP -> stringResource(R.string.discovery_reason_from_app)
-    DiscoveryReason.TRENDING -> stringResource(R.string.discovery_reason_trending)
-    DiscoveryReason.DIVERSE_PICK -> stringResource(R.string.discovery_reason_diverse)
-}
-
-// ---------------------------------------------------------------------------
-// Artwork. Two decode sizes and two cache keys per item: the rail card is not
-// allowed to pin the full-screen hero (and the hero is not downsampled to a
-// card). Everything is bounds-first and never upscaled.
-// ---------------------------------------------------------------------------
-
-internal enum class ArtRole { CARD, HERO }
 
 private val shelfArtCache =
     object : LruCache<String, ImageBitmap>(Adaptive.budgets.discoveryArtBytes) {

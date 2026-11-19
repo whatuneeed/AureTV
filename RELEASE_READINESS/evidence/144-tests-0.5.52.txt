@@ -1,0 +1,21 @@
+0.5.52 / vc125 — Stage 3.1 TopShelf presentation parts
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: TopShelf.kt 1247 -> 1050 lines
+New: TopShelfParts.kt (227 lines): EmptyHome, TopShelfHeading, sectionLabel,
+RecommendationInfo, reasonLabel, INFO_BOTTOM.
+SectionBar/ShelfRail/RailCard and art caches stay in TopShelf.kt.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest class=TopShelfTest — 12/12 passed (1m 38s)
+:app:testDebugUnitTest — 552/552 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 90077798e363f0c616a639c2afcd909bfa19dab588261eb87303250d70c6222d
+versionCode 125, versionName 0.5.52, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 4034 ms (emulator loaded after test run)
+ second cold start 4973 ms (noisy emulator; no FATAL EXCEPTION)
+ MainActivity -> SetupActivity, pid alive.
+Full connected suite was not repeated after this targeted TopShelf change.
