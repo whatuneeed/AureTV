@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Rail-карточки и кэш обложек лежат в TopShelf | 0.5.53 (TopShelfRail.kt) |
 | Пустые состояния и подписи полки лежат в TopShelf | 0.5.52 (TopShelfParts.kt) |
 | Карточки и кнопки строк Setup лежат в SetupScreen | 0.5.51 (SetupControls.kt) |
 | WeatherCitySearch (~300 строк) лежит в SetupScreen | 0.5.50 (WeatherCitySearch.kt) |
@@ -300,6 +301,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.53: Stage 3.2 — TopShelf rail
+
+- **Симптом.** После 0.5.52 `TopShelf.kt` оставался 1 050 строк; `ShelfRail`, `RailCard`, LRU-кэш обложек, preload и focus-retry занимали ~760 строк.
+- **Что сделано.**
+  - `TopShelfRail.kt` — `ShelfRail`, `RailCard`, `rememberRailArts`, LRU/epoch/failures, `trimShelfArtCache*`, `loadArt`, `readAtMost`, `heroKey`/`cardKey` и `requestShelfFocusWhenAttached`.
+  - `TopShelf.kt` — только hero, banner/scrim и `SectionBar`; **483 строки**.
+  - Константы namespaced `SHELF_*`: `CARD_WIDTH`/`ART_TIMEOUT_MS` уже заняты `OnlineInfoOverlay` в том же пакете.
+- **Файлы.** `ui/components/TopShelf.kt`, `ui/components/TopShelfRail.kt`, `ui/components/TopShelfParts.kt`.
+- **Чего не делать.** Не публиковать `CARD_*`/`ART_*` без префикса — конфликт с `OnlineInfoOverlay`; не менять `PRELOAD_CARDS`/LRU-лимиты при переносе, это влияет на память 1 GB.
+- **Проверка.** `TopShelfTest` — **12/12**, `HomeScreenTest` — **41/41** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.53 / vc126; **6 618 103 B**, SHA-256 **`44007c306101fe5ef5a61850aeaa34a1eeb5ec0f2988dee781ffc655a84d7979`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.52: Stage 3.1 — TopShelf presentation parts
 

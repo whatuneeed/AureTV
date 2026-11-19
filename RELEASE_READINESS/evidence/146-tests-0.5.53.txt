@@ -1,0 +1,23 @@
+0.5.53 / vc126 — Stage 3.2 TopShelf rail
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: TopShelf.kt 1050 -> 483 lines
+New: TopShelfRail.kt (628 lines): ShelfRail, RailCard, LRU art cache, trim helpers,
+rememberRailArts, loadArt, heroKey/cardKey, requestShelfFocusWhenAttached.
+Constants namespaced SHELF_* because OnlineInfoOverlay already declares CARD_WIDTH/API ART_*.
+TopShelf.kt keeps hero, banner/scrim and SectionBar.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest class=TopShelfTest — 12/12 passed
+:app:connectedDebugAndroidTest class=HomeScreenTest — 41/41 passed (5m 25s)
+:app:testDebugUnitTest — 552/552 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618103 B, sha256 44007c306101fe5ef5a61850aeaa34a1eeb5ec0f2988dee781ffc655a84d7979
+versionCode 126, versionName 0.5.53, v2, RU/EN 661.
+
+EMULATOR NOTE
+ AVD disconnected after the connected runs ("device emulator-5554 not found").
+ Relaunched with ANDROID_SDK_ROOT=C:/Android/sdk; boot completed; install repeated.
+ First cold start 1045 ms, second 458 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; only the two affected classes above.
