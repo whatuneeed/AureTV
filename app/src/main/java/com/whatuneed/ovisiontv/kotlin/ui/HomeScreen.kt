@@ -60,11 +60,9 @@ import com.whatuneed.ovisiontv.kotlin.data.homeFocusKey
 import com.whatuneed.ovisiontv.kotlin.data.indexOfHomeFocus
 import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
-import com.whatuneed.ovisiontv.kotlin.ui.components.ControlCenter
 import com.whatuneed.ovisiontv.kotlin.ui.components.LAUNCH_START_DELAY_MS
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
-import com.whatuneed.ovisiontv.kotlin.ui.components.SearchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.TopShelf
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
@@ -354,65 +352,14 @@ fun HomeScreen(
         editor.apply()
     }
 
-    // 12_SYSTEM_TRANSITIONS §3: a launch hides the grid by the same 340 pt as a folder.
-    // Closing starts the return at BACK, together with the panel zoom (T4, 0.5 s),
-    // instead of waiting for the panel to reach the icon and adding a second half-second.
-    LaunchedEffect(grid.openFolder != null, grid.launching != null, grid.folderClosing) {
-        val hidden = grid.launching != null || (grid.openFolder != null && !grid.folderClosing)
-        hideShift.animateTo(
-            targetValue = if (hidden) TvOs.HIDE_GRID_SHIFT else 0f,
-            animationSpec = tween(
-                motionDuration(FOLDER_ZOOM_MS, reduceMotion),
-                easing = TravelEasing,
-            ),
-        )
-    }
-
-    // T1: the card grows for 0.5 s; the app is started at 0.38 s so its window
-    // covers the end of the zoom instead of waiting for it. Reduce Motion keeps
-    // the same hand-off but starts the app on the first frame.
-    LaunchedEffect(grid.launching?.app?.packageName) {
-        val active = grid.launching ?: return@LaunchedEffect
-        if (reduceMotion) {
-            launchProgress.snapTo(1f)
-            if (!onLaunch(active.app)) {
-                launchProgress.snapTo(0f)
-                grid.launching = null
-            }
-            return@LaunchedEffect
-        }
-        launchProgress.snapTo(0f)
-        coroutineScope {
-            val forward = launch { launchProgress.animateTo(1f, LaunchSpec) }
-            delay(LAUNCH_START_DELAY_MS)
-            if (!onLaunch(active.app)) {
-                forward.cancel()
-                launchProgress.animateTo(0f, tween(200))
-                grid.launching = null
-            }
-            forward.join()
-        }
-    }
-
-    // T2: the app window hid the last frame of the zoom, so the reverse starts
-    // from a full-screen card. The grid never moved, which is the tvOS rule of
-    // pre-positioning the offset before the return frame.
-    LaunchedEffect(resumeTick) {
-        if (resumeTick == 0 || grid.launching == null) return@LaunchedEffect
-        if (reduceMotion) {
-            launchProgress.snapTo(0f)
-            grid.launching = null
-            return@LaunchedEffect
-        }
-        // 12_SYSTEM_TRANSITIONS T2: the grid must already sit at its final
-        // offset on the first return frame; animating the 340 pt back while the
-        // card shrinks produces a visible double move. A launch from a folder
-        // returns to an open panel, so the grid stays hidden there (T6).
-        if (grid.openFolder == null) hideShift.snapTo(0f)
-        launchProgress.snapTo(1f)
-        launchProgress.animateTo(0f, LaunchSpec)
-        grid.launching = null
-    }
+    HomeLaunchEffects(
+        grid = grid,
+        launchProgress = launchProgress,
+        hideShift = hideShift,
+        reduceMotion = reduceMotion,
+        resumeTick = resumeTick,
+        onLaunch = onLaunch,
+    )
 
     fun moveFocus(dx: Int, dy: Int) = grid.moveFocus(dx, dy)
 
@@ -1102,57 +1049,30 @@ fun HomeScreen(
             )
         }
 
-        if (overlays.searchOpen) {
-            SearchOverlay(
-                apps = searchableApps,
-                scale = scale,
-                reduceMotion = reduceMotion,
-                onClose = {
-                    overlays.searchOpen = false
-                    if (shelf.focus >= 0) shelf.focusTick++
-                },
-                // A failed start shows its own toast; the panel stays so the
-                // query and the chosen app are not lost.
-                onLaunch = { app -> if (onLaunch(app)) overlays.searchOpen = false },
-            )
-        }
-
-        // 07_CONTROL_CENTER: the panel is a separate overlay with its own focus
-        // and Back closes it. Back fades out and hands the focus back to the
-        // pill; a tile that leaves for another screen does not (so returning
-        // from that screen does not reopen the panel).
-        if (overlays.controlCenterOpen) {
-            ControlCenter(
-                scale = scale,
-                reduceMotion = reduceMotion,
-                libraryAvailable = grid.items.size > columns,
-                onClose = { returnFocus ->
-                    overlays.controlCenterOpen = false
-                    if (returnFocus) {
-                        overlays.capsuleFocused = true
-                    } else {
-                        overlays.capsuleFocused = false
-                        overlays.capsuleFromShelf = false
-                    }
-                },
-                onStartSaver = onStartSaver,
-                onOpenLibrary = { grid.focusIndex = columns },
-                onOpenSearch = { overlays.searchOpen = true },
-                onOpenSettings = {
-                    if (onOpenSettings != null) {
-                        onOpenSettings()
-                    } else {
-                        runCatching {
-                            context.startActivity(
-                                Intent(context, SettingsActivity::class.java)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }.onFailure { Log.w(HOME_TAG, "cannot open SettingsActivity", it) }
-                    }
-                },
-                onOpenSystem = onOpenSystem,
-            )
-        }
+        HomePanels(
+            overlays = overlays,
+            grid = grid,
+            shelf = shelf,
+            searchableApps = searchableApps,
+            scale = scale,
+            reduceMotion = reduceMotion,
+            columns = columns,
+            onLaunch = onLaunch,
+            onStartSaver = onStartSaver,
+            onOpenSettings = {
+                if (onOpenSettings != null) {
+                    onOpenSettings()
+                } else {
+                    runCatching {
+                        context.startActivity(
+                            Intent(context, SettingsActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }.onFailure { Log.w(HOME_TAG, "cannot open SettingsActivity", it) }
+                }
+            },
+            onOpenSystem = onOpenSystem,
+        )
 
         HomeTopChrome(
             scale = scale,

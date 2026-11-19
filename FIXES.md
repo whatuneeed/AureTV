@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Launch-анимация и панели Search/Control Center остаются в HomeScreen | 0.5.31 (HomeLaunchEffects/HomePanels) |
 | Discovery-refresh, показ карточек и парад hero занимают HomeScreen | 0.5.30 (HomeShelfEffects) |
 | Key-машина Home и overlay-флаги лежат внутри главного composable | 0.5.29 (HomeKeyHandler) |
 | Сетка, drag, папки и их мутации смешаны с input-машиной в HomeScreen | 0.5.28 (HomeGridState) |
@@ -278,6 +279,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.31: launch-эффекты и панели Home
+
+- **Симптом.** После выноса shelf-эффектов `HomeScreen.kt` оставался 1 237 строк; zoom запуска/возврата и панели Search/Control Center всё ещё были в главном composable.
+- **Что сделано.**
+  - `HomeLaunchEffects` — три `LaunchedEffect`: скрытие сетки на 340 pt, forward-зум с запуском приложения на 0.38 s и reverse-зум на возврате; Reduce Motion сохраняет hand-off.
+  - `HomePanels` — `SearchOverlay` и `ControlCenter`; панели сами закрываются через `HomeOverlayState`, `onOpenLibrary` двигает курсор в библиотеку.
+  - HomeScreen передаёт только `onOpenSettings`-fallback (прямой старт Activity или kids-gate) и `onOpenSystem`.
+  `HomeScreen.kt` уменьшился до **1 157 строк**.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeLaunchEffects.kt`, `ui/HomePanels.kt`.
+- **Чего не делать.** Не переносить `launchProgress`/`hideShift` внутрь эффектов: это `Animatable`, которыми управляет HomeScreen. Не делать `HomePanels` владельцем `onOpenSettings`: kids-gate остаётся в Activity/HomeScreen.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.31 / vc104; **6 585 339 B**, SHA-256 **`9d94af62274dd30c33f1e8b8139739fd9558f41ad539782500f17a90d4853daf`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.30: эффекты полки вынесены из HomeScreen
 
