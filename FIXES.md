@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| OnlineClient следует редиректам без проверки хоста | 0.5.63 (host policy + manual redirects) |
 | Weather следует редиректам без проверки хоста | 0.5.62 (manual redirect + 7-host allowlist) |
 | CitySearch следует редиректам без проверки хоста | 0.5.61 (manual redirect + host check) |
 | Notes/rows/formatting Update лежат в SoftwareUpdateScreen | 0.5.60 (SoftwareUpdateParts.kt) |
@@ -310,6 +311,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.63: Stage 4.2 — OnlineClient redirect contract
+
+- **Симптом.** JustWatch GraphQL и Apple RSS шли по автоматическим редиректам; конечный хост не проверялся, а copy-loop не проверял отмену.
+- **Что сделано.**
+  - Apple RSS: manual redirect, максимум 3 хопа, только `https://itunes.apple.com` (порт `-1`/`443`), ранний body cap и cancellation в цикле.
+  - JustWatch: POST больше не следует редиректам; 3xx считается ошибкой, потому что тело GraphQL-запроса нельзя безопасно переигрывать на другой хоп.
+  - Общая `onlineUrlIsTrusted(raw, allowedHosts)`; `contentLengthLong` проверяется до чтения.
+- **Файлы.** `online/OnlineClient.kt`, `test/.../OnlineUrlPolicyTest.kt`.
+- **Чего не делать.** Не разрешать Apple поддомены (`itunes.apple.com.evil` уже отклоняется). Не автоматически повторять POST на 301/302/303 без тела.
+- **Проверка.** `OnlineUrlPolicyTest` — **2/2**, `OnlineModelsTest` — **17/17**. Unit — **556/556**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.63 / vc136; **6 618 107 B**, SHA-256 **`59511687c5dd1bd146df491b44c166ec664b1ed68131fbbcb475fe5b9e4d543c`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.62: Stage 4.2 — Weather redirect contract
 

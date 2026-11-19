@@ -3,12 +3,15 @@ package com.whatuneed.ovisiontv.kotlin.online
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.util.Locale
 
@@ -45,7 +48,7 @@ internal class JustWatchClient(
             requestMethod = "POST"
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
-            instanceFollowRedirects = true
+            instanceFollowRedirects = false
             doOutput = true
             setFixedLengthStreamingMode(body.size)
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -54,12 +57,21 @@ internal class JustWatchClient(
             setRequestProperty("User-Agent", "OVisionTV (Android TV)")
         }
         try {
+            if (!onlineUrlIsTrusted(JUSTWATCH_GRAPHQL_URL, setOf("apis.justwatch.com"))) {
+                return@withContext emptyList()
+            }
             connection.outputStream.use { it.write(body) }
-            if (connection.responseCode !in 200..299) return@withContext emptyList()
+            val code = connection.responseCode
+            // The endpoint is a fixed GraphQL POST. A redirect would need the
+            // body replayed and could leave the host, so it is a failure.
+            if (code in 300..399) return@withContext emptyList()
+            if (code !in 200..299) return@withContext emptyList()
+            if (connection.contentLengthLong > ONLINE_CACHE_MAX_BYTES) return@withContext emptyList()
             val bytes = connection.inputStream.use { input ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(16 * 1024)
                 while (output.size() < ONLINE_CACHE_MAX_BYTES) {
+                    currentCoroutineContext().ensureActive()
                     val read = input.read(buffer)
                     if (read <= 0) break
                     output.write(buffer, 0, read)
@@ -109,37 +121,58 @@ internal class AppleRssClient(
                 .takeIf { it.length == 2 && it.all(Char::isLetter) } ?: "us"
             val safeLimit = limit.coerceIn(1, JUSTWATCH_CHART_LIMIT)
             val url = "https://itunes.apple.com/$safeCountry/rss/topmovies/limit=$safeLimit/json"
-            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = connectTimeoutMs
-                readTimeout = readTimeoutMs
-                instanceFollowRedirects = true
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "OVisionTV (Android TV)")
-                setRequestProperty("Accept-Language", "en-US,en;q=0.8")
-            }
-            try {
-                if (connection.responseCode !in 200..299) return@withContext emptyList()
-                val bytes = connection.inputStream.use { input ->
-                    val output = ByteArrayOutputStream()
-                    val buffer = ByteArray(16 * 1024)
-                    while (output.size() < ONLINE_CACHE_MAX_BYTES) {
-                        val read = input.read(buffer)
-                        if (read <= 0) break
-                        output.write(buffer, 0, read)
-                    }
-                    output.toByteArray()
-                }
-                if (bytes.size > ONLINE_CACHE_MAX_BYTES) return@withContext emptyList()
-                parseOnlineFeed(bytes.toString(Charsets.UTF_8), safeLimit)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                emptyList()
-            } finally {
-                connection.disconnect()
-            }
+            val bytes = fetch(url, redirects = 0) ?: return@withContext emptyList()
+            parseOnlineFeed(bytes.toString(Charsets.UTF_8), safeLimit)
         }
+
+    private suspend fun fetch(url: String, redirects: Int): ByteArray? {
+        currentCoroutineContext().ensureActive()
+        if (!onlineUrlIsTrusted(url, APPLE_HOSTS)) return null
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            instanceFollowRedirects = false
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "OVisionTV (Android TV)")
+            setRequestProperty("Accept-Language", "en-US,en;q=0.8")
+        }
+        return try {
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (redirects >= MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = runCatching { URL(URL(url), location).toString() }.getOrNull()
+                    ?: return null
+                return fetch(next, redirects + 1)
+            }
+            if (code !in 200..299) return null
+            if (connection.contentLengthLong > ONLINE_CACHE_MAX_BYTES) return null
+            val bytes = connection.inputStream.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(16 * 1024)
+                while (output.size() < ONLINE_CACHE_MAX_BYTES) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    output.write(buffer, 0, read)
+                }
+                output.toByteArray()
+            }
+            return bytes.takeIf { it.size <= ONLINE_CACHE_MAX_BYTES }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private companion object {
+        const val MAX_REDIRECTS = 3
+        val APPLE_HOSTS = setOf("itunes.apple.com")
+    }
 
     /**
      * Builds one index from several Apple storefronts. The local storefront is
@@ -154,6 +187,14 @@ internal class AppleRssClient(
                 .distinct()
                 .flatMap { topMovies(it, JUSTWATCH_CHART_LIMIT) },
         )
+}
+
+/** Online requests may only reach the fixed HTTPS chart hosts. */
+internal fun onlineUrlIsTrusted(raw: String, allowedHosts: Set<String>): Boolean {
+    val uri = runCatching { URI(raw) }.getOrNull() ?: return false
+    if (uri.scheme?.equals("https", ignoreCase = true) != true) return false
+    if (uri.port != -1 && uri.port != 443) return false
+    return uri.host?.lowercase() in allowedHosts
 }
 
 /**
