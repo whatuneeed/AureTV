@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Плееры и caption saver лежат в SaverScreen | 0.5.55 (SaverPlayers/SaverCaption) |
 | Геометрия и status capsule лежат в ControlCenter | 0.5.54 (ControlCenterGeometry/Status) |
 | Rail-карточки и кэш обложек лежат в TopShelf | 0.5.53 (TopShelfRail.kt) |
 | Пустые состояния и подписи полки лежат в TopShelf | 0.5.52 (TopShelfParts.kt) |
@@ -302,6 +303,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.55: Stage 3.4 — Saver layers
+
+- **Симптом.** `SaverScreen.kt` был 947 строк: decoder pair, MediaSession playback state и caption-слой лежали внутри одного composable.
+- **Что сделано.**
+  - `SaverPlayers.kt` — `updateSaverPlaybackState`, `createSaverPlayers`, `createPlayer`.
+  - `SaverCaption.kt` — `BoxScope.SaverCaption`; владение item, языком и таймингом осталось в `SaverScreen`.
+  - `SaverScreen.kt` — **861 строка**; playlist, crossfade, watchdog и focus не менялись.
+- **Файлы.** `ui/components/SaverScreen.kt`, `SaverPlayers.kt`, `SaverCaption.kt`.
+- **Чего не делать.** Не переносить caption-таймер (`CAPTION_DELAY/HOLD/FADE`) в слой: он часть timeline saver. Не менять `SAVER_STILL_MS`/`SAVER_CLIP_MS` при переносе. Не строить decoder pair внутри `SaverCaption`.
+- **Проверка.** `SaverPreviewTest` + `AmbientScreenTest` — **18/18** (51 s). Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.55 / vc128; **6 618 103 B**, SHA-256 **`b165d238d733fcf3117459f0a1bc9c232ff9f22c474e4e4188123b5257760e9b`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.54: Stage 3.3 — Control Center
 

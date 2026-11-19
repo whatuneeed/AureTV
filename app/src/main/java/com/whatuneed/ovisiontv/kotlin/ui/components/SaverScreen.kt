@@ -2,11 +2,9 @@ package com.whatuneed.ovisiontv.kotlin.ui.components
 
 import android.animation.ValueAnimator
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadata
 import android.media.session.MediaSession
-import android.media.session.PlaybackState
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
@@ -26,10 +24,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,15 +35,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -63,16 +55,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.util.Util
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.whatuneed.ovisiontv.kotlin.MainActivity
 import com.whatuneed.ovisiontv.kotlin.R
@@ -81,43 +67,16 @@ import com.whatuneed.ovisiontv.kotlin.data.AerialDeviceCapabilities
 import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
 import com.whatuneed.ovisiontv.kotlin.data.AerialQualityPolicy
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
-import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.SaverAlphaEasing
 import com.whatuneed.ovisiontv.kotlin.ui.SaverExitEasing
 import com.whatuneed.ovisiontv.kotlin.ui.SurfaceEasing
 import com.whatuneed.ovisiontv.kotlin.ui.rememberTvScale
-import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal const val SAVER_SCREEN_TAG = "saver_screen"
-
-/** The system media card follows the active player, not the slot index. */
-private fun updateSaverPlaybackState(session: MediaSession, players: List<Player>) {
-    val player = players.firstOrNull { it.mediaItemCount > 0 }
-    val state = when {
-        player == null -> PlaybackState.STATE_NONE
-        player.playbackState == Player.STATE_BUFFERING -> PlaybackState.STATE_BUFFERING
-        player.isPlaying -> PlaybackState.STATE_PLAYING
-        player.playbackState == Player.STATE_READY -> PlaybackState.STATE_PAUSED
-        else -> PlaybackState.STATE_NONE
-    }
-    val actions = PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or
-        PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SEEK_TO or
-        PlaybackState.ACTION_STOP
-    session.setPlaybackState(
-        PlaybackState.Builder()
-            .setActions(actions)
-            .setState(
-                state,
-                player?.currentPosition ?: 0L,
-                if (player?.isPlaying == true) 1f else 0f,
-            )
-            .build(),
-    )
-}
 
 // The Apple masters run about six minutes each; tvOS shows an excerpt, and so
 // does the saver. A still keeps the same rhythm when no clip can play.
@@ -891,57 +850,12 @@ internal fun SaverScreen(
                 ),
         )
         if (current != null) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = scale.dp(72f), bottom = scale.dp(64f))
-                    .graphicsLayer { alpha = captionAlpha },
-            ) {
-                Text(
-                    text = title,
-                    color = LauncherColors.textPrimary,
-                    fontSize = scale.sp(TvType.subhead),
-                    fontWeight = FontWeight.SemiBold,
-                    style = TextStyle(
-                        shadow = Shadow(TvInk.shadow, Offset(0f, 2f), 12f),
-                    ),
-                )
-                Text(
-                    text = saverThemeLabel(current.theme),
-                    color = LauncherColors.textSecondary,
-                    fontSize = scale.sp(TvType.callout),
-                    style = TextStyle(
-                        shadow = Shadow(TvInk.shadow, Offset(0f, 2f), 10f),
-                    ),
-                )
-            }
+            SaverCaption(
+                title = title,
+                theme = current.theme,
+                alpha = captionAlpha,
+                scale = scale,
+            )
         }
     }
-}
-
-/**
- * The saver's decoder pair. The host builds it while Home is idle: a cold
- * pair built inside the saver's first composition delays the first picture.
- */
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal fun createSaverPlayers(context: Context): List<ExoPlayer> =
-    List(2) { runCatching { createPlayer(context) }.getOrNull() }.filterNotNull()
-
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-private fun createPlayer(context: Context): ExoPlayer {
-    // Clips stream straight from Apple's CDN, as in the Java launcher: nothing
-    // is downloaded to disk and the saver works with a full cache partition.
-    val http = DefaultHttpDataSource.Factory()
-        .setUserAgent(Util.getUserAgent(context, "OVisionTV"))
-        .setConnectTimeoutMs(15_000)
-        .setReadTimeoutMs(15_000)
-    return ExoPlayer.Builder(context)
-        .setMediaSourceFactory(DefaultMediaSourceFactory(http))
-        .build()
-        .apply {
-            // The saver never takes over sound or audio focus, even when the
-            // TV is playing music in the background.
-            volume = 0f
-            setAudioAttributes(AudioAttributes.DEFAULT, false)
-        }
 }
