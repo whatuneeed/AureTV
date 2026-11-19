@@ -614,24 +614,6 @@ private suspend fun readHttpArt(value: String): ByteArray? {
     return null
 }
 
-/** Reads a stream into one buffer, refusing anything over [limit] bytes. */
-private suspend fun java.io.InputStream.readAtMost(limit: Int): ByteArray? {
-    val out = java.io.ByteArrayOutputStream(COPY_CHUNK)
-    val buffer = ByteArray(COPY_CHUNK)
-    var total = 0
-    while (true) {
-        currentCoroutineContext().ensureActive()
-        val read = read(buffer)
-        if (read < 0) break
-        total += read
-        if (total > limit) return null
-        out.write(buffer, 0, read)
-    }
-    return out.toByteArray()
-}
-
-private const val COPY_CHUNK = 64 * 1024
-
 /**
  * The focused app is decoded once at screen size, so an app that ships a larger
  * banner is not shown from the thumbnail; a smaller source keeps the thumbnail

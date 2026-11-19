@@ -53,7 +53,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.rememberTvScale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -266,7 +265,7 @@ private const val ART_TIMEOUT_MS = 8_000
 private const val ART_MAX_BYTES = 8 * 1024 * 1024
 private const val ART_MAX_REDIRECTS = 3
 
-private fun loadArtwork(value: String): Bitmap? {
+private suspend fun loadArtwork(value: String): Bitmap? {
     val bytes = downloadArtwork(value) ?: return null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
@@ -283,7 +282,7 @@ private fun loadArtwork(value: String): Bitmap? {
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 }
 
-private fun downloadArtwork(value: String): ByteArray? {
+private suspend fun downloadArtwork(value: String): ByteArray? {
     var current = value
     repeat(ART_MAX_REDIRECTS + 1) { attempt ->
         if (!onlineImageUrlIsTrusted(current)) return null
@@ -310,19 +309,7 @@ private fun downloadArtwork(value: String): ByteArray? {
             }
             if (code != HttpURLConnection.HTTP_OK) return null
             if (connection.contentLengthLong > ART_MAX_BYTES) return null
-            return connection.inputStream.use { input ->
-                val output = ByteArrayOutputStream(64 * 1024)
-                val buffer = ByteArray(64 * 1024)
-                var total = 0
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    total += read
-                    if (total > ART_MAX_BYTES) return null
-                    output.write(buffer, 0, read)
-                }
-                output.toByteArray()
-            }
+            return connection.inputStream.use { it.readAtMost(ART_MAX_BYTES) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {

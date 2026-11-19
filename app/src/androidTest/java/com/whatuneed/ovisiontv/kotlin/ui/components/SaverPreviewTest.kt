@@ -17,6 +17,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.zip.CRC32
 import java.util.zip.Deflater
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -63,7 +64,7 @@ class SaverPreviewTest {
     fun a_corrupt_oversized_preview_stays_within_the_pixel_budget() {
         val url = "https://sylvan.apple.com/aerial/oversized-load.png"
         val file = seed(url, png(10000, 10000, byteArrayOf(0, 1, 2, 3)))
-        val bitmap = AerialPreviewStore.load(targetContext(), url)
+        val bitmap = loadPreview(url)
         // Skia returns a partial bitmap for a corrupt IDAT instead of null; it must stay bounded.
         if (bitmap == null) assertFalse(file.exists())
         else assertTrue(bitmap.width.toLong() * bitmap.height <= 4_000_000)
@@ -73,7 +74,7 @@ class SaverPreviewTest {
     fun a_corrupt_oversized_thumbnail_stays_within_the_pixel_budget() {
         val url = "https://sylvan.apple.com/aerial/oversized-thumb.png"
         val file = seed(url, png(10000, 10000, byteArrayOf(0, 1, 2, 3)), thumb = true)
-        val bitmap = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        val bitmap = loadThumb(url)
         if (bitmap == null) assertFalse(file.exists())
         else assertTrue(bitmap.width.toLong() * bitmap.height <= 4_000_000)
     }
@@ -82,12 +83,12 @@ class SaverPreviewTest {
     fun an_undecodable_file_is_deleted_from_the_disk_cache() {
         val url = "https://sylvan.apple.com/aerial/garbage.png"
         val file = seed(url, "not a png".toByteArray())
-        assertNull(AerialPreviewStore.load(targetContext(), url))
+        assertNull(loadPreview(url))
         assertFalse(file.exists())
 
         val thumbUrl = "https://sylvan.apple.com/aerial/garbage-thumb.png"
         val thumbFile = seed(thumbUrl, "not a png".toByteArray(), thumb = true)
-        assertNull(AerialPreviewStore.loadThumbnail(targetContext(), thumbUrl))
+        assertNull(loadThumb(thumbUrl))
         assertFalse(thumbFile.exists())
     }
 
@@ -95,7 +96,7 @@ class SaverPreviewTest {
     fun an_oversized_but_valid_preview_is_downsampled_to_the_pixel_budget() {
         val url = "https://sylvan.apple.com/aerial/big-valid.png"
         val file = seed(url, png(3000, 3000, solidIdat(3000, 3000)))
-        val bitmap = AerialPreviewStore.load(targetContext(), url)
+        val bitmap = loadPreview(url)
         assertNotNull(bitmap)
         assertTrue(bitmap!!.width.toLong() * bitmap.height <= 4_000_000)
         assertTrue(file.exists())
@@ -104,7 +105,7 @@ class SaverPreviewTest {
     @Test
     fun a_loaded_thumbnail_is_available_to_the_next_tile_without_io() {
         val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
-        val loaded = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        val loaded = loadThumb(url)
         assertNotNull(loaded)
         assertSame(loaded, AerialPreviewStore.cachedThumbnail(url))
     }
@@ -113,7 +114,7 @@ class SaverPreviewTest {
     fun a_thumbnail_is_cached_as_a_small_file_not_the_full_png() {
         AerialPreviewStore.clear(targetContext())
         val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
-        val bitmap = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        val bitmap = loadThumb(url)
         assertNotNull(bitmap)
         assertEquals(450, bitmap!!.width)
         val thumbs = File(targetContext().cacheDir, "aerial_previews/thumbs")
@@ -124,12 +125,12 @@ class SaverPreviewTest {
     @Test
     fun a_bundled_legacy_frame_loads_without_the_network() {
         val url = "asset:aerial_previews/024891DE-B7F6-4187-BFE0-E6D237702EF0.jpg"
-        val bitmap = AerialPreviewStore.load(targetContext(), url)
+        val bitmap = loadPreview(url)
         assertNotNull(bitmap)
         assertEquals(900, bitmap!!.width)
         assertEquals(580, bitmap.height)
 
-        val thumb = AerialPreviewStore.loadThumbnail(targetContext(), url)
+        val thumb = loadThumb(url)
         assertNotNull(thumb)
         assertTrue(thumb!!.width > 0)
     }
@@ -138,13 +139,13 @@ class SaverPreviewTest {
     fun a_normal_small_preview_and_thumbnail_still_load() {
         val url = "https://sylvan.apple.com/aerial/small.png"
         seed(url, png(4, 4, solidIdat(4, 4)))
-        val bitmap = AerialPreviewStore.load(targetContext(), url)
+        val bitmap = loadPreview(url)
         assertNotNull(bitmap)
         assertEquals(4, bitmap!!.width)
 
         val thumbUrl = "https://sylvan.apple.com/aerial/small-thumb.png"
         seed(thumbUrl, png(4, 4, solidIdat(4, 4)), thumb = true)
-        val thumb = AerialPreviewStore.loadThumbnail(targetContext(), thumbUrl)
+        val thumb = loadThumb(thumbUrl)
         assertNotNull(thumb)
         assertEquals(2, thumb!!.width)
     }
@@ -206,5 +207,13 @@ class SaverPreviewTest {
         }
         deflater.end()
         return out.toByteArray()
+    }
+
+    private fun loadPreview(url: String): android.graphics.Bitmap? = runBlocking {
+        AerialPreviewStore.load(targetContext(), url)
+    }
+
+    private fun loadThumb(url: String): android.graphics.Bitmap? = runBlocking {
+        AerialPreviewStore.loadThumbnail(targetContext(), url)
     }
 }

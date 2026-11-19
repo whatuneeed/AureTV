@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Отмена не прерывает чтение картинок | 0.5.66 (общий bounded-read + ensureActive) |
 | User-Agent версии расходятся, Reddit шлёт `0.5.7` | 0.5.65 (единый UA из BuildConfig) |
 | Image-loader'ы следуют редиректам на любой хост | 0.5.64 (same-host policy, manual redirects) |
 | OnlineClient следует редиректам без проверки хоста | 0.5.63 (host policy + manual redirects) |
@@ -313,6 +314,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.66: Stage 4.4 — отмена и общий bounded-read
+
+- **Симптом.** Три загрузчика читали тело блокирующим циклом без `ensureActive()`; уход с экрана ждал socket timeout до 8–12 с.
+- **Что сделано.**
+  - `ui/components/BoundedRead.kt` — один `readAtMost(limit)` с проверкой отмены перед каждым чанком 64 KiB.
+  - Через него переведены `OnlineInfoOverlay`, `SaverPreviewImage`, `RedditImageStore`, `TopShelfRail`.
+  - `AerialPreviewStore.load*` и `RedditImageStore.load*` стали `suspend`, потому что внутри теперь реальная отмена.
+  - Cancellation больше не проглатывается `runCatching`.
+- **Файлы.** `BoundedRead.kt`, три загрузчика, `TopShelfRail.kt`, `SaverPreviewImage.kt`, `RedditImageStore.kt`, `SaverPreviewTest.kt`, `BoundedReadTest.kt`, network-документ.
+- **Чего не делать.** Не заменять `readAtMost` на `readBytes()` и не убирать `ensureActive`: это вернёт ожидание таймаута и безлимитную память.
+- **Проверка.** `BoundedReadTest` — **3/3**, `SaverPreviewTest` + `OnlineInfoOverlayTest` + `TopShelfTest` + `AmbientScreenTest` — **33/33**. Unit — **565/565**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.66 / vc139; **6 618 107 B**, SHA-256 **`57e770d3d2739c8cb12bfa6baf75206a4386b6d19b80b462305798fc75f09ba9`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.65: Stage 4.3 — единый User-Agent
 

@@ -8,7 +8,8 @@ import android.util.LruCache
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
-import java.io.ByteArrayOutputStream
+import com.whatuneed.ovisiontv.kotlin.ui.components.readAtMost
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -43,10 +44,10 @@ object RedditImageStore {
 
     fun cached(url: String): Bitmap? = thumbs.get(url) ?: full.get(url)
 
-    fun loadThumbnail(context: Context, url: String): Bitmap? =
+    suspend fun loadThumbnail(context: Context, url: String): Bitmap? =
         load(context, url, thumbnail = true)
 
-    fun loadFull(context: Context, url: String): Bitmap? =
+    suspend fun loadFull(context: Context, url: String): Bitmap? =
         load(context, url, thumbnail = false)
 
     fun clear(context: Context) {
@@ -57,7 +58,7 @@ object RedditImageStore {
         }
     }
 
-    private fun load(context: Context, raw: String, thumbnail: Boolean): Bitmap? {
+    private suspend fun load(context: Context, raw: String, thumbnail: Boolean): Bitmap? {
         val url = RedditFeedParser.safeImageUrl(raw) ?: return null
         val memory = if (thumbnail) thumbs else full
         memory.get(url)?.let { return it }
@@ -97,7 +98,7 @@ object RedditImageStore {
         )
     }.getOrNull()
 
-    private fun download(url: String): ByteArray? = runCatching {
+    private suspend fun download(url: String): ByteArray? = runCatching {
         var current = url
         repeat(MAX_REDIRECTS + 1) { attempt ->
             val connection = URL(current).openConnection() as HttpURLConnection
@@ -119,25 +120,14 @@ object RedditImageStore {
                 }
                 if (code != HttpURLConnection.HTTP_OK) return null
                 if (connection.contentLengthLong > MAX_BYTES) return null
-                val out = ByteArrayOutputStream(COPY_CHUNK)
-                connection.inputStream.use { input ->
-                    val buffer = ByteArray(COPY_CHUNK)
-                    var total = 0
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        total += read
-                        if (total > MAX_BYTES) return null
-                        out.write(buffer, 0, read)
-                    }
-                }
-                return out.toByteArray()
+                return connection.inputStream.use { it.readAtMost(MAX_BYTES) }
             } finally {
                 connection.disconnect()
             }
         }
         null
     }.getOrElse { error ->
+        if (error is CancellationException) throw error
         Log.w(TAG, "reddit image download failed", error)
         null
     }

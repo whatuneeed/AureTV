@@ -1,0 +1,23 @@
+0.5.66 / vc139 — Stage 4.4 cancellation and shared bounded read
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: one BoundedRead.readAtMost(limit) checks ensureActive before every
+64 KiB chunk and enforces the cap. OnlineInfoOverlay, SaverPreviewImage,
+RedditImageStore and TopShelfRail now use it. AerialPreviewStore.load* and
+RedditImageStore.load* became suspend so cancellation is real; runCatching no
+longer swallows CancellationException.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:compileDebugAndroidTestKotlin — BUILD SUCCESSFUL
+BoundedReadTest — 3/3 (cap, exact body, deterministic mid-copy cancellation)
+SaverPreviewTest + OnlineInfoOverlayTest + TopShelfTest + AmbientScreenTest — 33/33
+:app:testDebugUnitTest — 565/565 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 57e770d3d2739c8cb12bfa6baf75206a4386b6d19b80b462305798fc75f09ba9
+versionCode 139, versionName 0.5.66, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 980 ms, second 668 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated. Real network cancellation latency is not
+measured; only the deterministic loop-level cancellation is tested.

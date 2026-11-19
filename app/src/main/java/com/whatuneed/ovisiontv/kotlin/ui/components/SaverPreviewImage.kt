@@ -14,6 +14,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlinx.coroutines.CancellationException
 
 /**
  * Still frames for the Settings preview. Current Apple aerials ship a 900×580
@@ -53,7 +54,7 @@ internal object AerialPreviewStore {
     fun cachedThumbnail(url: String): Bitmap? = thumbMemory.get(url)
 
     /** Grid tiles draw 450×290 stills; half sampling keeps them affordable. */
-    fun loadThumbnail(context: Context, url: String): Bitmap? {
+    suspend fun loadThumbnail(context: Context, url: String): Bitmap? {
         if (!isAerialPreviewUrl(url)) return null
         thumbMemory.get(url)?.let { return it }
         val dir = File(context.applicationContext.cacheDir, THUMB_DIR)
@@ -126,7 +127,7 @@ internal object AerialPreviewStore {
         }
     }
 
-    fun load(context: Context, url: String): Bitmap? {
+    suspend fun load(context: Context, url: String): Bitmap? {
         if (!isAerialPreviewUrl(url)) return null
         memory.get(url)?.let { return it }
 
@@ -159,7 +160,7 @@ internal object AerialPreviewStore {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
     }.getOrNull()
 
-    private fun read(url: String, context: Context): ByteArray? =
+    private suspend fun read(url: String, context: Context): ByteArray? =
         if (url.startsWith("asset:")) {
             runCatching {
                 context.assets.open(url.removePrefix("asset:")).use { it.readBytes() }
@@ -168,7 +169,7 @@ internal object AerialPreviewStore {
             download(url)
         }
 
-    private fun download(url: String): ByteArray? {
+    private suspend fun download(url: String): ByteArray? {
         var current = url
         repeat(MAX_REDIRECTS + 1) { attempt ->
             if (!isAerialMediaUrl(current)) return null
@@ -193,23 +194,14 @@ internal object AerialPreviewStore {
                     }
                     if (code != HttpURLConnection.HTTP_OK) return null
                     if (connection.contentLengthLong > MAX_BYTES) return null
-                    val out = ByteArrayOutputStream(COPY_CHUNK)
-                    connection.inputStream.use { input ->
-                        val buffer = ByteArray(COPY_CHUNK)
-                        var total = 0
-                        while (true) {
-                            val read = input.read(buffer)
-                            if (read < 0) break
-                            total += read
-                            if (total > MAX_BYTES) return null
-                            out.write(buffer, 0, read)
-                        }
-                    }
-                    return out.toByteArray()
+                    return connection.inputStream.use { it.readAtMost(MAX_BYTES) }
                 } finally {
                     connection.disconnect()
                 }
-            }.getOrNull()
+            }.getOrElse { error ->
+                if (error is CancellationException) throw error
+                null
+            }
             return result
         }
         return null

@@ -79,25 +79,24 @@ All HTTP clients, the ExoPlayer data source and the updater now use
 No client keeps its own version string. `LauncherUserAgentTest` fails if the value
 drifts from the installed `VERSION_NAME` or carries the old `0.5.7`.
 
-### G3. Missing early `Content-Length` rejection — P3 — PARTIAL
+### G3. Missing early `Content-Length` rejection — P3 — RESOLVED 0.5.66
 
-`CitySearch`, `Weather.get`, `Weather.reverseGeocode`, `OnlineClient` (both) and the
-three image loaders now reject a declared oversized body before opening the stream.
-Reddit feed/image and the remaining updater paths still rely on the streaming cap.
+Every client that opens an `HttpURLConnection` now checks `contentLengthLong` before
+reading the stream, and every body copy still enforces its streaming cap.
 They still stop at the streaming cap, so this is not a memory hole; it only wastes a
 connection and some bytes. Safe to add without changing a successful request.
 
-### G4. Blocking reads are not coroutine-aware in three image loaders — P2 — PARTIAL
+### G4. Blocking reads are not coroutine-aware in three image loaders — P2 — RESOLVED 0.5.66
 
-`TopShelfRail` now checks `ensureActive()` in the read loop. `OnlineInfoOverlay`,
-`SaverPreviewImage` and `RedditImageStore` still perform a blocking
-`HttpURLConnection` read inside `Dispatchers.IO` without a per-chunk `ensureActive()`.
-Cancellation is bounded by the 8–12 s read timeout, not immediate. Do not add a shared helper before deciding whether these loaders
+All four image loaders now read through `BoundedRead.readAtMost`, which checks
+`ensureActive()` before every 64 KiB chunk. `BoundedReadTest` cancels a live copy
+deterministically and asserts the `CancellationException`; it also covers the cap. Do not add a shared helper before deciding whether these loaders
 should close the stream on cancellation.
 
-### G5. Duplicated body-copy and redirect code — P3
+### G5. Duplicated body-copy and redirect code — P3 — PARTIAL
 
-Four manual redirect implementations and eight copy loops exist. They differ in:
+The body copy is now one helper (`ui/components/BoundedRead.kt`). Four redirect
+implementations remain. They differ in:
 - cap accounting (`ByteArrayOutputStream` vs `contentLengthLong`);
 - deadline handling (`Weather`, `CitySearch` use a wall-clock deadline; others only
   socket timeouts);
