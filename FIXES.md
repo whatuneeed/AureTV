@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Геометрия и status capsule лежат в ControlCenter | 0.5.54 (ControlCenterGeometry/Status) |
 | Rail-карточки и кэш обложек лежат в TopShelf | 0.5.53 (TopShelfRail.kt) |
 | Пустые состояния и подписи полки лежат в TopShelf | 0.5.52 (TopShelfParts.kt) |
 | Карточки и кнопки строк Setup лежат в SetupScreen | 0.5.51 (SetupControls.kt) |
@@ -301,6 +302,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.54: Stage 3.3 — Control Center
+
+- **Симптом.** `ControlCenter.kt` был 1 074 строки; чистая focus-геометрия, часы/сеть и status capsule жили в одном файле с panel state.
+- **Что сделано.**
+  - `ControlCenterGeometry.kt` — `CcFocusRect`, `CcGeometry`, `ccGeometry`, `ccCircleX`, `ccFocusRects`, `nextCcFocusId`; unit-тест `CcFocusNavigationTest` уже существовал.
+  - `ControlCenterStatus.kt` — `rememberClockText`, `rememberNetworkKind`, `networkStatusLabel`, `StatusCapsule`.
+  - `ControlCenter.kt` — **735 строк**, только типы панели, state и `ControlCenter`.
+  - Константы остались `CC_*`; `CC_TILE_*`/`CC_PANEL_WIDTH`/`CC_CIRCLE` теперь в geometry, `CC_CAPSULE_*`/`CC_AVATAR_*` — в status.
+- **Файлы.** `ui/components/ControlCenter.kt`, `ControlCenterGeometry.kt`, `ControlCenterStatus.kt`.
+- **Чего не делать.** Не переносить `CcTile`/`CcCircle`/`CcLayout` в status-файл: они принадлежат панели; при выносе status они случайно уехали и сломали сборку. Не менять `nextCcFocusId` без `CcFocusNavigationTest`.
+- **Проверка.** `ControlCenterTest` — **9/9**, `CcFocusNavigationTest` — зелёный. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.54 / vc127; **6 618 103 B**, SHA-256 **`b9d1296ce52a38032be63cae6e2bb77b21b0db42413005895f4d3ea1e9b32eed`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.53: Stage 3.2 — TopShelf rail
 

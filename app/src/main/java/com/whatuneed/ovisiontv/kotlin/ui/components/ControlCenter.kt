@@ -4,11 +4,6 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -31,15 +26,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,10 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -61,7 +51,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -77,9 +66,7 @@ import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.NetworkKind
 import com.whatuneed.ovisiontv.kotlin.data.SleepControls
-import com.whatuneed.ovisiontv.kotlin.ui.TvFocus
 import com.whatuneed.ovisiontv.kotlin.ui.TvInk
-import com.whatuneed.ovisiontv.kotlin.ui.TvRadius
 import com.whatuneed.ovisiontv.kotlin.ui.SurfaceEasing
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import com.whatuneed.ovisiontv.kotlin.ui.TvScale
@@ -87,10 +74,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.motionDuration
 import com.whatuneed.ovisiontv.kotlin.ui.TvType
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.math.abs
 
 // The Java Control Center sizes were written for its 960×540 design canvas;
 // the Kotlin launcher works in tvOS points on 1920×1080, so every layout value
@@ -99,333 +82,21 @@ import kotlin.math.abs
 internal const val CC_CAPSULE_SIDE = 48f
 internal const val CC_CAPSULE_TOP = 48f
 internal const val CC_CAPSULE_HEIGHT = 76f
-private const val CC_CAPSULE_RU_WIDTH = 216f
-private const val CC_CAPSULE_EN_WIDTH = 252f
-private const val CC_AVATAR_SIZE = 40f
-private const val CC_AVATAR_FONT = 22f
-private const val CC_AVATAR_GAP = 12f
-private const val CC_AVATAR_SPACE = CC_AVATAR_SIZE + CC_AVATAR_GAP
 private const val CC_PANEL_TOP = 144f
-private const val CC_PANEL_WIDTH = 560f
-private const val CC_TILE_WIDTH = 272f
-private const val CC_TILE_HEIGHT = 96f
-private const val CC_TILE_GAP = 16f
-private const val CC_CIRCLE = 80f
-private const val CC_CAPSULE_FONT = TvType.subhead
 private const val CC_TILE_TITLE_FONT = TvType.body
 private const val CC_TILE_STATUS_FONT = TvType.caption
 private const val CC_CIRCLE_GLYPH = 56f
 private const val CC_TILE_GLYPH = 44f
 private const val CC_TALL_GLYPH = 92f
-private const val CC_CAPSULE_GLYPH = 36f
-private const val CC_FOCUS_SCALE = 1.04f
 
 // 07_CONTROL_CENTER records that tvOS panel geometry, motion and materials are
 // UNKNOWN; these are project values from the Java panel, kept in the shared
 // focus rhythm. The page appears as one surface, never as a cascade, so its
 // entrance is the shared TvOs.SURFACE_ENTER_MS; only the exit and the pill's
 // promotion are local to this surface.
-private const val CC_EXIT_MS = 200
-private const val CC_PROMOTE_MS = 280
-private const val CC_PANEL_DROP = 20f
 private const val CC_SCRIM_ALPHA = 0.65f
 
-internal const val LEAD_ID = "lead"
-internal const val SOUND_ID = "left:1"
-private const val CC_TALL_RADIUS = TvRadius.panelWide
-
-// One geometry source for the layout and for focus navigation: the hand-written
-// index graph routed arrows diagonally (Down from Wi-Fi landed on the saver
-// circle), so moves are resolved against the real tile rectangles instead.
-internal data class CcFocusRect(
-    val id: String,
-    val left: Float,
-    val top: Float,
-    val right: Float,
-    val bottom: Float,
-) {
-    val centerX: Float get() = (left + right) / 2f
-    val centerY: Float get() = (top + bottom) / 2f
-}
-
-internal data class CcGeometry(
-    val powerHeight: Float,
-    val soundY: Float,
-    val circleY: Float,
-    val panelHeight: Float,
-)
-
-internal fun ccGeometry(rightCount: Int, circleCount: Int): CcGeometry {
-    val rowsCount = maxOf(rightCount, 2)
-    val rowsHeight = rowsCount * CC_TILE_HEIGHT + (rowsCount - 1) * CC_TILE_GAP
-    val powerHeight = (rowsCount - 1) * CC_TILE_HEIGHT + (rowsCount - 2) * CC_TILE_GAP
-    val soundY = powerHeight + CC_TILE_GAP
-    return CcGeometry(
-        powerHeight = powerHeight,
-        soundY = soundY,
-        circleY = rowsHeight + CC_TILE_GAP,
-        panelHeight = rowsHeight + if (circleCount == 0) 0f else CC_TILE_GAP + CC_CIRCLE,
-    )
-}
-
-internal fun ccCircleX(index: Int, count: Int): Float =
-    if (count <= 1) 0f else index * (CC_PANEL_WIDTH - CC_CIRCLE) / (count - 1f)
-
-internal fun ccFocusRects(rightIds: List<String>, circleIds: List<String>): List<CcFocusRect> {
-    val geometry = ccGeometry(rightIds.size, circleIds.size)
-    return buildList {
-        add(CcFocusRect(LEAD_ID, 0f, 0f, CC_TILE_WIDTH, geometry.powerHeight))
-        add(CcFocusRect(SOUND_ID, 0f, geometry.soundY, CC_TILE_WIDTH, geometry.soundY + CC_TILE_HEIGHT))
-        rightIds.forEachIndexed { index, id ->
-            val y = index * (CC_TILE_HEIGHT + CC_TILE_GAP)
-            add(CcFocusRect(id, CC_TILE_WIDTH + CC_TILE_GAP, y, CC_PANEL_WIDTH, y + CC_TILE_HEIGHT))
-        }
-        circleIds.forEachIndexed { index, id ->
-            val x = ccCircleX(index, circleIds.size)
-            add(CcFocusRect(id, x, geometry.circleY, x + CC_CIRCLE, geometry.circleY + CC_CIRCLE))
-        }
-    }
-}
-
-// FocusFinder rules: the candidate must lie in the pressed direction and share
-// the perpendicular beam with the source — a corner touch must not steal a
-// vertical move. Nearest edge wins; ties go to the closer cross-axis center,
-// then to layout order. No candidate means the focus stays put.
-internal fun nextCcFocusId(currentId: String, direction: Key, rects: List<CcFocusRect>): String? {
-    val current = rects.firstOrNull { it.id == currentId } ?: return null
-    val horizontal = direction == Key.DirectionLeft || direction == Key.DirectionRight
-    val forward = direction == Key.DirectionRight || direction == Key.DirectionDown
-    var best: CcFocusRect? = null
-    var bestMajor = Float.MAX_VALUE
-    var bestCross = Float.MAX_VALUE
-    for (candidate in rects) {
-        if (candidate.id == currentId) continue
-        val inDirection: Boolean
-        val sharesBeam: Boolean
-        val major: Float
-        val cross: Float
-        if (horizontal) {
-            inDirection = if (forward) candidate.left >= current.right else candidate.right <= current.left
-            sharesBeam = candidate.top < current.bottom && candidate.bottom > current.top
-            major = if (forward) candidate.left - current.right else current.left - candidate.right
-            cross = abs(candidate.centerY - current.centerY)
-        } else {
-            inDirection = if (forward) candidate.top >= current.bottom else candidate.bottom <= current.top
-            sharesBeam = candidate.left < current.right && candidate.right > current.left
-            major = if (forward) candidate.top - current.bottom else current.top - candidate.bottom
-            cross = abs(candidate.centerX - current.centerX)
-        }
-        if (!inDirection || !sharesBeam) continue
-        if (major < bestMajor || (major == bestMajor && cross < bestCross)) {
-            best = candidate
-            bestMajor = major
-            bestCross = cross
-        }
-    }
-    return best?.id
-}
-
 /** The clock follows the interface language, not the device's 12/24-hour setting. */
-@Composable
-internal fun rememberClockText(): String {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    // English reads 9:40 PM, Russian reads 21:40, as in the Java build.
-    val pattern = clockPattern(locale.language, minutes = true)
-    val format = remember(pattern, locale) { SimpleDateFormat(pattern, locale) }
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            val millis = System.currentTimeMillis()
-            now = millis
-            // Wake on the minute boundary instead of polling every second.
-            delay(60_000L - millis % 60_000L)
-        }
-    }
-    return format.format(Date(now))
-}
-
-@Composable
-internal fun rememberNetworkKind(): NetworkKind {
-    val context = LocalContext.current
-    var kind by remember { mutableStateOf(DeviceFactsReader.currentNetwork(context)) }
-    DisposableEffect(context) {
-        val manager = context.getSystemService(ConnectivityManager::class.java)
-        // Callbacks arrive on a binder thread; the main handler keeps the state
-        // write on the composition thread.
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            private fun refresh() {
-                kind = DeviceFactsReader.currentNetwork(context)
-            }
-
-            override fun onAvailable(network: Network) = refresh()
-            override fun onLost(network: Network) = refresh()
-            override fun onCapabilitiesChanged(
-                network: Network,
-                capabilities: NetworkCapabilities,
-            ) = refresh()
-        }
-        val registered = runCatching {
-            manager?.registerDefaultNetworkCallback(callback, Handler(Looper.getMainLooper()))
-        }.isSuccess
-        onDispose {
-            if (registered) runCatching { manager?.unregisterNetworkCallback(callback) }
-        }
-    }
-    return kind
-}
-
-@Composable
-internal fun networkStatusLabel(kind: NetworkKind): String = stringResource(
-    when (kind) {
-        NetworkKind.NONE -> R.string.cc_not_connected
-        NetworkKind.ETHERNET -> R.string.settings_network_ethernet
-        NetworkKind.MOBILE -> R.string.settings_network_mobile
-        NetworkKind.WIFI, NetworkKind.OTHER -> R.string.cc_connected
-    },
-)
-
-/**
- * The top-right status pill. It is the entry point to the Control Center and
- * shows only real state: the live clock and the active connection. While the
- * panel is open the pill grows into a band as wide as the panel, the clock
- * glides left and the network glyph keeps the right end.
- *
- * Focus is the same inset white ring as the launcher's other chrome. The pill
- * has no elevation (FRAGILE TV GPU: a stadium outline turns an elevation shadow
- * into a square patch on some TV GPUs).
- */
-@Composable
-internal fun StatusCapsule(
-    scale: TvScale,
-    focused: Boolean,
-    promoted: Boolean,
-    clock: String,
-    network: NetworkKind,
-    focusRequester: FocusRequester,
-    onActivate: () -> Unit,
-    modifier: Modifier = Modifier,
-    reduceMotion: Boolean = false,
-    profileEmoji: String? = null,
-    profileColor: Long? = null,
-    profileName: String? = null,
-) {
-    val russian = LocalConfiguration.current.locales[0]?.language == "ru"
-    val avatarSpace = if (profileEmoji != null) CC_AVATAR_SPACE else 0f
-    val width by animateFloatAsState(
-        targetValue = if (promoted) {
-            CC_PANEL_WIDTH
-        } else if (russian) {
-            CC_CAPSULE_RU_WIDTH + avatarSpace
-        } else {
-            CC_CAPSULE_EN_WIDTH + avatarSpace
-        },
-        animationSpec = tween(motionDuration(CC_PROMOTE_MS, reduceMotion), easing = SurfaceEasing),
-        label = "capsuleWidth",
-    )
-    val grow by animateFloatAsState(
-        targetValue = if (focused && !promoted) CC_FOCUS_SCALE else 1f,
-        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
-        label = "capsuleFocus",
-    )
-    val ring by animateFloatAsState(
-        targetValue = if (focused && !promoted) 1f else 0f,
-        animationSpec = tween(motionDuration(TvOs.FOCUS_MS, reduceMotion)),
-        label = "capsuleRing",
-    )
-    val shape = RoundedCornerShape(scale.dp(CC_CAPSULE_HEIGHT / 2f))
-    val title = stringResource(R.string.cc_title)
-    val networkText = networkStatusLabel(network)
-    Row(
-        modifier = modifier
-            .width(scale.dp(width))
-            .height(scale.dp(CC_CAPSULE_HEIGHT))
-            // The pill grows leftwards from its right edge, as the Java one did.
-            .graphicsLayer {
-                scaleX = grow
-                scaleY = grow
-                transformOrigin = TransformOrigin(1f, 0.5f)
-            }
-            .clip(shape)
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(TvInk.capsuleTop, TvInk.capsuleBottom),
-                ),
-                shape = shape,
-            )
-            .border(
-                // Java marks the focused pill with a bright inset ring; the
-                // ring sits inside the clip so it keeps its full stroke.
-                width = TvFocus.capsuleWidth(scale, ring),
-                brush = TvFocus.capsuleBrush(ring),
-                shape = shape,
-            )
-            .then(
-                if (promoted) {
-                    Modifier.clearAndSetSemantics {}
-                } else {
-                    Modifier
-                        .focusRequester(focusRequester)
-                        .focusable()
-                        .clearAndSetSemantics {
-                            contentDescription = title
-                            stateDescription = listOfNotNull(
-                                networkText,
-                                clock,
-                                profileName,
-                            ).joinToString(", ")
-                            role = Role.Button
-                            onClick(label = title) {
-                                onActivate()
-                                true
-                            }
-                        }
-                },
-            )
-            .padding(horizontal = scale.dp(24f)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = clock,
-            color = Color.White,
-            fontSize = scale.sp(CC_CAPSULE_FONT),
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-        )
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier
-                .width(scale.dp(2f))
-                .height(scale.dp(32f))
-                .background(Color.White.copy(alpha = 0.22f)),
-        )
-        Spacer(Modifier.width(scale.dp(20f)))
-        Image(
-            imageVector = SectionGlyph.wifi,
-            contentDescription = null,
-            modifier = Modifier.size(scale.dp(CC_CAPSULE_GLYPH)),
-            colorFilter = ColorFilter.tint(
-                Color.White.copy(alpha = if (network == NetworkKind.NONE) 0.35f else 0.92f),
-            ),
-        )
-        if (profileEmoji != null && !promoted) {
-            Spacer(Modifier.width(scale.dp(CC_AVATAR_GAP)))
-            Box(
-                Modifier
-                    .size(scale.dp(CC_AVATAR_SIZE))
-                    .clip(CircleShape)
-                    .background(Color(profileColor ?: 0xFFD9DCE3)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = profileEmoji,
-                    fontSize = scale.sp(CC_AVATAR_FONT),
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
 private class CcTile(
     val id: String,
     val title: String,
@@ -448,16 +119,6 @@ private class CcCircle(
 
 private enum class CcLayout { TALL, ROW, CIRCLE }
 
-/**
- * tvOS-inspired quick settings, laid out like the Java panel: Power holds the
- * left column's first two rows with Sound under it; Wi-Fi, Display and the
- * Sleep Timer stand in one column on the right; the saver and the launcher's
- * shortcuts fill the circle row. Do Not Disturb is left out until notification
- * access is decided (31_QUICK_SETTINGS_CONTROL_CENTER).
- *
- * [onClose] receives whether focus should return to the capsule: Back does,
- * an action leaves for another surface and does not.
- */
 @Composable
 internal fun ControlCenter(
     scale: TvScale,
