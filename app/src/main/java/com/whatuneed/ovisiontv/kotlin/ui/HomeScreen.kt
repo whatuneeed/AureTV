@@ -551,56 +551,20 @@ fun HomeScreen(
     // Layout gate instead of a blind delay: once the grid is placed every tile's
     // FocusRequester is attached, so the cursor can move on the first frame.
     var gridPlaced by remember { mutableStateOf(false) }
-    LaunchedEffect(
-        Unit,
-        focusTick,
-        gridModal,
-        overlays.capsuleFocused,
-        overlays.weatherFocused,
-        grid.focusIndex,
-        grid.items,
-        grid.editing,
-        grid.pickupActive,
-        gridPlaced,
-        shelf.focus,
-        shelf.sectionFocused,
-    ) {
-        if (gridModal || !gridPlaced) return@LaunchedEffect
-        // TopShelf owns the real target while the carousel or its section bar
-        // has the cursor; the grid must not pull focus back underneath it.
-        if (shelf.focus >= 0 || shelf.sectionFocused) return@LaunchedEffect
-        // The pill sits outside the grid; while it owns the cursor the grid must
-        // not take the focus back (the panel requests its own tile).
-        if (overlays.capsuleFocused) {
-            capsuleRequester.requestHomeFocusWhenAttached()
-            return@LaunchedEffect
-        }
-        if (overlays.weatherFocused) {
-            weatherRequester.requestHomeFocusWhenAttached()
-            return@LaunchedEffect
-        }
-        // The proxy is the cell under the cursor while it is being moved, so it
-        // carries the focus; the tiles the cursor passes over stay silent.
-        if (grid.pickupActive) {
-            pickupRequester.requestHomeFocusWhenAttached()
-            return@LaunchedEffect
-        }
-        val requester = grid.items.getOrNull(grid.focusIndex)?.let { tileRequesters[it.key] }
-        val target = requester ?: focusRequester
-        if (!target.requestHomeFocusWhenAttached()) return@LaunchedEffect
-        // TalkBack installs its own first-node focus when the window opens, so a
-        // cold start would announce tile 0 while the saved cursor sits deeper.
-        // Only an accessibility service does that; without one the repeat would
-        // be a blind 350 ms window where keys can land on the wrong tile.
-        // Compose 1.7 has no enabled flag on its accessibility manager, so the
-        // platform one answers whether a screen reader is exploring by touch.
-        val screenReader = context
-            .getSystemService(AccessibilityManager::class.java)
-            ?.isTouchExplorationEnabled == true
-        if (!screenReader) return@LaunchedEffect
-        delay(350)
-        target.requestHomeFocusWhenAttached()
-    }
+    HomeFocusRequester(
+        grid = grid,
+        shelf = shelf,
+        overlays = overlays,
+        focusTick = focusTick,
+        gridModal = gridModal,
+        gridPlaced = gridPlaced,
+        capsuleRequester = capsuleRequester,
+        weatherRequester = weatherRequester,
+        pickupRequester = pickupRequester,
+        focusRequester = focusRequester,
+        tileRequesters = tileRequesters,
+        context = context,
+    )
 
     // Weather turned off in Settings, or the pill left the screen: the cursor
     // must not sit on a node that no longer exists. While the forecast panel is

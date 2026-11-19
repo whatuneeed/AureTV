@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Запрос фокуса после раскладки сетки и TalkBack-повтор лежат в HomeScreen | 0.5.34 (HomeFocusRequester) |
 | Погодные эффекты и три локальных state лежат в HomeScreen | 0.5.33 (HomeWeatherState/Effects) |
 | Library-переход, clamp курсора, scroll и сохранение фокуса лежат в HomeScreen | 0.5.32 (HomeLayout/FocusEffects) |
 | Launch-анимация и панели Search/Control Center остаются в HomeScreen | 0.5.31 (HomeLaunchEffects/HomePanels) |
@@ -281,6 +282,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.34: запрос фокуса Home
+
+- **Симптом.** После 0.5.33 `HomeScreen.kt` оставался 1 093 строки; большой `LaunchedEffect` выбора focus-таргета (сетка, полка, capsule, weather pill, drag-proxy) и TalkBack-повтор через 350 ms жили в главном composable.
+- **Что сделано.**
+  - `HomeFocusRequester` — тот же layout-gate: ждёт `gridPlaced`, уступает фокус полке/capsule/pill/proxy, затем просит тайл или корневой `focusRequester`.
+  - TalkBack-повтор остался только при включённом touch exploration; без screen reader окна 350 ms нет.
+  - HomeScreen передаёт `gridModal`, `gridPlaced`, requester'ы и `tileRequesters`.
+  `HomeScreen.kt` уменьшился до **1 056 строк** (исходно 2 619).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeFocusRequester.kt`.
+- **Чего не делать.** Не убирать `gridPlaced`-gate и не заменять его `delay`: до раскладки `FocusRequester` тайла ещё не привязан. Не включать TalkBack-повтор без проверки `isTouchExplorationEnabled` — это вернёт слепое окно, где клавиши попадают не в ту плитку.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.34 / vc107; **6 585 335 B**, SHA-256 **`1e11cc8483dfcd94d33bfe5dbd03dcd2bd4a3ab866b15289f2323631633b4710`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.33: погодные эффекты Home
 
