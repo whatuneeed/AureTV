@@ -223,6 +223,17 @@ private fun secureUrl(value: String, vararg allowedHostSuffixes: String): String
     return value
 }
 
+/** Image loaders accept only the two chart CDNs and Apple artwork. */
+internal fun onlineImageUrlIsTrusted(raw: String): Boolean {
+    val uri = runCatching { URI(raw) }.getOrNull() ?: return false
+    if (!uri.scheme.equals("https", ignoreCase = true)) return false
+    if (uri.port != -1 && uri.port != 443) return false
+    val host = uri.host?.lowercase() ?: return false
+    return ONLINE_IMAGE_HOSTS.any { host == it || host.endsWith(".$it") }
+}
+
+private val ONLINE_IMAGE_HOSTS = listOf("justwatch.com", "mzstatic.com", "apple.com")
+
 /**
  * An index of Apple's official previews by normalized title and, when both
  * sides have one, by release year. This deliberately does not guess a match

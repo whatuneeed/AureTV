@@ -96,6 +96,7 @@ internal const val SHELF_RAIL_BOTTOM = 56f
 internal const val SHELF_RAIL_TITLE_GAP = 12f
 internal const val SHELF_ART_TIMEOUT_MS = 10_000
 internal const val SHELF_ART_MAX_BYTES = 8 * 1024 * 1024
+private const val SHELF_ART_MAX_REDIRECTS = 3
 
 @Composable
 internal fun ShelfRail(
@@ -573,17 +574,7 @@ private suspend fun readArtBytes(
     return try {
         currentCoroutineContext().ensureActive()
         if (uri.scheme == "http" || uri.scheme == "https") {
-            val connection = URL(value).openConnection() as HttpURLConnection
-            connection.connectTimeout = SHELF_ART_TIMEOUT_MS
-            connection.readTimeout = SHELF_ART_TIMEOUT_MS
-            connection.instanceFollowRedirects = true
-            try {
-                if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-                if (connection.contentLengthLong > SHELF_ART_MAX_BYTES) return null
-                connection.inputStream.use { it.readAtMost(SHELF_ART_MAX_BYTES) }
-            } finally {
-                connection.disconnect()
-            }
+            readHttpArt(value)
         } else {
             context.contentResolver.openInputStream(uri)?.use { it.readAtMost(SHELF_ART_MAX_BYTES) }
         }
@@ -592,6 +583,35 @@ private suspend fun readArtBytes(
     } catch (_: Exception) {
         null
     }
+}
+
+private suspend fun readHttpArt(value: String): ByteArray? {
+    var current = value
+    repeat(SHELF_ART_MAX_REDIRECTS + 1) { attempt ->
+        currentCoroutineContext().ensureActive()
+        val connection = URL(current).openConnection() as HttpURLConnection
+        connection.connectTimeout = SHELF_ART_TIMEOUT_MS
+        connection.readTimeout = SHELF_ART_TIMEOUT_MS
+        connection.instanceFollowRedirects = false
+        try {
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (attempt >= SHELF_ART_MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
+                    ?: return null
+                if (!imageRedirectIsTrusted(current, next)) return null
+                current = next
+                return@repeat
+            }
+            if (code != HttpURLConnection.HTTP_OK) return null
+            if (connection.contentLengthLong > SHELF_ART_MAX_BYTES) return null
+            return connection.inputStream.use { it.readAtMost(SHELF_ART_MAX_BYTES) }
+        } finally {
+            connection.disconnect()
+        }
+    }
+    return null
 }
 
 /** Reads a stream into one buffer, refusing anything over [limit] bytes. */

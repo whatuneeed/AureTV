@@ -43,6 +43,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.whatuneed.ovisiontv.kotlin.R
+import com.whatuneed.ovisiontv.kotlin.online.onlineImageUrlIsTrusted
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.TvSpace
@@ -262,49 +263,72 @@ private fun rememberArtwork(url: String?): androidx.compose.runtime.State<Bitmap
 
 private const val ART_TIMEOUT_MS = 8_000
 private const val ART_MAX_BYTES = 8 * 1024 * 1024
+private const val ART_MAX_REDIRECTS = 3
 
 private fun loadArtwork(value: String): Bitmap? {
-    val connection = runCatching { URL(value).openConnection() as HttpURLConnection }.getOrNull()
-        ?: return null
-    try {
-        connection.connectTimeout = ART_TIMEOUT_MS
-        connection.readTimeout = ART_TIMEOUT_MS
-        connection.instanceFollowRedirects = true
-        connection.setRequestProperty("Accept", "image/*")
-        connection.setRequestProperty("User-Agent", "OVisionTV (Android TV)")
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-        if (connection.contentLengthLong > ART_MAX_BYTES) return null
-        val bytes = connection.inputStream.use { input ->
-            val output = ByteArrayOutputStream(64 * 1024)
-            val buffer = ByteArray(64 * 1024)
-            var total = 0
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                total += read
-                if (total > ART_MAX_BYTES) return null
-                output.write(buffer, 0, read)
-            }
-            output.toByteArray()
-        }
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-        var sample = 1
-        while (bounds.outWidth / sample > 1920 || bounds.outHeight / sample > 1080) {
-            sample *= 2
-        }
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = sample
-            inScaled = false
-            inPreferredConfig = Bitmap.Config.RGB_565
-        }
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (_: Exception) {
-        return null
-    } finally {
-        connection.disconnect()
+    val bytes = downloadArtwork(value) ?: return null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / sample > 1920 || bounds.outHeight / sample > 1080) {
+        sample *= 2
     }
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inScaled = false
+        inPreferredConfig = Bitmap.Config.RGB_565
+    }
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+}
+
+private fun downloadArtwork(value: String): ByteArray? {
+    var current = value
+    repeat(ART_MAX_REDIRECTS + 1) { attempt ->
+        if (!onlineImageUrlIsTrusted(current)) return null
+        val connection = runCatching {
+            URL(current).openConnection() as HttpURLConnection
+        }.getOrNull() ?: return null
+        try {
+            connection.connectTimeout = ART_TIMEOUT_MS
+            connection.readTimeout = ART_TIMEOUT_MS
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Accept", "image/*")
+            connection.setRequestProperty("User-Agent", "OVisionTV (Android TV)")
+            val code = connection.responseCode
+            if (code in 300..399) {
+                if (attempt >= ART_MAX_REDIRECTS) return null
+                val location = connection.getHeaderField("Location") ?: return null
+                val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
+                    ?: return null
+                if (!onlineImageUrlIsTrusted(next) || !imageRedirectIsTrusted(current, next)) {
+                    return null
+                }
+                current = next
+                return@repeat
+            }
+            if (code != HttpURLConnection.HTTP_OK) return null
+            if (connection.contentLengthLong > ART_MAX_BYTES) return null
+            return connection.inputStream.use { input ->
+                val output = ByteArrayOutputStream(64 * 1024)
+                val buffer = ByteArray(64 * 1024)
+                var total = 0
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    if (total > ART_MAX_BYTES) return null
+                    output.write(buffer, 0, read)
+                }
+                output.toByteArray()
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return null
+        } finally {
+            connection.disconnect()
+        }
+    }
+    return null
 }

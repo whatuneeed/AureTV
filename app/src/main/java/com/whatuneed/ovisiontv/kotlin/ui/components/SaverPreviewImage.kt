@@ -34,6 +34,7 @@ internal object AerialPreviewStore {
     private const val THUMB_MAX_BYTES = 32L * 1024 * 1024
     private const val TIMEOUT_MS = 10_000
     private const val MAX_BYTES = 8 * 1024 * 1024
+    private const val MAX_REDIRECTS = 3
     private const val COPY_CHUNK = 64 * 1024
     private const val THUMB_JPEG_QUALITY = 82
 
@@ -167,33 +168,52 @@ internal object AerialPreviewStore {
             download(url)
         }
 
-    private fun download(url: String): ByteArray? = runCatching {
-        if (!isAerialMediaUrl(url)) return null
-        val connection = URL(url).openConnection() as HttpURLConnection
-        connection.connectTimeout = TIMEOUT_MS
-        connection.readTimeout = TIMEOUT_MS
-        connection.instanceFollowRedirects = true
-        connection.setRequestProperty("Accept", "image/*")
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            if (connection.contentLengthLong > MAX_BYTES) return null
-            val out = ByteArrayOutputStream(COPY_CHUNK)
-            connection.inputStream.use { input ->
-                val buffer = ByteArray(COPY_CHUNK)
-                var total = 0
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    total += read
-                    if (total > MAX_BYTES) return null
-                    out.write(buffer, 0, read)
+    private fun download(url: String): ByteArray? {
+        var current = url
+        repeat(MAX_REDIRECTS + 1) { attempt ->
+            if (!isAerialMediaUrl(current)) return null
+            val result = runCatching {
+                val connection = URL(current).openConnection() as HttpURLConnection
+                connection.connectTimeout = TIMEOUT_MS
+                connection.readTimeout = TIMEOUT_MS
+                connection.instanceFollowRedirects = false
+                connection.setRequestProperty("Accept", "image/*")
+                try {
+                    val code = connection.responseCode
+                    if (code in 300..399) {
+                        if (attempt >= MAX_REDIRECTS) return null
+                        val location = connection.getHeaderField("Location") ?: return null
+                        val next = runCatching { URL(URL(current), location).toString() }.getOrNull()
+                            ?: return null
+                        if (!isAerialMediaUrl(next) || !imageRedirectIsTrusted(current, next)) {
+                            return null
+                        }
+                        current = next
+                        return@repeat
+                    }
+                    if (code != HttpURLConnection.HTTP_OK) return null
+                    if (connection.contentLengthLong > MAX_BYTES) return null
+                    val out = ByteArrayOutputStream(COPY_CHUNK)
+                    connection.inputStream.use { input ->
+                        val buffer = ByteArray(COPY_CHUNK)
+                        var total = 0
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            total += read
+                            if (total > MAX_BYTES) return null
+                            out.write(buffer, 0, read)
+                        }
+                    }
+                    return out.toByteArray()
+                } finally {
+                    connection.disconnect()
                 }
-            }
-            out.toByteArray()
-        } finally {
-            connection.disconnect()
+            }.getOrNull()
+            return result
         }
-    }.getOrNull()
+        return null
+    }
 
     private fun save(
         dir: File,

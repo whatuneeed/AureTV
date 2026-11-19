@@ -23,6 +23,19 @@ class OnlineUrlPolicyTest {
     }
 
     @Test
+    fun onlineArtworkStaysOnTheChartImageCdn() {
+        assertTrue(onlineImageUrlIsTrusted("https://images.justwatch.com/poster/1/s592"))
+        assertTrue(onlineImageUrlIsTrusted("https://is1-ssl.mzstatic.com/image/thumb/x.jpg"))
+        assertTrue(onlineImageUrlIsTrusted("https://mzstatic.com/image/thumb/x.jpg"))
+        assertTrue(onlineImageUrlIsTrusted("https://example.apple.com/art/x.jpg"))
+
+        assertFalse(onlineImageUrlIsTrusted("http://images.justwatch.com/poster/1/s592"))
+        assertFalse(onlineImageUrlIsTrusted("https://images.justwatch.com.evil.test/poster"))
+        assertFalse(onlineImageUrlIsTrusted("https://evil.test/poster"))
+        assertFalse(onlineImageUrlIsTrusted("not a url"))
+    }
+
+    @Test
     fun appleRssStaysOnItunesHttpsHost() {
         val hosts = setOf("itunes.apple.com")
 

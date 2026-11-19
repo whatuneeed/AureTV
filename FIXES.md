@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Image-loader'ы следуют редиректам на любой хост | 0.5.64 (same-host policy, manual redirects) |
 | OnlineClient следует редиректам без проверки хоста | 0.5.63 (host policy + manual redirects) |
 | Weather следует редиректам без проверки хоста | 0.5.62 (manual redirect + 7-host allowlist) |
 | CitySearch следует редиректам без проверки хоста | 0.5.61 (manual redirect + host check) |
@@ -311,6 +312,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.64: Stage 4.2 — image redirect policy
+
+- **Симптом.** `OnlineInfoOverlay`, `SaverPreviewImage` и `TopShelfRail` использовали `instanceFollowRedirects = true`; картинка могла увести запрос на любой HTTPS-хост.
+- **Что сделано.**
+  - `ImageRedirectPolicy.kt` — редирект разрешён только на тот же хост; cleartext только для `sylvan.apple.com`.
+  - `OnlineInfoOverlay`: allowlist art-CDN (`justwatch.com`, `mzstatic.com`, `apple.com`) + manual redirect max 3 + ранний cap.
+  - `SaverPreviewImage` и `TopShelfRail`: manual redirect max 3, каждый хоп проверяется; `asset:`/`content:` ветки сохранены.
+- **Файлы.** `ui/components/ImageRedirectPolicy.kt`, `OnlineInfoOverlay.kt`, `SaverPreviewImage.kt`, `TopShelfRail.kt`, `online/OnlineModels.kt`, два unit-теста.
+- **Чего не делать.** Не разрешать cross-host CDN-редирект без явного allowlist: это снова отправляет запрос чужому серверу. Не ломать `asset:`-превью Aerial.
+- **Проверка.** `ImageRedirectPolicyTest` — **3/3**, `OnlineUrlPolicyTest` — **3/3**, `OnlineInfoOverlayTest` + `SaverPreviewTest` + `TopShelfTest` — **24/24**. Unit — **560/560**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.64 / vc137; **6 618 107 B**, SHA-256 **`d3bc43167f97e58cf509490816a056116023fff2435b278484cc8f331cef8740`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.63: Stage 4.2 — OnlineClient redirect contract
 

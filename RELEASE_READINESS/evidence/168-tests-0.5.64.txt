@@ -1,0 +1,22 @@
+0.5.64 / vc137 — Stage 4.2 image redirect policy
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: OnlineInfoOverlay, SaverPreviewImage and TopShelfRail use manual redirects
+(max 3) with same-host validation; OnlineInfo also requires the chart image CDN.
+Cleartext redirect only for sylvan.apple.com. asset:/content: branches kept.
+New ImageRedirectPolicy + onlineImageUrlIsTrusted.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+ImageRedirectPolicyTest — 3/3
+OnlineUrlPolicyTest — 3/3
+OnlineInfoOverlayTest + SaverPreviewTest + TopShelfTest — 24/24
+:app:testDebugUnitTest — 560/560 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 d3bc43167f97e58cf509490816a056116023fff2435b278484cc8f331cef8740
+versionCode 137, versionName 0.5.64, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 1166 ms, second 752 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; only the three affected component classes.
+Live CDN redirect behavior was not exercised.
