@@ -11,7 +11,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -32,10 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -585,55 +581,27 @@ fun HomeScreen(
             .focusRequester(focusRequester)
             // Preview runs before menus and panels consume the key, so any
             // press anywhere on this screen restarts the saver's idle clock.
-            .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown) onUserActivity()
-                // Preview runs before an overlay can consume the release: a key
-                // whose KeyUp lands on the panel must not stay "pressed" here
-                // and swallow the next press of the same key after it closes.
-                if (event.type == KeyEventType.KeyUp) keyRepeat.release(event.key)
-                false
-            }
-            .onKeyEvent { event ->
-                // The zoom owns the screen until the app or the return finishes.
-                if (grid.launching != null) return@onKeyEvent true
-                // Search is a separate surface: anything the panel did not use
-                // must not reach the grid behind it (a MENU press, for example).
-                if (overlays.searchOpen) return@onKeyEvent true
-                // The Control Center owns the remote while it is open; the
-                // focused tile already consumed its own keys.
-                if (overlays.controlCenterOpen) return@onKeyEvent true
-                // A shelf card menu is its own focus surface.
-                if (shelf.menu != null) return@onKeyEvent true
-                // The forecast panel has its own focus and Back handler.
-                if (overlays.weatherPanelOpen) return@onKeyEvent true
-                // A context menu owns the remote. A hold that opened it keeps
-                // sending repeats, and some remotes deliver each repeat as its
-                // own press and release; those pairs must not reach the grid.
-                if (menuOpen || overlays.newFolderApp != null || overlays.renameApp != null) {
-                    return@onKeyEvent true
-                }
-                handleHomeKey(
-                    event = event,
-                    grid = grid,
-                    shelf = shelf,
-                    overlays = overlays,
-                    rails = rails,
-                    shelfCards = shelfCards,
-                    weatherVisible = weatherVisible,
-                    libraryMode = libraryMode,
-                    columns = columns,
-                    kidsMode = kidsMode,
-                    keyRepeat = keyRepeat,
-                    scope = scope,
-                    onOrderChanged = onOrderChanged,
-                    context = context,
-                    cellCenter = ::cellCenter,
-                    startLaunch = ::startLaunch,
-                    activateShelfCard = ::activateShelfCard,
-                    focusCapsule = ::focusCapsule,
-                )
-            }
-            .focusable(),
+            .homeKeyInput(
+                grid = grid,
+                shelf = shelf,
+                overlays = overlays,
+                rails = rails,
+                shelfCards = shelfCards,
+                weatherVisible = weatherVisible,
+                libraryMode = libraryMode,
+                columns = columns,
+                kidsMode = kidsMode,
+                keyRepeat = keyRepeat,
+                scope = scope,
+                onOrderChanged = onOrderChanged,
+                context = context,
+                cellCenter = ::cellCenter,
+                startLaunch = ::startLaunch,
+                activateShelfCard = ::activateShelfCard,
+                focusCapsule = ::focusCapsule,
+                menuOpen = menuOpen,
+                onUserActivity = onUserActivity,
+            ),
     ) {
         HomeSceneLayers(
             libraryVisible = libraryVisible,

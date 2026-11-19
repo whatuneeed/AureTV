@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Preview/main key-обработчик Home собирается в HomeScreen | 0.5.40 (homeKeyInput) |
 | Overlay открытой папки собирается в HomeScreen | 0.5.39 (HomeFolderHost) |
 | Верхний chrome и модальные окна полки собираются в HomeScreen | 0.5.38 (HomeChromeHost) |
 | Меню папки, приложения, полки и «В папку…» собираются в HomeScreen | 0.5.37 (HomeContextMenus) |
@@ -287,6 +288,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.40: key-обработчик Home
+
+- **Симптом.** После 0.5.39 `HomeScreen.kt` оставался 766 строк; `.onPreviewKeyEvent` + `.onKeyEvent` + `.focusable()` с шестью modal-гейтами занимали ~60 строк главного composable.
+- **Что сделано.**
+  - `Modifier.homeKeyInput(...)` — preview сбрасывает saver-clock и отпускает зажатые клавиши; main-обработчик сначала блокирует launch/search/control center/shelf menu/weather panel/context menus, затем вызывает `handleHomeKey`.
+  - HomeScreen оставил `.focusRequester(focusRequester).homeKeyInput(...)`.
+  `HomeScreen.kt` уменьшился до **738 строк** (исходно 2 619, минус ~72%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeInput.kt`.
+- **Чего не делать.** Не убирать preview-`release`: KeyUp, пришедший на панель, иначе оставит клавишу «зажатой». Не менять порядок modal-гейтов: grid не должен получать клавиши под панелью.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.40 / vc113; **6 601 723 B**, SHA-256 **`35dc09805039f613bcfc783975d63656ddf60a6606037d318e849c6f8144c9bc`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.39: overlay папки Home
 
