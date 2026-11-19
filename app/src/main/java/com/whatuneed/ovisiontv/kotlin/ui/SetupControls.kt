@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.res.stringResource
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,7 +52,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 
 internal const val SETUP_ROW_HEIGHT = 92f
 internal const val SETUP_ROW_HEIGHT_DETAIL = 112f

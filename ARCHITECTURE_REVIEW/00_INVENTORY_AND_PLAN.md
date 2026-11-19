@@ -187,6 +187,16 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
 
 ---
 
+## 8. STAGE 5 — PACKAGE MOVES
+
+| Шаг | Файл | Из | В | Проверка |
+|---|---|---|---|---|
+| 5.1 | `SectionGlyph.kt` | `ui.components` | `core.designsystem` | compile, `ControlCenterTest` + `SetupScreenTest` 36/36 |
+
+Правило: один файл за коммит, только `package` и импорты; поведение, `internal`-видимость и имена не меняются.
+
+---
+
 ## 6. RISK REGISTER
 
 | Риск | Уровень | Контроль |

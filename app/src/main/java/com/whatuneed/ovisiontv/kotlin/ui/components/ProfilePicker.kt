@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.Profile
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog

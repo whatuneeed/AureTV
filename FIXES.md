@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `SectionGlyph` лежит среди экранов | 0.5.68 (`core.designsystem`) |
 | Разбор `Location` продублирован в 9 клиентах | 0.5.67 (общий `resolveRedirectUrl`) |
 | Отмена не прерывает чтение картинок | 0.5.66 (общий bounded-read + ensureActive) |
 | User-Agent версии расходятся, Reddit шлёт `0.5.7` | 0.5.65 (единый UA из BuildConfig) |
@@ -315,6 +316,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.68: Stage 5.1 — SectionGlyph в core.designsystem
+
+- **Симптом.** Чистый набор Material-глифов лежал в `ui.components` вместе с экранными компонентами и сетью.
+- **Что сделано.**
+  - `SectionGlyph.kt` перемещён в `core/designsystem`, `package` обновлён.
+  - Импорты поправлены в 9 файлах; старые `ui.components.SectionGlyph` удалены.
+  - Поведение, имена и `internal`-видимость не менялись.
+- **Файлы.** `core/designsystem/SectionGlyph.kt` + 9 импортов, `ARCHITECTURE_REVIEW/00_INVENTORY_AND_PLAN.md`.
+- **Чего не делать.** Не переносить глифы в `ui`, если они нужны экранам и компонентам: это снова создаст обратную зависимость. Не менять пути без обновления всех импортов.
+- **Проверка.** `ControlCenterTest` + `SetupScreenTest` — **36/36**. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.68 / vc141; **6 618 107 B**, SHA-256 **`0e4e2b0a125c13d30ad8c725f0297d921e6fbf336eb674737ff4b1ca36b3bed2`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.67: Stage 4.5 — общий redirect resolver
 

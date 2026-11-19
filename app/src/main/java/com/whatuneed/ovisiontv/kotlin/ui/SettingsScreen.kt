@@ -115,6 +115,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.BackupActivity
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
@@ -193,7 +194,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
-import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientDimLabel

@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.NetworkKind

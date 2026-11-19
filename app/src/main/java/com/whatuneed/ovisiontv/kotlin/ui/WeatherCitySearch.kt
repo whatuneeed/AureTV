@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import kotlin.math.abs
 import androidx.compose.foundation.layout.Arrangement
@@ -66,7 +67,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardMode
 import com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardPanel
 import com.whatuneed.ovisiontv.kotlin.ui.components.KeyboardState
 import com.whatuneed.ovisiontv.kotlin.ui.components.PANEL_HEIGHT
-import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvResultRow
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvSearchField
 import com.whatuneed.ovisiontv.kotlin.ui.components.keysHeight

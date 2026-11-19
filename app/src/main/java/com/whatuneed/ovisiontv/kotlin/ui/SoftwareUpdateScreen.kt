@@ -27,9 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.BuildConfig
 import com.whatuneed.ovisiontv.kotlin.R
-import com.whatuneed.ovisiontv.kotlin.ui.components.SectionGlyph
 import com.whatuneed.ovisiontv.kotlin.ui.components.TV_TOOL_LIST_WIDTH
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvToolPageScaffold
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
