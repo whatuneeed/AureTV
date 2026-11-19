@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Discovery-refresh, показ карточек и парад hero занимают HomeScreen | 0.5.30 (HomeShelfEffects) |
 | Key-машина Home и overlay-флаги лежат внутри главного composable | 0.5.29 (HomeKeyHandler) |
 | Сетка, drag, папки и их мутации смешаны с input-машиной в HomeScreen | 0.5.28 (HomeGridState) |
 | Состояние полки и выбранной секции разбросано по HomeScreen и смешано с grid/input | 0.5.27 (HomeShelfState) |
@@ -277,6 +278,21 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.30: эффекты полки вынесены из HomeScreen
+
+- **Симптом.** После key-хендлеров `HomeScreen.kt` оставался 1 365 строк; discovery-refresh, `markShown`, сброс фокуса полки при модальных окнах и 10-секундный парад hero лежали среди рендера.
+- **Что сделано.** Добавлен `HomeShelfEffects` — composable только с `LaunchedEffect`:
+  - refresh `DiscoveryEngine` по `shelfApp`, `grid.items`, `kidsMode` и `shelf.revision`;
+  - сохранение выбранной карточки по id и выбор rail;
+  - `markShown` после `SHOWN_SETTLE_MS`;
+  - сброс `shelf.focus`/`sectionFocused` при открытом меню/панели;
+  - автопереключение hero каждые 10 с с остановкой на модальных окнах.
+  `HomeScreen.kt` уменьшился до **1 237 строк** (исходно 2 619).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeShelfEffects.kt`.
+- **Чего не делать.** Не объединять refresh с key-хендлером: эффекты должны реагировать на `resumeTick`/`revision`, а не на нажатия. Не кэшировать `shelfCards`/`currentSection` вне composable — они читаются из state holder и должны пересчитываться.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15** (`HomeGridState` 9, `HomeShelfState` 4, `HomeOverlayState` 2). Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.30 / vc103; **6 585 339 B**, SHA-256 **`923a10b11d9fa1a75eaa2a44cdc7d9431683d013e3104de6bfa4b67ddc3d093c`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.29: HomeOverlayState и key handlers
 
