@@ -40,8 +40,8 @@ android {
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;
         // versionName names the batch of changes the build contains.
-        versionCode = 122
-        versionName = "0.5.49"
+        versionCode = 123
+        versionName = "0.5.50"
         buildConfigField(
             "String",
             "UPDATE_METADATA_URL",

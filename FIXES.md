@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| WeatherCitySearch (~300 строк) лежит в SetupScreen | 0.5.50 (WeatherCitySearch.kt) |
 | Шесть страниц Setup лежат в SetupScreen | 0.5.49 (SetupPages) |
 | Mode-блоки главного Saver (Photos/Reddit/Aerial/Clock) лежат в SettingsScreen | 0.5.48 (SettingsSaverMainSections) |
 | Saver subpages (mode/delay/dim/session/themes/refresh/clock) лежат в SettingsScreen | 0.5.47 (SettingsSaverChoicePages) |
@@ -297,6 +298,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.50: Stage 2.9 — WeatherCitySearch
+
+- **Симптом.** После 0.5.49 `SetupScreen.kt` оставался 1 691 строка; поиск города с клавиатурой, debounce, результатами и focus-зонами занимал ~370 строк.
+- **Что сделано.**
+  - `WeatherCitySearch.kt` — `WeatherCitySearch`, `CityZone`, `CityResultRow`, `CITY_*`-геометрия и `requestSetupFocusWhenAttached`.
+  - `CitySearch.search`, `WeatherPreferences` и `LocalContext` остались внутри overlay; внешний контракт `onPick/onClose` не менялся.
+  - `SetupScreen.kt` уменьшился до **1 276 строк** после удаления 20 осиротевших импортов.
+- **Файлы.** `ui/SetupScreen.kt`, `ui/WeatherCitySearch.kt`.
+- **Чего не делать.** Не возвращать `requestWhenAttached` в общий namespace: extension переименован в `requestSetupFocusWhenAttached`, чтобы не конфликтовать с другими экранами.
+- **Проверка.** `SetupScreenTest` — **27/27** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.50 / vc123; **6 618 107 B**, SHA-256 **`32965600d3ff3187295ed191484cc0ec8ccf44e865d16837c25ad57980126cf6`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.49: Stage 2.8 — страницы Setup
 
