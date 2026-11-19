@@ -1344,7 +1344,7 @@ fun SettingsScreen(
             add(
                 SettingsRow(
                     title = stringResource(R.string.saver_start_after),
-                    value = saverDelayLabel(saverDelay),
+                    value = settingsSaverDelayLabel(saverDelay),
                     chevron = true,
                     // Opening on the first row would let one OK press overwrite the
                     // stored choice with a value the user never looked at.
@@ -1528,7 +1528,7 @@ fun SettingsScreen(
                 add(
                     SettingsRow(
                         title = stringResource(R.string.saver_reddit_refresh),
-                        value = stringResource(redditRefreshRes(redditRefresh)),
+                        value = stringResource(settingsRedditRefreshRes(redditRefresh)),
                         chevron = true,
                         action = {
                             open(
@@ -1680,7 +1680,7 @@ fun SettingsScreen(
                 add(
                     SettingsRow(
                         title = stringResource(R.string.saver_refresh),
-                        value = saverRefreshLabel(saverRefresh),
+                        value = settingsSaverRefreshLabel(saverRefresh),
                         chevron = true,
                         action = {
                             open(
@@ -1709,109 +1709,73 @@ fun SettingsScreen(
             )
         }
 
-        PAGE_SAVER_RESET -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.saver_reset_confirm),
-                destructive = true,
-                action = { resetSaver() },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.settings_cancel),
-                action = { back() },
-            ),
+        PAGE_SAVER_RESET -> settingsSaverResetRows(
+            onReset = { resetSaver() },
+            onCancel = { back() },
         )
 
-        PAGE_SAVER_MODE -> AmbientMode.entries.map { mode ->
-            SettingsRow(
-                title = ambientModeLabel(mode),
-                checked = mode == ambientMode,
-                choice = true,
-                action = {
-                    ambientMode = mode
-                    AmbientSettingsStore.setMode(context, mode)
-                },
-            )
-        }
+        PAGE_SAVER_MODE -> settingsSaverModeRows(
+            selected = ambientMode,
+            onSelect = { mode ->
+                ambientMode = mode
+                AmbientSettingsStore.setMode(context, mode)
+            },
+        )
 
-        PAGE_SAVER_REDDIT_REFRESH -> RedditRefresh.entries.map { refresh ->
-            SettingsRow(
-                title = stringResource(redditRefreshRes(refresh)),
-                checked = refresh == redditRefresh,
-                choice = true,
-                action = {
-                    redditRefresh = refresh
-                    AmbientRedditStore.setRefresh(context, refresh)
-                },
-            )
-        }
+        PAGE_SAVER_REDDIT_REFRESH -> settingsSaverRedditRefreshRows(
+            selected = redditRefresh,
+            onSelect = { refresh ->
+                redditRefresh = refresh
+                AmbientRedditStore.setRefresh(context, refresh)
+            },
+        )
 
-        PAGE_SAVER_CLOCK_FORMAT -> AmbientClockFormat.entries.map { format ->
-            SettingsRow(
-                title = ambientClockFormatLabel(format),
-                checked = format == ambientClockFormat,
-                choice = true,
-                action = {
-                    ambientClockFormat = format
-                    AmbientSettingsStore.setClockFormat(context, format)
-                },
-            )
-        }
+        PAGE_SAVER_CLOCK_FORMAT -> settingsSaverClockFormatRows(
+            selected = ambientClockFormat,
+            onSelect = { format ->
+                ambientClockFormat = format
+                AmbientSettingsStore.setClockFormat(context, format)
+            },
+        )
 
-        PAGE_SAVER_DIM -> AmbientDim.entries.map { dim ->
-            SettingsRow(
-                title = ambientDimLabel(dim),
-                checked = dim == ambientDim,
-                choice = true,
-                action = {
-                    ambientDim = dim
-                    AmbientSettingsStore.setDimAfter(context, dim)
-                },
-            )
-        }
+        PAGE_SAVER_DIM -> settingsSaverDimRows(
+            selected = ambientDim,
+            onSelect = { dim ->
+                ambientDim = dim
+                AmbientSettingsStore.setDimAfter(context, dim)
+            },
+        )
 
-        PAGE_SAVER_SESSION -> AmbientSession.entries.map { session ->
-            SettingsRow(
-                title = ambientSessionLabel(session),
-                checked = session == ambientSession,
-                choice = true,
-                action = {
-                    ambientSession = session
-                    AmbientSettingsStore.setMaxSession(context, session)
-                },
-            )
-        }
+        PAGE_SAVER_SESSION -> settingsSaverSessionRows(
+            selected = ambientSession,
+            onSelect = { session ->
+                ambientSession = session
+                AmbientSettingsStore.setMaxSession(context, session)
+            },
+        )
 
-        PAGE_SAVER_DELAY -> SaverDelay.entries.map { delay ->
-            SettingsRow(
-                title = saverDelayLabel(delay),
-                checked = delay == saverDelay,
-                choice = true,
-                action = {
-                    saverDelay = delay
-                    SaverPreferences.setDelay(context, delay)
-                },
-            )
-        }
+        PAGE_SAVER_DELAY -> settingsSaverDelayRows(
+            selected = saverDelay,
+            onSelect = { delay ->
+                saverDelay = delay
+                SaverPreferences.setDelay(context, delay)
+            },
+        )
 
-        PAGE_SAVER_THEMES -> SaverTheme.entries.map { theme ->
-            SettingsRow(
-                title = saverThemeLabel(theme),
-                checked = theme in saverThemes,
-                action = { saverThemes = SaverPreferences.toggleTheme(context, theme, clipList) },
-            )
-        }
+        PAGE_SAVER_THEMES -> settingsSaverThemeRows(
+            selected = saverThemes,
+            onToggle = { theme ->
+                saverThemes = SaverPreferences.toggleTheme(context, theme, clipList)
+            },
+        )
 
-        PAGE_SAVER_REFRESH -> SaverRefresh.entries.map { refresh ->
-            SettingsRow(
-                title = saverRefreshLabel(refresh),
-                checked = refresh == saverRefresh,
-                choice = true,
-                action = {
-                    saverRefresh = refresh
-                    SaverPreferences.setRefresh(context, refresh)
-                },
-            )
-        }
+        PAGE_SAVER_REFRESH -> settingsSaverRefreshRows(
+            selected = saverRefresh,
+            onSelect = { refresh ->
+                saverRefresh = refresh
+                SaverPreferences.setRefresh(context, refresh)
+            },
+        )
 
         PAGE_INTERFACE -> listOf(
             SettingsRow(
@@ -1826,7 +1790,7 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_saver),
                 // The value is the stored delay, not a constant: "Never" also
                 // tells the viewer the saver is off without opening the page.
-                value = saverDelayLabel(saverDelay),
+                value = settingsSaverDelayLabel(saverDelay),
                 chevron = true,
                 action = { open(PAGE_SAVER) },
             ),
@@ -4145,12 +4109,6 @@ private fun buildLayout(
     return entries
 }
 
-private fun redditRefreshRes(refresh: RedditRefresh): Int = when (refresh) {
-    RedditRefresh.SIX -> R.string.saver_reddit_six
-    RedditRefresh.TWELVE -> R.string.saver_reddit_twelve
-    RedditRefresh.TWENTY_FOUR -> R.string.saver_reddit_twenty_four
-}
-
 private fun pageOf(section: Section): Int = when (section) {    Section.INTERFACE -> PAGE_INTERFACE
     Section.HOME_SCREEN -> PAGE_HOME_SCREEN
     Section.PROFILES -> PAGE_PROFILES
@@ -4294,27 +4252,6 @@ private fun languageLabel(language: String): String = stringResource(
         LocalePreference.RUSSIAN -> R.string.settings_language_russian
         LocalePreference.ENGLISH -> R.string.settings_language_english
         else -> R.string.settings_language_system
-    },
-)
-
-@Composable
-private fun saverDelayLabel(delay: SaverDelay): String = stringResource(
-    when (delay) {
-        SaverDelay.TWO -> R.string.saver_delay_2
-        SaverDelay.FIVE -> R.string.saver_delay_5
-        SaverDelay.TEN -> R.string.saver_delay_10
-        SaverDelay.TWENTY -> R.string.saver_delay_20
-        SaverDelay.NEVER -> R.string.saver_never
-    },
-)
-
-@Composable
-private fun saverRefreshLabel(refresh: SaverRefresh): String = stringResource(
-    when (refresh) {
-        SaverRefresh.DAILY -> R.string.saver_refresh_daily
-        SaverRefresh.WEEKLY -> R.string.saver_refresh_weekly
-        SaverRefresh.MONTHLY -> R.string.saver_refresh_monthly
-        SaverRefresh.NEVER -> R.string.saver_refresh_never
     },
 )
 

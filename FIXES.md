@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Saver subpages (mode/delay/dim/session/themes/refresh/clock) лежат в SettingsScreen | 0.5.47 (SettingsSaverChoicePages) |
 | Weather- и Discovery-страницы лежат в SettingsScreen | 0.5.46 (SettingsWeather/DiscoveryPages) |
 | Permissions и Device group страницы лежат в SettingsScreen | 0.5.45 (SettingsPermissions/DeviceGroup) |
 | Startup/Startup-when страницы лежат в SettingsScreen | 0.5.44 (SettingsStartupPages) |
@@ -294,6 +295,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.47: Stage 2.6 — Saver subpages
+
+- **Симптом.** После 0.5.46 `SettingsScreen.kt` оставался 4 334 строки; девять Saver-подстраниц (reset, mode, Reddit refresh, clock format, dim, session, delay, themes, refresh) и их label-хелперы занимали ~160 строк.
+- **Что сделано.**
+  - `SettingsSaverChoicePages.kt` — девять page-builders и namespaced `settingsSaverDelayLabel` / `settingsSaverRefreshLabel` / `settingsRedditRefreshRes`.
+  - `AmbientSettingsStore`/`SaverPreferences`/`AmbientRedditStore` остались в `SettingsScreen`; builder'ы получают `selected` и `onSelect`.
+  - `SettingsScreen.kt` уменьшился до **4 271 строки** — цель <4 300 достигнута.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsSaverChoicePages.kt`.
+- **Чего не делать.** Не путать enum-значения: `SaverDelay.TWO` использует `saver_delay_2`, `SaverRefresh` — `DAILY/WEEKLY/MONTHLY/NEVER`. Эти строки уже были однажды перепутаны при выносе и исправлены компилятором.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.47 / vc120; **6 618 107 B**, SHA-256 **`339a86a3e0aa3692d0e0f043c24a9a8853eb014b3a016c1265392a0b6d5d7ade`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.46: Stage 2.5 — Weather и Discovery pages
 
