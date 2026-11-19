@@ -33,7 +33,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -67,7 +66,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SearchOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.TopShelf
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
@@ -194,47 +192,16 @@ fun HomeScreen(
             },
         ),
     ) { mutableStateMapOf<String, String>() }
-    var menuFolderId by remember { mutableStateOf<String?>(null) }
-    // Deleting a folder is destructive to the layout even though its apps are
-    // preserved, so the menu asks once more. Keeping the pending id in state
-    // also keeps the grid from taking the remote while the confirmation is up.
-    var folderDeleteId by remember { mutableStateOf<String?>(null) }
-    var menuApp by remember { mutableStateOf<TvApp?>(null) }
-    // A hold opens the menu while OK is still down; its auto-repeat would pick
-    // the first row the moment the panel takes focus. The menu waits for the
-    // release before it accepts OK when it was opened this way.
-    var menuOpenedByHold by remember { mutableStateOf(false) }
-    // "Move to Folder…" closes the app menu and opens a picker over the grid.
-    var moveToFolderApp by remember { mutableStateOf<TvApp?>(null) }
-    // "New Folder…" in that picker: the keyboard names a folder around the app.
-    var newFolderApp by remember { mutableStateOf<TvApp?>(null) }
-    // Renaming an app changes only the launcher's caption; the package and its
-    // activity stay untouched, and the value lives in AppLabelStore.
-    var renameApp by remember { mutableStateOf<TvApp?>(null) }
-    var searchOpen by remember { mutableStateOf(false) }
-    // The status pill is the only way into the Control Center. `capsuleFromShelf`
-    // remembers that Up came from the carousel, so Down returns there instead of
-    // dropping the grid back into dock mode.
-    var controlCenterOpen by remember { mutableStateOf(false) }
-    var capsuleFocused by remember { mutableStateOf(false) }
-    var capsuleFromShelf by remember { mutableStateOf(false) }
     val capsuleRequester = remember { FocusRequester() }
     val capsuleClock = rememberClockText()
     val capsuleNetwork = rememberNetworkKind()
-    // The weather pill sits in the other top corner. It is hidden (and cannot
-    // be focused) while no forecast has loaded or the weather is off.
-    var weatherFocused by remember { mutableStateOf(false) }
-    var weatherFromShelf by remember { mutableStateOf(false) }
-    var weatherPanelOpen by remember { mutableStateOf(false) }
     var weatherEnabled by remember { mutableStateOf(WeatherPreferences.enabled(context)) }
     var weatherData by remember { mutableStateOf<Weather.Data?>(null) }
     var weatherStale by remember { mutableStateOf(false) }
     val weatherRequester = remember { FocusRequester() }
-    // OK is a two-edge press: the release only launches when this grid saw the
-    // press, so a menu that closes on KeyDown cannot hand its release to the tile.
-    var okDown by remember { mutableStateOf(false) }
     val keyRepeat = rememberTvKeyRepeat()
     val launchProgress = remember { Animatable(0f) }
+    val overlays = remember { HomeOverlayState() }
 
     // 02_HOME_SCREEN §3: the dock is the first row of the same grid. Leaving it
     // for the apps below turns the grid into the full-screen library: the shelf
@@ -278,8 +245,8 @@ fun HomeScreen(
     val shelfHeld = (
         shelf.focus >= 0 ||
             shelf.sectionFocused ||
-            (capsuleFocused && capsuleFromShelf) ||
-            (weatherFocused && weatherFromShelf)
+            (overlays.capsuleFocused && overlays.capsuleFromShelf) ||
+            (overlays.weatherFocused && overlays.weatherFromShelf)
         ) && !libraryMode
     val shelfHide by animateFloatAsState(
         targetValue = if (shelfHeld) TvOs.HIDE_GRID_SHIFT else 0f,
@@ -337,8 +304,8 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(weatherPanelOpen) {
-        if (!weatherPanelOpen) return@LaunchedEffect
+    LaunchedEffect(overlays.weatherPanelOpen) {
+        if (!overlays.weatherPanelOpen) return@LaunchedEffect
         Weather.refresh(context, false)
         weatherData = Weather.cached(context)
         weatherStale = Weather.stale(context)
@@ -416,22 +383,22 @@ fun HomeScreen(
         grid.editing,
         grid.openFolder,
         grid.launching,
-        menuFolderId,
-        folderDeleteId,
-        menuApp,
-        moveToFolderApp,
-        newFolderApp,
-        renameApp,
-        searchOpen,
-        controlCenterOpen,
-        weatherPanelOpen,
+        overlays.menuFolderId,
+        overlays.folderDeleteId,
+        overlays.menuApp,
+        overlays.moveToFolderApp,
+        overlays.newFolderApp,
+        overlays.renameApp,
+        overlays.searchOpen,
+        overlays.controlCenterOpen,
+        overlays.weatherPanelOpen,
         shelf.playingTrailer,
         shelf.onlineInfo,
     ) {
         if (grid.editing || grid.openFolder != null || grid.launching != null ||
-            menuFolderId != null || folderDeleteId != null || menuApp != null ||
-            moveToFolderApp != null || newFolderApp != null || renameApp != null || searchOpen ||
-            controlCenterOpen || weatherPanelOpen || shelf.playingTrailer != null ||
+            overlays.menuFolderId != null || overlays.folderDeleteId != null || overlays.menuApp != null ||
+            overlays.moveToFolderApp != null || overlays.newFolderApp != null || overlays.renameApp != null || overlays.searchOpen ||
+            overlays.controlCenterOpen || overlays.weatherPanelOpen || shelf.playingTrailer != null ||
             shelf.onlineInfo != null
         ) {
             shelf.focus = -1
@@ -455,25 +422,25 @@ fun HomeScreen(
         grid.editing,
         grid.openFolder,
         grid.launching,
-        menuFolderId,
-        menuApp,
-        moveToFolderApp,
-        newFolderApp,
-        renameApp,
-        searchOpen,
-        controlCenterOpen,
-        capsuleFocused,
-        weatherFocused,
-        weatherPanelOpen,
+        overlays.menuFolderId,
+        overlays.menuApp,
+        overlays.moveToFolderApp,
+        overlays.newFolderApp,
+        overlays.renameApp,
+        overlays.searchOpen,
+        overlays.controlCenterOpen,
+        overlays.capsuleFocused,
+        overlays.weatherFocused,
+        overlays.weatherPanelOpen,
         shelf.playingTrailer,
         shelf.onlineInfo,
     ) {
         if (shelfCards.size <= 1 || shelf.sectionFocused || shelf.focus >= 0 ||
             shelf.menu != null || libraryMode || grid.editing || grid.openFolder != null ||
-            grid.launching != null || menuFolderId != null || folderDeleteId != null ||
-            menuApp != null || moveToFolderApp != null || newFolderApp != null ||
-            renameApp != null || searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
-            weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
+            grid.launching != null || overlays.menuFolderId != null || overlays.folderDeleteId != null ||
+            overlays.menuApp != null || overlays.moveToFolderApp != null || overlays.newFolderApp != null ||
+            overlays.renameApp != null || overlays.searchOpen || overlays.controlCenterOpen || overlays.capsuleFocused || overlays.weatherFocused ||
+            overlays.weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
         ) {
             return@LaunchedEffect
         }
@@ -585,10 +552,10 @@ fun HomeScreen(
         grid.holdJob?.cancel()
         grid.holdJob = null
         grid.longPressHandled = true
-        okDown = false
+        overlays.okDown = false
         grid.confirmIndex = null
-        capsuleFromShelf = fromShelf
-        capsuleFocused = true
+        overlays.capsuleFromShelf = fromShelf
+        overlays.capsuleFocused = true
     }
 
     fun endPickup() = grid.endPickup()
@@ -640,7 +607,7 @@ fun HomeScreen(
     // published it; otherwise the app itself opens, never a foreign package.
     fun closeShelfMenu() {
         shelf.menu = null
-        menuOpenedByHold = false
+        overlays.menuOpenedByHold = false
         shelf.focus = shelf.selected
         shelf.focusTick++
     }
@@ -733,13 +700,13 @@ fun HomeScreen(
     fun renameAppInHome(app: TvApp, label: String) {
         AppLabelStore.setLabel(context, app.packageName, label, prefsName)
         grid.applyAppLabel(app.packageName, label)
-        renameApp = null
+        overlays.renameApp = null
     }
 
     fun resetAppLabel(app: TvApp) {
         AppLabelStore.clearLabel(context, app.packageName, prefsName)
         grid.applyAppLabel(app.packageName, AppLabelStore.defaultLabel(context, app))
-        renameApp = null
+        overlays.renameApp = null
     }
 
     fun moveAppToHome(folderId: String, app: TvApp) =
@@ -769,13 +736,13 @@ fun HomeScreen(
         // A menu whose tile vanished has no node left to dismiss it. Kept open,
         // it would gate the grid for TalkBack and swallow SEARCH with nothing
         // on screen to close.
-        menuApp = menuApp?.takeIf { app ->
+        overlays.menuApp = overlays.menuApp?.takeIf { app ->
             grid.items.any { it is HomeItem.AppItem && it.app.packageName == app.packageName }
         }
-        menuFolderId = menuFolderId?.takeIf { id ->
+        overlays.menuFolderId = overlays.menuFolderId?.takeIf { id ->
             grid.items.any { it is HomeItem.FolderItem && it.id == id }
         }
-        folderDeleteId = folderDeleteId?.takeIf { id ->
+        overlays.folderDeleteId = overlays.folderDeleteId?.takeIf { id ->
             grid.items.any { it is HomeItem.FolderItem && it.id == id }
         }
     }
@@ -800,9 +767,9 @@ fun HomeScreen(
     // column keeps the same app under the cursor on the way up.
     BackHandler(
         enabled = libraryMode && !grid.editing && grid.openFolder == null && grid.launching == null &&
-            menuFolderId == null && folderDeleteId == null && menuApp == null &&
-            moveToFolderApp == null && newFolderApp == null && renameApp == null &&
-            !searchOpen && !controlCenterOpen,
+            overlays.menuFolderId == null && overlays.folderDeleteId == null && overlays.menuApp == null &&
+            overlays.moveToFolderApp == null && overlays.newFolderApp == null && overlays.renameApp == null &&
+            !overlays.searchOpen && !overlays.controlCenterOpen,
     ) {
         grid.focusIndex = grid.focusIndex % columns
     }
@@ -816,16 +783,16 @@ fun HomeScreen(
     // needs its own target; focusing the grid root would make TalkBack read the
     // first tile instead of the one being moved.
     val pickupRequester = remember { FocusRequester() }
-    val menuOpen = menuFolderId != null || folderDeleteId != null ||
-        menuApp != null || moveToFolderApp != null
+    val menuOpen = overlays.menuFolderId != null || overlays.folderDeleteId != null ||
+        overlays.menuApp != null || overlays.moveToFolderApp != null
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
-        grid.openFolder == null && grid.launching == null && !menuOpen && renameApp == null &&
-        !searchOpen && !controlCenterOpen && !weatherPanelOpen && shelf.focus < 0 &&
+        grid.openFolder == null && grid.launching == null && !menuOpen && overlays.renameApp == null &&
+        !overlays.searchOpen && !overlays.controlCenterOpen && !overlays.weatherPanelOpen && shelf.focus < 0 &&
         !shelf.sectionFocused
     val gridModal = grid.openFolder != null || grid.launching != null || menuOpen ||
-        newFolderApp != null || renameApp != null || searchOpen || controlCenterOpen ||
-        weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
+        overlays.newFolderApp != null || overlays.renameApp != null || overlays.searchOpen || overlays.controlCenterOpen ||
+        overlays.weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
     // Layout gate instead of a blind delay: once the grid is placed every tile's
     // FocusRequester is attached, so the cursor can move on the first frame.
     var gridPlaced by remember { mutableStateOf(false) }
@@ -833,8 +800,8 @@ fun HomeScreen(
         Unit,
         focusTick,
         gridModal,
-        capsuleFocused,
-        weatherFocused,
+        overlays.capsuleFocused,
+        overlays.weatherFocused,
         grid.focusIndex,
         grid.items,
         grid.editing,
@@ -849,11 +816,11 @@ fun HomeScreen(
         if (shelf.focus >= 0 || shelf.sectionFocused) return@LaunchedEffect
         // The pill sits outside the grid; while it owns the cursor the grid must
         // not take the focus back (the panel requests its own tile).
-        if (capsuleFocused) {
+        if (overlays.capsuleFocused) {
             capsuleRequester.requestHomeFocusWhenAttached()
             return@LaunchedEffect
         }
-        if (weatherFocused) {
+        if (overlays.weatherFocused) {
             weatherRequester.requestHomeFocusWhenAttached()
             return@LaunchedEffect
         }
@@ -883,14 +850,14 @@ fun HomeScreen(
     // Weather turned off in Settings, or the pill left the screen: the cursor
     // must not sit on a node that no longer exists. While the forecast panel is
     // open the pill is hidden but keeps the return target for Back.
-    LaunchedEffect(weatherVisible, weatherPanelOpen, weatherEnabled) {
-        if (!weatherVisible && weatherFocused && !weatherPanelOpen) {
-            weatherFocused = false
-            weatherFromShelf = false
+    LaunchedEffect(weatherVisible, overlays.weatherPanelOpen, weatherEnabled) {
+        if (!weatherVisible && overlays.weatherFocused && !overlays.weatherPanelOpen) {
+            overlays.weatherFocused = false
+            overlays.weatherFromShelf = false
         }
         if (!weatherEnabled) {
-            weatherPanelOpen = false
-            weatherFromShelf = false
+            overlays.weatherPanelOpen = false
+            overlays.weatherFromShelf = false
         }
     }
 
@@ -917,434 +884,40 @@ fun HomeScreen(
                 if (grid.launching != null) return@onKeyEvent true
                 // Search is a separate surface: anything the panel did not use
                 // must not reach the grid behind it (a MENU press, for example).
-                if (searchOpen) return@onKeyEvent true
+                if (overlays.searchOpen) return@onKeyEvent true
                 // The Control Center owns the remote while it is open; the
                 // focused tile already consumed its own keys.
-                if (controlCenterOpen) return@onKeyEvent true
+                if (overlays.controlCenterOpen) return@onKeyEvent true
                 // A shelf card menu is its own focus surface.
                 if (shelf.menu != null) return@onKeyEvent true
                 // The forecast panel has its own focus and Back handler.
-                if (weatherPanelOpen) return@onKeyEvent true
+                if (overlays.weatherPanelOpen) return@onKeyEvent true
                 // A context menu owns the remote. A hold that opened it keeps
                 // sending repeats, and some remotes deliver each repeat as its
                 // own press and release; those pairs must not reach the grid.
-                if (menuOpen || newFolderApp != null || renameApp != null) {
+                if (menuOpen || overlays.newFolderApp != null || overlays.renameApp != null) {
                     return@onKeyEvent true
                 }
-                when (event.type) {
-                    KeyEventType.KeyDown -> {
-                        // A held key used to repeat at the system rate: OK
-                        // restarted the edit timer and never opened grid.editing.
-                        if (TvKeyRepeat.isOneShot(event.key) && !keyRepeat.firstPress(event)) {
-                            return@onKeyEvent true
-                        }
-                        // The weather pill mirrors the Java card: Ok opens the
-                        // forecast, Right crosses to the status pill, Down/Back
-                        // drop into the carousel or the grid, Up/Left stay put.
-                        if (weatherFocused) {
-                            val handled = when (event.key) {
-                                Key.DirectionRight -> {
-                                    val fromShelf = weatherFromShelf
-                                    weatherFocused = false
-                                    weatherFromShelf = false
-                                    capsuleFromShelf = fromShelf
-                                    capsuleFocused = true
-                                    true
-                                }
-
-                                Key.DirectionDown, Key.Back -> {
-                                    val fromShelf = weatherFromShelf
-                                    weatherFocused = false
-                                    weatherFromShelf = false
-                                    if (fromShelf && shelfCards.isNotEmpty() && !grid.editing) {
-                                        shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                    okDown = false
-                                    weatherPanelOpen = true
-                                    true
-                                }
-
-                                // Up/Left have nowhere to go from the left pill.
-                                // Menu/Search are not grid actions here either;
-                                // system media and volume keys still fall through.
-                                Key.DirectionUp, Key.DirectionLeft,
-                                Key.Menu, Key.Search, Key.Assist,
-                                -> true
-
-                                else -> false
-                            }
-                            if (handled) return@onKeyEvent true
-                        }
-                        // The pill is the top of the screen: Ok opens the panel,
-                        // Down/Back drop back in, Left reaches the weather card
-                        // when one is shown, Right/Up have nowhere to go.
-                        if (capsuleFocused) {
-                            val handled = when (event.key) {
-                                Key.DirectionDown, Key.Back -> {
-                                    val fromShelf = capsuleFromShelf
-                                    capsuleFocused = false
-                                    capsuleFromShelf = false
-                                    if (fromShelf && shelfCards.isNotEmpty() && !grid.editing) {
-                                        shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionLeft -> {
-                                    if (weatherVisible) {
-                                        val fromShelf = capsuleFromShelf
-                                        capsuleFocused = false
-                                        capsuleFromShelf = false
-                                        weatherFromShelf = fromShelf
-                                        weatherFocused = true
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
-
-                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                    okDown = false
-                                    controlCenterOpen = true
-                                    true
-                                }
-
-                                // The pill is the top-right corner: Right/Up stay
-                                // put, and Menu/Search are not dock actions.
-                                Key.DirectionRight, Key.DirectionUp,
-                                Key.Menu, Key.Search, Key.Assist,
-                                -> true
-
-                                else -> false
-                            }
-                            if (handled) return@onKeyEvent true
-                        }
-                        // The section bar sits above the rail: Left/Right
-                        // switch the rail, Down/Back return to the cards.
-                        if (shelf.sectionFocused && rails.size > 1 && !grid.editing) {
-                            val index = rails.indexOfFirst { it.section == currentSection }
-                            val handled = when (event.key) {
-                                Key.DirectionLeft -> {
-                                    if (rails.isNotEmpty()) {
-                                        val next = (index - 1 + rails.size) % rails.size
-                                        shelf.selectSection(rails[next].section)
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionRight -> {
-                                    if (rails.isNotEmpty()) {
-                                        val next = (index + 1) % rails.size
-                                        shelf.selectSection(rails[next].section)
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionDown, Key.Back,
-                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
-                                -> {
-                                    shelf.sectionFocused = false
-                                    shelf.focus = shelf.selected.coerceIn(
-                                        0,
-                                        shelfCards.lastIndex.coerceAtLeast(0),
-                                    )
-                                    true
-                                }
-
-                                Key.DirectionUp -> {
-                                    shelf.sectionFocused = false
-                                    focusCapsule(fromShelf = true)
-                                    true
-                                }
-
-                                // Do not leak these into the dock branch below:
-                                // the bar is not the app grid. SEARCH stays a
-                                // grid/capsule action for now; MENU has no
-                                // section-specific grid.items.
-                                Key.Menu, Key.Search, Key.Assist -> true
-
-                                else -> false
-                            }
-                            if (handled) return@onKeyEvent true
-                        }
-                        // The rail owns the remote while a card is focused so
-                        // the grid cursor underneath cannot move.
-                        if (shelf.focus >= 0 && shelfCards.isNotEmpty() && !grid.editing) {
-                            val held = shelfCards.getOrNull(shelf.focus)
-                            val handled = when (event.key) {
-                                Key.DirectionLeft -> {
-                                    if (shelf.focus > 0) {
-                                        shelf.focus--
-                                        shelf.selected = shelf.focus
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionRight -> {
-                                    if (shelf.focus < shelfCards.lastIndex) {
-                                        shelf.focus++
-                                        shelf.selected = shelf.focus
-                                    }
-                                    true
-                                }
-
-                                Key.DirectionDown, Key.Back -> {
-                                    shelf.focus = -1
-                                    shelf.sectionFocused = false
-                                    true
-                                }
-
-                                Key.DirectionUp -> {
-                                    // Up reaches the section bar when there is
-                                    // one; otherwise it is the status pill.
-                                    shelf.focus = -1
-                                    if (rails.size > 1) {
-                                        shelf.sectionFocused = true
-                                    } else {
-                                        focusCapsule(fromShelf = true)
-                                    }
-                                    true
-                                }
-
-                                // A long OK opens the card menu, as on a grid
-                                // tile. A short OK is handled on KeyUp so the
-                                // hold cannot activate the card as well.
-                                Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                    okDown = true
-                                    grid.longPressHandled = false
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = scope.launch {
-                                        delay(MENU_HOLD_MS)
-                                        grid.longPressHandled = true
-                                        okDown = false
-                                        menuOpenedByHold = true
-                                        shelf.menu = held
-                                    }
-                                    true
-                                }
-
-                                Key.Menu -> {
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = null
-                                    okDown = false
-                                    grid.longPressHandled = true
-                                    menuOpenedByHold = false
-                                    shelf.menu = held
-                                    true
-                                }
-
-                                else -> false
-                            }
-                            if (handled) return@onKeyEvent true
-                        }
-                        when (event.key) {
-                            Key.DirectionLeft -> {
-                                moveFocus(-1, 0)
-                                keyRepeat.startRepeat(scope) { moveFocus(-1, 0) }
-                                true
-                            }
-
-                            Key.DirectionRight -> {
-                                moveFocus(1, 0)
-                                keyRepeat.startRepeat(scope) { moveFocus(1, 0) }
-                                true
-                            }
-
-                            Key.DirectionUp -> {
-                                if (grid.focusIndex < columns && !grid.editing && !grid.pickupActive) {
-                                    if (rails.isNotEmpty()) {
-                                        shelf.enterShelf()
-                                    } else {
-                                        // No recommendations: the row above the
-                                        // dock is the status pill (Java focusTop).
-                                        focusCapsule(fromShelf = false)
-                                    }
-                                } else {
-                                    moveFocus(0, -1)
-                                    keyRepeat.startRepeat(scope) { moveFocus(0, -1) }
-                                }
-                                true
-                            }
-
-                            Key.DirectionDown -> {
-                                moveFocus(0, 1)
-                                keyRepeat.startRepeat(scope) { moveFocus(0, 1) }
-                                true
-                            }
-
-                            Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                                okDown = true
-                                // The auto-repeat that follows a hold can arrive after the
-                                // edit-mode timer fires, so only the first KeyDown may toggle.
-                                if (grid.editing && grid.pickupActive) {
-                                    // A short press drops the dragged tile where it
-                                    // already sits; holding OK folds it with the
-                                    // neighbour the drag pushed aside.
-                                    grid.longPressHandled = false
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = scope.launch {
-                                        delay(FOLDER_HOLD_MS)
-                                        val victim = grid.mergeVictim
-                                        if (grid.pickupActive && victim != null &&
-                                            victim in grid.items.indices
-                                        ) {
-                                            grid.longPressHandled = true
-                                            grid.confirmIndex = victim
-                                            delay(FOLDER_CONFIRM_MS)
-                                            if (grid.pickupActive) mergePickupInto(victim)
-                                        }
-                                    }
-                                } else if (grid.editing) {
-                                    // tvOS lifts the icon and leaves it on the
-                                    // cursor until the next click; the press is
-                                    // consumed so KeyUp does not drop it again.
-                                    togglePickup()
-                                    okDown = false
-                                } else if (!kidsMode) {
-                                    // A long OK opens the context menu, as in the
-                                    // Java build (showOptions on long click). The
-                                    // edit mode lives inside that menu as "Move".
-                                    grid.longPressHandled = false
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = scope.launch {
-                                        delay(MENU_HOLD_MS)
-                                        grid.longPressHandled = true
-                                        okDown = false
-                                        grid.confirmIndex = null
-                                        menuOpenedByHold = true
-                                        when (val focused = grid.items.getOrNull(grid.focusIndex)) {
-                                            is HomeItem.AppItem -> menuApp = focused.app
-                                            is HomeItem.FolderItem ->
-                                                if (!isHiddenFolder(focused)) {
-                                                    menuFolderId = focused.id
-                                                }
-
-                                            null -> Unit
-                                        }
-                                    }
-                                } else {
-                                    // Kids mode has no edit mode and no menus,
-                                    // but the hold is only consumed after the
-                                    // same delay the menu timer would take: a
-                                    // short press must still launch the tile.
-                                    // НЕ ТРОГАТЬ вслепую: установка
-                                    // grid.longPressHandled = true здесь, до KeyUp,
-                                    // делала мёртвым любое OK в детском режиме.
-                                    grid.longPressHandled = false
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = scope.launch {
-                                        delay(MENU_HOLD_MS)
-                                        grid.longPressHandled = true
-                                    }
-                                }
-                                true
-                            }
-
-                            // 09_SEARCH §3: search is its own surface, reached from a
-                            // dedicated entry rather than from the grid's context menu.
-                            // Android TV remotes send ASSIST where tvOS sends Search,
-                            // and some keyboards only have the magnifier key.
-                            Key.Search, Key.Assist -> {
-                                if (!grid.editing && grid.openFolder == null && !menuOpen &&
-                                    grid.launching == null
-                                ) {
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = null
-                                    okDown = false
-                                    grid.longPressHandled = false
-                                    grid.confirmIndex = null
-                                    searchOpen = true
-                                }
-                                true
-                            }
-
-                            // tvOS opens its context menu on a long OK (T12), so
-                            // the hold does it here too; MENU stays as the
-                            // alternative for remotes and keyboards that send it.
-                            Key.Menu -> {
-                                // A running hold timer would fight the menu, and
-                                // a kids profile gets no menus at all: its tiles
-                                // must not offer uninstall or hiding.
-                                if (!grid.editing && !kidsMode) {
-                                    grid.holdJob?.cancel()
-                                    grid.holdJob = null
-                                    okDown = false
-                                    grid.longPressHandled = true
-                                    grid.confirmIndex = null
-                                    menuOpenedByHold = false
-                                    when (val focused = grid.items.getOrNull(grid.focusIndex)) {
-                                        is HomeItem.AppItem -> menuApp = focused.app
-                                        // The hidden folder is not a user folder: no
-                                        // rename, no delete, so it has no menu at all.
-                                        is HomeItem.FolderItem -> if (!isHiddenFolder(focused)) {
-                                            menuFolderId = focused.id
-                                        }
-
-                                        null -> Unit
-                                    }
-                                }
-                                true
-                            }
-
-                            // tvOS returns from the app grid to the dock on BACK.
-                            // A remote delivers BACK to the focus node before the
-                            // Activity dispatcher (see FolderOverlay), so the grid
-                            // claims it here; panels own their own BACK.
-                            // At the root there is nothing above Home: BACK is a
-                            // deliberate no-op (the launcher is the HOME surface),
-                            // matching MainActivity's OnBackPressedCallback.
-                            Key.Back -> {
-                                when {
-                                    grid.openFolder != null || menuOpen -> Unit
-                                    grid.editing -> {
-                                        if (grid.pickupActive) {
-                                            val start = grid.pickupStart
-                                            grid.pickupSnapshot?.let { grid.items = it }
-                                            if (start in grid.items.indices) grid.focusIndex = start
-                                            endPickup()
-                                        } else {
-                                            grid.editing = false
-                                        }
-                                    }
-
-                                    libraryMode -> grid.focusIndex = grid.focusIndex % columns
-                                }
-                                true
-                            }
-
-                            else -> false
-                        }
-                    }
-
-                    KeyEventType.KeyUp -> when (event.key) {
-                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            grid.holdJob?.cancel()
-                            grid.holdJob = null
-                            if (!grid.editing && shelf.focus >= 0 && okDown && !grid.longPressHandled) {
-                                shelfCards.getOrNull(shelf.focus)?.let(::activateShelfCard)
-                            } else if (grid.editing && grid.pickupActive) {
-                                if (okDown && !grid.longPressHandled) dropPickup()
-                            } else if (!grid.editing && okDown && !grid.longPressHandled && shelf.focus < 0) {
-                                when (val item = grid.items.getOrNull(grid.focusIndex)) {
-                                    is HomeItem.AppItem -> startLaunch(item.app, cellCenter(grid.focusIndex))
-                                    is HomeItem.FolderItem -> openFolderAt(grid.focusIndex)
-                                    null -> Unit
-                                }
-                            }
-                            okDown = false
-                            grid.longPressHandled = false
-                            true
-                        }
-
-                        else -> false
-                    }
-
-                    else -> false
-                }
+                handleHomeKey(
+                    event = event,
+                    grid = grid,
+                    shelf = shelf,
+                    overlays = overlays,
+                    rails = rails,
+                    shelfCards = shelfCards,
+                    weatherVisible = weatherVisible,
+                    libraryMode = libraryMode,
+                    columns = columns,
+                    kidsMode = kidsMode,
+                    keyRepeat = keyRepeat,
+                    scope = scope,
+                    onOrderChanged = onOrderChanged,
+                    context = context,
+                    cellCenter = ::cellCenter,
+                    startLaunch = ::startLaunch,
+                    activateShelfCard = ::activateShelfCard,
+                    focusCapsule = ::focusCapsule,
+                )
             }
             .focusable(),
     ) {
@@ -1358,8 +931,8 @@ fun HomeScreen(
                 // offering the tiles it covers.
                 .then(
                     if (grid.openFolder != null || grid.launching != null || menuOpen ||
-                        newFolderApp != null || renameApp != null || searchOpen ||
-                        controlCenterOpen || weatherPanelOpen || shelf.menu != null ||
+                        overlays.newFolderApp != null || overlays.renameApp != null || overlays.searchOpen ||
+                        overlays.controlCenterOpen || overlays.weatherPanelOpen || shelf.menu != null ||
                         shelf.playingTrailer != null || shelf.onlineInfo != null
                     ) {
                         Modifier.clearAndSetSemantics {}
@@ -1405,8 +978,8 @@ fun HomeScreen(
                             enabled = previewAutoplay && !kidsMode && !reduceMotion &&
                                 !libraryMode && !grid.editing && !grid.pickupActive &&
                                 !saverVisible && grid.openFolder == null && grid.launching == null &&
-                                !menuOpen && newFolderApp == null && renameApp == null &&
-                                !searchOpen && !controlCenterOpen && !weatherPanelOpen &&
+                                !menuOpen && overlays.newFolderApp == null && overlays.renameApp == null &&
+                                !overlays.searchOpen && !overlays.controlCenterOpen && !overlays.weatherPanelOpen &&
                                 shelf.menu == null &&
                                 shelf.playingTrailer == null && shelf.onlineInfo == null,
                         ),
@@ -1427,8 +1000,8 @@ fun HomeScreen(
                 reduceMotion = reduceMotion,
                 scroll = scroll,
                 shift = { libraryShift.value - shelfHide },
-                focused = grid.focusIndex < columns && shelf.focus < 0 && !capsuleFocused &&
-                    !weatherFocused,
+                focused = grid.focusIndex < columns && shelf.focus < 0 && !overlays.capsuleFocused &&
+                    !overlays.weatherFocused,
                 fade = { libraryFade.value },
             )
 
@@ -1443,8 +1016,8 @@ fun HomeScreen(
                 libraryFade = libraryFade,
                 focusIndex = grid.focusIndex,
                 shelfFocus = shelf.focus,
-                capsuleFocused = capsuleFocused,
-                weatherFocused = weatherFocused,
+                capsuleFocused = overlays.capsuleFocused,
+                weatherFocused = overlays.weatherFocused,
                 pickupActive = grid.pickupActive,
                 pickupOrigin = grid.pickupOrigin,
                 editing = grid.editing,
@@ -1490,7 +1063,7 @@ fun HomeScreen(
             )
         }
 
-        menuFolderId?.let { folderId ->
+        overlays.menuFolderId?.let { folderId ->
             val index = grid.items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
             val folder = grid.items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
@@ -1498,7 +1071,7 @@ fun HomeScreen(
                     folder = folder,
                     anchor = cellCenter(index),
                     scale = scale,
-                    suppressOkUntilRelease = menuOpenedByHold,
+                    suppressOkUntilRelease = overlays.menuOpenedByHold,
                     onOpen = { openFolderAt(index) },
                     onMove = {
                         grid.focusIndex = index
@@ -1510,12 +1083,12 @@ fun HomeScreen(
                     onRequestDelete = {
                         // The menu already animated out; ask once more
                         // before the layout loses the folder.
-                        menuFolderId = null
-                        folderDeleteId = folderId
+                        overlays.menuFolderId = null
+                        overlays.folderDeleteId = folderId
                     },
                     onDismiss = {
-                        menuFolderId = null
-                        menuOpenedByHold = false
+                        overlays.menuFolderId = null
+                        overlays.menuOpenedByHold = false
                     },
                 )
             }
@@ -1523,7 +1096,7 @@ fun HomeScreen(
 
         // Destructive confirmation for a folder. It is a second menu, not a
         // silent delete: the apps return home, but the user still chooses.
-        folderDeleteId?.let { folderId ->
+        overlays.folderDeleteId?.let { folderId ->
             val index = grid.items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
             val folder = grid.items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
@@ -1531,17 +1104,17 @@ fun HomeScreen(
                     folder = folder,
                     anchor = cellCenter(index),
                     scale = scale,
-                    onCancel = { folderDeleteId = null },
+                    onCancel = { overlays.folderDeleteId = null },
                     onDelete = {
                         removeFolderById(folderId)
-                        folderDeleteId = null
+                        overlays.folderDeleteId = null
                     },
-                    onDismiss = { folderDeleteId = null },
+                    onDismiss = { overlays.folderDeleteId = null },
                 )
             }
         }
 
-        menuApp?.let { app ->
+        overlays.menuApp?.let { app ->
             val index = grid.items.indexOfFirst {
                 it is HomeItem.AppItem && it.app.packageName == app.packageName
             }
@@ -1557,7 +1130,7 @@ fun HomeScreen(
                     hasCustomLabel = hasCustomLabel,
                     anchor = cellCenter(index),
                     scale = scale,
-                    suppressOkUntilRelease = menuOpenedByHold,
+                    suppressOkUntilRelease = overlays.menuOpenedByHold,
                     onOpen = { startLaunch(app, cellCenter(index)) },
                     onMove = {
                         grid.focusIndex = index
@@ -1566,15 +1139,15 @@ fun HomeScreen(
                         grid.confirmIndex = null
                         togglePickup()
                     },
-                    onMoveToFolder = { moveToFolderApp = app },
+                    onMoveToFolder = { overlays.moveToFolderApp = app },
                     onHide = { hideAppFromHome(app) },
-                    onRename = { renameApp = app },
+                    onRename = { overlays.renameApp = app },
                     onResetLabel = { resetAppLabel(app) },
                     onAppInfo = { onAppInfo(app) },
                     onUninstall = { onUninstall(app) },
                     onDismiss = {
-                        menuApp = null
-                        menuOpenedByHold = false
+                        overlays.menuApp = null
+                        overlays.menuOpenedByHold = false
                     },
                 )
             }
@@ -1587,7 +1160,7 @@ fun HomeScreen(
                 favorite = favorite,
                 anchor = shelfCardAnchor(),
                 scale = scale,
-                suppressOkUntilRelease = menuOpenedByHold,
+                suppressOkUntilRelease = overlays.menuOpenedByHold,
                 onOpen = {
                     closeShelfMenu()
                     activateShelfCard(item)
@@ -1615,7 +1188,7 @@ fun HomeScreen(
         // 05_FOLDERS: the app menu's "Move to Folder…" lists the user folders and
         // ends with "New Folder…", as the Java launcher did — a folder made here
         // is named first and takes the app with it.
-        moveToFolderApp?.let { app ->
+        overlays.moveToFolderApp?.let { app ->
             val folders = grid.items.filterIsInstance<HomeItem.FolderItem>()
                 .filterNot { isHiddenFolder(it) }
             val tileIndex = grid.items.indexOfFirst {
@@ -1626,50 +1199,50 @@ fun HomeScreen(
                 anchor = cellCenter(if (tileIndex >= 0) tileIndex else grid.focusIndex),
                 scale = scale,
                 onMove = { folder -> moveAppIntoFolder(app, folder.id) },
-                onNewFolder = { newFolderApp = app },
-                onDismiss = { moveToFolderApp = null },
+                onNewFolder = { overlays.newFolderApp = app },
+                onDismiss = { overlays.moveToFolderApp = null },
             )
         }
 
-        newFolderApp?.let { app ->
+        overlays.newFolderApp?.let { app ->
             RenameKeyboardOverlay(
                 title = context.getString(R.string.new_folder_title),
                 initial = "",
                 scale = scale,
                 onDone = { name ->
-                    newFolderApp = null
+                    overlays.newFolderApp = null
                     createFolderWithApp(name, app)
                 },
-                onCancel = { newFolderApp = null },
+                onCancel = { overlays.newFolderApp = null },
                 placeholder = context.getString(R.string.keyboard_placeholder),
                 note = context.getString(R.string.new_folder_note),
             )
         }
 
-        renameApp?.let { app ->
+        overlays.renameApp?.let { app ->
             RenameKeyboardOverlay(
                 title = context.getString(R.string.rename_app_title),
                 initial = AppLabelStore.label(context, app.packageName, prefsName) ?: app.label,
                 scale = scale,
                 onDone = { name -> renameAppInHome(app, name) },
-                onCancel = { renameApp = null },
+                onCancel = { overlays.renameApp = null },
                 placeholder = context.getString(R.string.keyboard_placeholder),
                 note = context.getString(R.string.rename_app_note),
             )
         }
 
-        if (searchOpen) {
+        if (overlays.searchOpen) {
             SearchOverlay(
                 apps = searchableApps,
                 scale = scale,
                 reduceMotion = reduceMotion,
                 onClose = {
-                    searchOpen = false
+                    overlays.searchOpen = false
                     if (shelf.focus >= 0) shelf.focusTick++
                 },
                 // A failed start shows its own toast; the panel stays so the
                 // query and the chosen app are not lost.
-                onLaunch = { app -> if (onLaunch(app)) searchOpen = false },
+                onLaunch = { app -> if (onLaunch(app)) overlays.searchOpen = false },
             )
         }
 
@@ -1677,23 +1250,23 @@ fun HomeScreen(
         // and Back closes it. Back fades out and hands the focus back to the
         // pill; a tile that leaves for another screen does not (so returning
         // from that screen does not reopen the panel).
-        if (controlCenterOpen) {
+        if (overlays.controlCenterOpen) {
             ControlCenter(
                 scale = scale,
                 reduceMotion = reduceMotion,
                 libraryAvailable = grid.items.size > columns,
                 onClose = { returnFocus ->
-                    controlCenterOpen = false
+                    overlays.controlCenterOpen = false
                     if (returnFocus) {
-                        capsuleFocused = true
+                        overlays.capsuleFocused = true
                     } else {
-                        capsuleFocused = false
-                        capsuleFromShelf = false
+                        overlays.capsuleFocused = false
+                        overlays.capsuleFromShelf = false
                     }
                 },
                 onStartSaver = onStartSaver,
                 onOpenLibrary = { grid.focusIndex = columns },
-                onOpenSearch = { searchOpen = true },
+                onOpenSearch = { overlays.searchOpen = true },
                 onOpenSettings = {
                     if (onOpenSettings != null) {
                         onOpenSettings()
@@ -1713,15 +1286,15 @@ fun HomeScreen(
         HomeTopChrome(
             scale = scale,
             reduceMotion = reduceMotion,
-            weatherPanelOpen = weatherPanelOpen,
+            weatherPanelOpen = overlays.weatherPanelOpen,
             weatherData = weatherData,
             weatherStale = weatherStale,
             weatherVisible = weatherVisible,
-            weatherFocused = weatherFocused,
+            weatherFocused = overlays.weatherFocused,
             weatherManual = { WeatherPreferences.manual(context) },
             weatherRequester = weatherRequester,
-            capsuleFocused = capsuleFocused,
-            controlCenterOpen = controlCenterOpen,
+            capsuleFocused = overlays.capsuleFocused,
+            controlCenterOpen = overlays.controlCenterOpen,
             capsuleClock = capsuleClock,
             capsuleNetwork = capsuleNetwork,
             capsuleRequester = capsuleRequester,
@@ -1731,23 +1304,23 @@ fun HomeScreen(
             openFolder = grid.openFolder,
             launching = grid.launching,
             menuOpen = menuOpen,
-            searchOpen = searchOpen,
+            searchOpen = overlays.searchOpen,
             onCloseWeatherPanel = {
-                weatherPanelOpen = false
+                overlays.weatherPanelOpen = false
                 // The Java popover returned to the weather card.
-                weatherFocused = true
+                overlays.weatherFocused = true
             },
             onWeatherActivate = {
-                weatherFromShelf = false
-                weatherFocused = true
-                weatherPanelOpen = true
+                overlays.weatherFromShelf = false
+                overlays.weatherFocused = true
+                overlays.weatherPanelOpen = true
             },
             onStatusActivate = {
                 // TalkBack has no key event: take the pill and open the
                 // panel the same way OK does.
-                capsuleFromShelf = false
-                capsuleFocused = true
-                controlCenterOpen = true
+                overlays.capsuleFromShelf = false
+                overlays.capsuleFocused = true
+                overlays.controlCenterOpen = true
             },
         )
 

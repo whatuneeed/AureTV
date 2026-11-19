@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Key-машина Home и overlay-флаги лежат внутри главного composable | 0.5.29 (HomeKeyHandler) |
 | Сетка, drag, папки и их мутации смешаны с input-машиной в HomeScreen | 0.5.28 (HomeGridState) |
 | Состояние полки и выбранной секции разбросано по HomeScreen и смешано с grid/input | 0.5.27 (HomeShelfState) |
 | Меню папки, приложения, полки и выбора папки лежат внутри главного composable Home | 0.5.26 (Home menus) |
@@ -276,6 +277,20 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.29: HomeOverlayState и key handlers
+
+- **Симптом.** После `HomeGridState` в `HomeScreen.kt` оставалось 1 791 строк; key-машина (~230 строк), флаги меню/поиска/капсул/погоды и обработка KeyDown/KeyUp были в одном composable.
+- **Что сделано.**
+  - `HomeOverlayState` владеет меню папки/приложения, подтверждением удаления, move-to-folder, new-folder, rename, поиском, Control Center, фокусом капсул и погодой, `okDown`, `menuOpenedByHold`; `menuOpen` — вычисляемое свойство.
+  - `HomeTopKeyHandler.kt` — погодная капсула, статусная капсула, section bar и полка; возвращает `false`, если ни одна поверхность не владеет пультом.
+  - `HomeKeyHandler.kt` — one-shot фильтрация, вызов top-handler, сетка (стрелки, OK, MENU, SEARCH/ASSIST, BACK) и KeyUp; drag/folder/launch вызовы идут через state holder и callbacks.
+  - `HomeScreen.kt` оставляет модальные gates и вызов `handleHomeKey(...)`.
+  `HomeScreen.kt` уменьшился до **1 365 строк** (исходно 2 619).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeOverlayState.kt`, `ui/HomeTopKeyHandler.kt`, `ui/HomeKeyHandler.kt`, `app/src/test/.../ui/HomeOverlayStateTest.kt`.
+- **Чего не делать.** Не убирать `return false` из top-handler: иначе сетка перестанет получать стрелки. Не вызывать `return@onKeyEvent` из нового handler — там обычный `return`. Не переносить модальные gates внутрь handler: `launching`/search/control/shelf menu/weather panel должны блокировать клавиши до него.
+- **Проверка.** `HomeGridStateTest` — **9/9**, `HomeShelfStateTest` — **4/4**, `HomeOverlayStateTest` — **2/2**. `HomeScreenTest` — **41/41** на AVD `hume-tv`. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.29 / vc102; **6 585 339 B**, SHA-256 **`e643be11fd58c783f2b7888191cddff97f384a6d87bbba9221e4e044ba04871b`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.28: HomeGridState для сетки, drag и папок
 
