@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Device/About/Legal row builders лежат в SettingsScreen | 0.5.42 (SettingsAboutGroupRows) |
 | После серии split'ов остались мёртвые импорты в HomeScreen/SettingsScreen | 0.5.41 (20 imports removed) |
 | Preview/main key-обработчик Home собирается в HomeScreen | 0.5.40 (homeKeyInput) |
 | Overlay открытой папки собирается в HomeScreen | 0.5.39 (HomeFolderHost) |
@@ -289,6 +290,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.42: Stage 2.1 — About/Device rows
+
+- **Симптом.** После baseline `SettingsScreen.kt` оставался 4 793 строки; построители строк Device/About/Legal находились в том же файле, хотя не зависят от состояния экрана.
+- **Что сделано.**
+  - `SettingsAboutGroupRows.kt` — `deviceGroupRows`, `aboutGroupRows`, `legalRows` перенесены без изменения логики.
+  - Добавлены namespaced-алиасы `SETTINGS_PAGE_*`: `SetupScreen.kt` уже объявляет собственные `PAGE_SAVER`/`PAGE_HOME`, поэтому публиковать `PAGE_*` из Settings нельзя.
+  - `SettingsScreen.kt` уменьшился до **4 667 строк**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsAboutGroupRows.kt`.
+- **Чего не делать.** Не делать `PAGE_*` в Settings `internal`: возникает конфликт с `SetupScreen.kt`. Для вынесенных builders использовать только `SETTINGS_PAGE_*`.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.42 / vc115; **6 601 723 B**, SHA-256 **`2f383938e1dedac2c20819d5c669781c9df731153f42fffa052d087a670013c1`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.41: baseline и безопасная чистка импортов
 

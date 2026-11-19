@@ -1,0 +1,23 @@
+0.5.42 / vc115 — Stage 2.1 Settings About/Device rows
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: SettingsScreen.kt 4793 -> 4667 lines
+New: SettingsAboutGroupRows.kt 133 lines
+Moved without logic change: deviceGroupRows, aboutGroupRows, legalRows
+Namespaced aliases SETTINGS_PAGE_* avoid SetupScreen PAGE_* conflicts.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:connectedDebugAndroidTest class=SettingsScreenTest
+  Starting 59 tests; Finished 59 tests — 0 failed, 0 skipped
+  BUILD SUCCESSFUL in 7m 31s
+:app:testDebugUnitTest — 552/552 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6601723 B, sha256 2f383938e1dedac2c20819d5c669781c9df731153f42fffa052d087a670013c1
+versionCode 115, versionName 0.5.42, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 4926 ms (emulator loaded after test run)
+ second cold start 1706 ms
+ MainActivity -> SetupActivity, pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated after this targeted Settings change.

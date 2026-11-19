@@ -345,6 +345,20 @@ private const val PAGE_DISCOVERY_CLEAR = 40
 private const val PAGE_DISCOVERY = 41
 private const val PAGE_WEATHER_CLEAR = 42
 
+// Namespaced aliases for row builders extracted from this screen.
+internal const val SETTINGS_PAGE_NETWORK = PAGE_NETWORK
+internal const val SETTINGS_PAGE_DEVICE = PAGE_DEVICE
+internal const val SETTINGS_PAGE_STORAGE = PAGE_STORAGE
+internal const val SETTINGS_PAGE_PERMISSIONS = PAGE_PERMISSIONS
+internal const val SETTINGS_PAGE_SYSTEM = PAGE_SYSTEM
+internal const val SETTINGS_PAGE_UPDATES = PAGE_UPDATES
+internal const val SETTINGS_PAGE_ABOUT = PAGE_ABOUT
+internal const val SETTINGS_PAGE_LEGAL = PAGE_LEGAL
+internal const val SETTINGS_PAGE_DOC_TERMS = PAGE_DOC_TERMS
+internal const val SETTINGS_PAGE_DOC_PRIVACY = PAGE_DOC_PRIVACY
+internal const val SETTINGS_PAGE_DOC_AERIAL = PAGE_DOC_AERIAL
+internal const val SETTINGS_PAGE_DOC_LICENSES = PAGE_DOC_LICENSES
+
 private val PROFILE_PAGES = setOf(
     PAGE_PROFILES,
     PAGE_PROFILE_EDIT,
@@ -4468,132 +4482,6 @@ private fun buildLayout(
     }
     return entries
 }
-
-// The page builders below are separate composables on purpose: SettingsScreen
-// already sits close to the JVM 64 KB method limit, and inlining another set of
-// rows pushes the compiler over it.
-
-@Composable
-private fun deviceGroupRows(
-    factsReady: Boolean,
-    network: String?,
-    model: String?,
-    freeSpace: String?,
-    permissions: String,
-    updateValue: String?,
-    onUpdate: (() -> Unit)?,
-    onBackup: () -> Unit,
-    onOpen: (Int) -> Unit,
-): List<SettingsRow> = listOfNotNull(
-    SettingsRow(
-        title = stringResource(R.string.settings_network),
-        value = network,
-        chevron = true,
-        action = { onOpen(PAGE_NETWORK) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_about_device),
-        value = model,
-        chevron = true,
-        action = { onOpen(PAGE_DEVICE) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_storage),
-        value = freeSpace,
-        chevron = true,
-        action = { onOpen(PAGE_STORAGE) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_permissions),
-        value = permissions,
-        chevron = true,
-        action = { onOpen(PAGE_PERMISSIONS) },
-    ),
-    SettingsRow(
-        // The Android version and build channel live on the System page, not
-        // on this row: one fact, one place.
-        title = stringResource(R.string.settings_system),
-        chevron = true,
-        action = { onOpen(PAGE_SYSTEM) },
-    ),
-    // Maintenance lives one level below Device, not three: Home → Device →
-    // Update/Backup. The System page keeps only Home-button and service state.
-    if (updateValue != null && onUpdate != null) {
-        SettingsRow(
-            title = stringResource(R.string.settings_software_update),
-            value = updateValue,
-            chevron = true,
-            action = onUpdate,
-        )
-    } else {
-        null
-    },
-    SettingsRow(
-        title = stringResource(R.string.backup_title),
-        value = stringResource(R.string.backup_open),
-        chevron = true,
-        action = onBackup,
-    ),
-)
-
-@Composable
-private fun aboutGroupRows(
-    clipCount: Int,
-    onOpen: (Int) -> Unit,
-    onRunSetup: () -> Unit,
-): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_updates),
-        value = pluralStringResource(
-            R.plurals.settings_clips_count,
-            clipCount,
-            clipCount,
-        ),
-        chevron = true,
-        action = { onOpen(PAGE_UPDATES) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_system_info),
-        chevron = true,
-        action = { onOpen(PAGE_ABOUT) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_legal),
-        chevron = true,
-        action = { onOpen(PAGE_LEGAL) },
-    ),
-    SettingsRow(
-        // The wizard keeps current values and asks nothing twice; this row is
-        // the way back after a language or shelf mistake.
-        title = stringResource(R.string.settings_run_setup),
-        chevron = true,
-        action = onRunSetup,
-    ),
-)
-
-@Composable
-private fun legalRows(onOpen: (Int) -> Unit): List<SettingsRow> = listOf(
-    SettingsRow(
-        title = stringResource(R.string.settings_terms),
-        chevron = true,
-        action = { onOpen(PAGE_DOC_TERMS) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_privacy),
-        chevron = true,
-        action = { onOpen(PAGE_DOC_PRIVACY) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_aerial_sources),
-        chevron = true,
-        action = { onOpen(PAGE_DOC_AERIAL) },
-    ),
-    SettingsRow(
-        title = stringResource(R.string.settings_licenses),
-        chevron = true,
-        action = { onOpen(PAGE_DOC_LICENSES) },
-    ),
-)
 
 private fun redditRefreshRes(refresh: RedditRefresh): Int = when (refresh) {
     RedditRefresh.SIX -> R.string.saver_reddit_six
