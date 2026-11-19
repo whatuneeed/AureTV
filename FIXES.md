@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Фото/Reddit/Clock faces лежат в AmbientScreen | 0.5.59 (AmbientFaces.kt) |
 | Password/row/SAF-хелперы Backup лежат в BackupScreen | 0.5.58 (BackupScreenParts.kt) |
 | PageDots и focus-retry папки лежат в FolderOverlay | 0.5.57 (FolderOverlayParts.kt) |
 | Package-intents и error states лежат в LauncherRoot | 0.5.56 (LauncherRootParts.kt) |
@@ -306,6 +307,17 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.59: Stage 3.8 — Ambient faces
+
+- **Симптом.** `AmbientScreen.kt` был 823 строки; photo/reddit/clock face, backdrop и weather-состояние жили в одном файле с mode/store/power-policy.
+- **Что сделано.**
+  - `AmbientFaces.kt` — `PhotoFace`, `RedditFace`, `ClockFace`, `AmbientBackdrop`, `creditFor`, `AmbientWeather`, `rememberAmbientWeather`, `rememberAmbientNow`; константы `CLOCK_DRIFT_MS`/`POWER_TICK_MS`/`PHOTO_*` перенесены.
+  - `AmbientScreen.kt` — **395 строк**; `AmbientSettingsStore`, power tick и mode switching остались на месте.
+- **Файлы.** `ui/components/AmbientScreen.kt`, `ui/components/AmbientFaces.kt`.
+- **Чего не делать.** Не переносить `AmbientPowerPolicy`/`AmbientSession` в faces; не менять `PHOTO_HOLD_MS`/`PHOTO_FADE_MS` при переносе — это ритм screensaver. Не включать Reddit/Photos в Kids Mode.
+- **Проверка.** `AmbientScreenTest` + `SaverPreviewTest` — **18/18** (1 m 55 s). Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.59 / vc132; **6 618 107 B**, SHA-256 **`ff0b0e3d1ab89153755d3e942d8a68d52f6e3ebffcae44e25b62e1ae54f58934`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.58: Stage 3.7 — Backup presentation
 
