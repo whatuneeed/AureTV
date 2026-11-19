@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Сетка, drag, папки и их мутации смешаны с input-машиной в HomeScreen | 0.5.28 (HomeGridState) |
 | Состояние полки и выбранной секции разбросано по HomeScreen и смешано с grid/input | 0.5.27 (HomeShelfState) |
 | Меню папки, приложения, полки и выбора папки лежат внутри главного composable Home | 0.5.26 (Home menus) |
 | `HomeScreen.kt` всё ещё держит сетку, top chrome и модальные окна в одном файле | 0.5.25 (Home layers) |
@@ -275,6 +276,21 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.28: HomeGridState для сетки, drag и папок
+
+- **Симптом.** После выноса полки `HomeScreen.kt` оставался 1 799 строк; сетка, курсор, drag, открытие папок и все мутации `items` жили в главном composable. Это делало input-машину неразрывной с рендером.
+- **Что сделано.** Добавлен `HomeGridState`:
+  - владеет `items`, `editing`, `pickupActive/Origin/Snapshot/Start`, `mergeVictim`, `confirmIndex`, `holdJob`, `longPressHandled`, `openFolder`, `folderClosing`, `launching`;
+  - `focusIndex` остаётся `rememberSaveable`: снаружи создаётся `MutableIntState`, state holder читает и пишет его;
+  - перенесены `targetFor`, `moveFocus`, `endPickup`, `dropPickup`, `mergePickupInto`, `togglePickup`, `openFolderAt`, `activate`, `updateFolderApps`, `renameFolder`, `applyEdit`, `removeFolderById`, `hideAppFromHome`, `applyAppLabel`, `moveAppToHome`, `moveAppIntoFolder`, `createFolderWithApp`;
+  - HomeScreen оставил тонкие обёртки, чтобы input-машина и меню не меняли вызовы;
+  - `renameAppInHome`/`resetAppLabel` остались в HomeScreen: они дополнительно закрывают клавиатуру (`renameApp = null`).
+  `HomeScreen.kt` уменьшился до **1 791 строки**.
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeGridState.kt`, `app/src/test/.../ui/HomeGridStateTest.kt`.
+- **Чего не делать.** Не делать `focusIndex` обычной переменной класса: `rememberSaveable` должен остаться снаружи. Не переносить `startLaunch`, `cellCenter` и `focusCapsule` в класс: они зависят от анимаций и kids-gate. Не вызывать `grid.applyEdit` без `onOrderChanged` — иначе порядок не сохранится.
+- **Проверка.** `HomeGridStateTest` — **9/9** (неполный ряд, края, drag/reorder, папки, метки, удаление, перемещение, пустой drop). `HomeShelfStateTest` — **4/4**. `HomeScreenTest` — **41/41** на AVD `hume-tv`. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.28 / vc101; **6 585 339 B**, SHA-256 **`dc71d9c7a7f733cb5babcd66d79f6f25dd34472ae53b37d0c956acc89d01aa23`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.27: HomeShelfState вместо россыпи shelf-переменных
 

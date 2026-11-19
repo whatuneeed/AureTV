@@ -48,7 +48,6 @@ import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.SettingsActivity
 import com.whatuneed.ovisiontv.kotlin.data.AppLabelStore
 import com.whatuneed.ovisiontv.kotlin.data.HomeItem
-import com.whatuneed.ovisiontv.kotlin.data.HomeEdit
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
 import com.whatuneed.ovisiontv.kotlin.data.ProfileCatalog
@@ -57,14 +56,11 @@ import com.whatuneed.ovisiontv.kotlin.data.SafePreferences
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.Weather
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
-import com.whatuneed.ovisiontv.kotlin.data.hideApp
 import com.whatuneed.ovisiontv.kotlin.data.homeApps
 import com.whatuneed.ovisiontv.kotlin.data.homeFocusKey
 import com.whatuneed.ovisiontv.kotlin.data.indexOfHomeFocus
 import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
-import com.whatuneed.ovisiontv.kotlin.data.removeFolder
-import com.whatuneed.ovisiontv.kotlin.data.takeAppOutOfFolder
 import com.whatuneed.ovisiontv.kotlin.ui.components.ControlCenter
 import com.whatuneed.ovisiontv.kotlin.ui.components.LAUNCH_START_DELAY_MS
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
@@ -84,13 +80,9 @@ import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource
 import com.whatuneed.ovisiontv.kotlin.discovery.defaultDiscoverySection
 import com.whatuneed.ovisiontv.kotlin.discovery.providerTargetForOnline
 import com.whatuneed.ovisiontv.kotlin.online.onlinePreviewUri
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.UUID
-import kotlin.math.max
-import kotlin.math.min
 
 @Composable
 fun HomeScreen(
@@ -140,16 +132,13 @@ fun HomeScreen(
     }
     val columns = TvOs.COLUMNS
 
-    // The grid keeps its own order; the parent replaces `initialItems` on install/uninstall.
-    var items by remember(initialItems) { mutableStateOf(initialItems) }
-
     // A removed focused app leaves no package to restore; the cursor then stays
     // where it was instead of jumping to the first tile.
     var lastFocusIndex by remember { mutableIntStateOf(-1) }
     // The persisted key lags by the save debounce, so the grid also keeps the
     // live key: a list replaced right after a press must not restore an older app.
     var lastFocusKey by remember { mutableStateOf<String?>(null) }
-    var focusIndex by rememberSaveable(initialItems) {
+    val focusState = rememberSaveable(initialItems) {
         val saved = lastFocusKey ?: SafePreferences.string(prefs, LauncherPrefs.KEY_FOCUS_PACKAGE, null)
         val restored = indexOfHomeFocus(initialItems, saved)
         mutableIntStateOf(
@@ -160,6 +149,7 @@ fun HomeScreen(
             },
         )
     }
+    val grid = remember(initialItems) { HomeGridState(initialItems, focusState) }
     var shelfIndex by rememberSaveable(initialItems) {
         val saved = SafePreferences.string(prefs, LauncherPrefs.KEY_SHELF_PACKAGE, null)
         val dockSize = minOf(columns, initialItems.size)
@@ -170,13 +160,12 @@ fun HomeScreen(
             initialItems[it] is HomeItem.AppItem
         } ?: 0
         // A focused folder is not an app, so tvOS leaves the shelf empty (06_TOP_SHELF §1).
-        mutableIntStateOf(if (focusIndex < dockSize) focusIndex else restored ?: fallback)
+        mutableIntStateOf(if (grid.focusIndex < dockSize) grid.focusIndex else restored ?: fallback)
     }
 
-    var editing by remember { mutableStateOf(false) }
     // The shelf belongs to the app under the dock cursor; its cards come only
     // from rows that app published to the TV provider.
-    val shelfApp = (items.getOrNull(shelfIndex) as? HomeItem.AppItem)?.app
+    val shelfApp = (grid.items.getOrNull(shelfIndex) as? HomeItem.AppItem)?.app
     // Discovery is profile-scoped: a new profile creates a new engine, so two
     // profiles never share usage, favorites or hidden cards.
     val discovery = remember(context, prefsName, profileId) {
@@ -191,19 +180,6 @@ fun HomeScreen(
     val rails = shelf.rails
     val currentSection = shelf.currentSection
     val shelfCards = shelf.shelfCards
-    var pickupActive by remember { mutableStateOf(false) }
-    var pickupOrigin by remember { mutableStateOf<Int?>(null) }
-    // Order before the drag: BACK during a pickup puts every tile back, since
-    // the drag reorders the grid live (neighbours slide on every step).
-    var pickupSnapshot by remember { mutableStateOf<List<HomeItem>?>(null) }
-    var pickupStart by remember { mutableIntStateOf(-1) }
-    // The tile the drag last pushed away: holding there for a moment folds the
-    // two into a folder, which is how folders are created on tvOS.
-    var mergeVictim by remember { mutableStateOf<Int?>(null) }
-    var confirmIndex by remember { mutableStateOf<Int?>(null) }
-    var holdJob by remember { mutableStateOf<Job?>(null) }
-    var longPressHandled by remember { mutableStateOf(false) }
-    var openFolder by remember { mutableStateOf<OpenFolder?>(null) }
     // A folder remembers the app it was left on; reopening it must not jump
     // back to the first cell (UX-09). A package key survives an earlier app
     // being uninstalled, which an index does not, and the map survives a
@@ -218,8 +194,6 @@ fun HomeScreen(
             },
         ),
     ) { mutableStateMapOf<String, String>() }
-    var folderClosing by remember { mutableStateOf(false) }
-    var launching by remember { mutableStateOf<Launching?>(null) }
     var menuFolderId by remember { mutableStateOf<String?>(null) }
     // Deleting a folder is destructive to the layout even though its apps are
     // preserved, so the menu asks once more. Keeping the pending id in state
@@ -266,9 +240,9 @@ fun HomeScreen(
     // for the apps below turns the grid into the full-screen library: the shelf
     // and band fade, and the grid rises to the top instead of scrolling under a
     // static header. Coming back up restores the dock.
-    val libraryMode = items.size > columns && focusIndex >= columns
-    val rows = ((items.size + columns - 1) / columns).coerceAtLeast(1)
-    val bottomReserve = if (items.size % columns == 0) 88f + 150f else 0f
+    val libraryMode = grid.items.size > columns && grid.focusIndex >= columns
+    val rows = ((grid.items.size + columns - 1) / columns).coerceAtLeast(1)
+    val bottomReserve = if (grid.items.size % columns == 0) 88f + 150f else 0f
     val lastRowCenter = TvOs.ROW_TOP + (rows - 1) * TvOs.ROW_PITCH + TvOs.ICON_HEIGHT / 2f
     val maxOffsetHome = (lastRowCenter + 270f + bottomReserve - TvOs.SCREEN_HEIGHT)
         .coerceAtLeast(0f)
@@ -284,7 +258,7 @@ fun HomeScreen(
     }
 
     val scroll = remember(initialItems) {
-        Animatable(scrollTargetFor(focusIndex))
+        Animatable(scrollTargetFor(grid.focusIndex))
     }
     // 02_HOME_SCREEN §4: opening a folder hides the grid by shifting it +340 pt.
     val hideShift = remember { Animatable(0f) }
@@ -339,9 +313,9 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(items.size) {
-        if (focusIndex > items.lastIndex) {
-            focusIndex = items.lastIndex.coerceAtLeast(0)
+    LaunchedEffect(grid.items.size) {
+        if (grid.focusIndex > grid.items.lastIndex) {
+            grid.focusIndex = grid.items.lastIndex.coerceAtLeast(0)
         }
     }
 
@@ -376,16 +350,16 @@ fun HomeScreen(
     LaunchedEffect(
         shelfApp?.packageName,
         resumeTick,
-        items,
+        grid.items,
         kidsMode,
         shelf.revision,
     ) {
-        val hiddenPackages = items
+        val hiddenPackages = grid.items
             .filterIsInstance<HomeItem.FolderItem>()
             .filter(::isHiddenFolder)
             .flatMap { it.apps }
             .mapTo(HashSet()) { it.packageName }
-        val apps = homeApps(items).filterNot { it.packageName in hiddenPackages }
+        val apps = homeApps(grid.items).filterNot { it.packageName in hiddenPackages }
         // A refresh must keep the card, not the index: a provider row can move
         // when another app publishes something newer.
         val selectedId = shelfCards.getOrNull(shelf.selected)?.id
@@ -439,9 +413,9 @@ fun HomeScreen(
     }
 
     LaunchedEffect(
-        editing,
-        openFolder,
-        launching,
+        grid.editing,
+        grid.openFolder,
+        grid.launching,
         menuFolderId,
         folderDeleteId,
         menuApp,
@@ -454,7 +428,7 @@ fun HomeScreen(
         shelf.playingTrailer,
         shelf.onlineInfo,
     ) {
-        if (editing || openFolder != null || launching != null ||
+        if (grid.editing || grid.openFolder != null || grid.launching != null ||
             menuFolderId != null || folderDeleteId != null || menuApp != null ||
             moveToFolderApp != null || newFolderApp != null || renameApp != null || searchOpen ||
             controlCenterOpen || weatherPanelOpen || shelf.playingTrailer != null ||
@@ -478,9 +452,9 @@ fun HomeScreen(
         shelf.sectionFocused,
         shelf.menu,
         libraryMode,
-        editing,
-        openFolder,
-        launching,
+        grid.editing,
+        grid.openFolder,
+        grid.launching,
         menuFolderId,
         menuApp,
         moveToFolderApp,
@@ -495,8 +469,8 @@ fun HomeScreen(
         shelf.onlineInfo,
     ) {
         if (shelfCards.size <= 1 || shelf.sectionFocused || shelf.focus >= 0 ||
-            shelf.menu != null || libraryMode || editing || openFolder != null ||
-            launching != null || menuFolderId != null || folderDeleteId != null ||
+            shelf.menu != null || libraryMode || grid.editing || grid.openFolder != null ||
+            grid.launching != null || menuFolderId != null || folderDeleteId != null ||
             menuApp != null || moveToFolderApp != null || newFolderApp != null ||
             renameApp != null || searchOpen || controlCenterOpen || capsuleFocused || weatherFocused ||
             weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
@@ -508,18 +482,18 @@ fun HomeScreen(
         if (shelf.focus >= 0) shelf.focus = shelf.selected
     }
 
-    LaunchedEffect(focusIndex) {
-        lastFocusIndex = focusIndex
+    LaunchedEffect(grid.focusIndex) {
+        lastFocusIndex = grid.focusIndex
     }
 
     // The tile itself is part of the key: deleting a folder can put another app
     // at the same index, and a size-only key would keep the dead folder saved.
-    LaunchedEffect(focusIndex, items.size, items.getOrNull(focusIndex)) {
-        val focused = items.getOrNull(focusIndex) ?: return@LaunchedEffect
-        if (focusIndex < columns) shelfIndex = focusIndex
+    LaunchedEffect(grid.focusIndex, grid.items.size, grid.items.getOrNull(grid.focusIndex)) {
+        val focused = grid.items.getOrNull(grid.focusIndex) ?: return@LaunchedEffect
+        if (grid.focusIndex < columns) shelfIndex = grid.focusIndex
 
         scroll.animateTo(
-            targetValue = scrollTargetFor(focusIndex),
+            targetValue = scrollTargetFor(grid.focusIndex),
             animationSpec = tween(
                 durationMillis = TvOs.SCROLL_DURATION_MS,
                 easing = FastOutSlowInEasing,
@@ -530,13 +504,13 @@ fun HomeScreen(
     // Phase 08: a cursor that is still moving is not a choice. Only the focus
     // that rests for a moment is saved, so a burst of presses neither rewrites
     // the preference on every step nor leaves a half-travelled position behind.
-    LaunchedEffect(focusIndex, items.getOrNull(focusIndex)) {
-        val focused = items.getOrNull(focusIndex) ?: return@LaunchedEffect
+    LaunchedEffect(grid.focusIndex, grid.items.getOrNull(grid.focusIndex)) {
+        val focused = grid.items.getOrNull(grid.focusIndex) ?: return@LaunchedEffect
         lastFocusKey = homeFocusKey(focused)
         delay(FOCUS_SAVE_MS)
         val editor = prefs.edit()
         editor.putString(LauncherPrefs.KEY_FOCUS_PACKAGE, homeFocusKey(focused))
-        if (focused is HomeItem.AppItem && focusIndex < columns) {
+        if (focused is HomeItem.AppItem && grid.focusIndex < columns) {
             editor.putString(LauncherPrefs.KEY_SHELF_PACKAGE, focused.app.packageName)
         }
         editor.apply()
@@ -545,8 +519,8 @@ fun HomeScreen(
     // 12_SYSTEM_TRANSITIONS §3: a launch hides the grid by the same 340 pt as a folder.
     // Closing starts the return at BACK, together with the panel zoom (T4, 0.5 s),
     // instead of waiting for the panel to reach the icon and adding a second half-second.
-    LaunchedEffect(openFolder != null, launching != null, folderClosing) {
-        val hidden = launching != null || (openFolder != null && !folderClosing)
+    LaunchedEffect(grid.openFolder != null, grid.launching != null, grid.folderClosing) {
+        val hidden = grid.launching != null || (grid.openFolder != null && !grid.folderClosing)
         hideShift.animateTo(
             targetValue = if (hidden) TvOs.HIDE_GRID_SHIFT else 0f,
             animationSpec = tween(
@@ -559,13 +533,13 @@ fun HomeScreen(
     // T1: the card grows for 0.5 s; the app is started at 0.38 s so its window
     // covers the end of the zoom instead of waiting for it. Reduce Motion keeps
     // the same hand-off but starts the app on the first frame.
-    LaunchedEffect(launching?.app?.packageName) {
-        val active = launching ?: return@LaunchedEffect
+    LaunchedEffect(grid.launching?.app?.packageName) {
+        val active = grid.launching ?: return@LaunchedEffect
         if (reduceMotion) {
             launchProgress.snapTo(1f)
             if (!onLaunch(active.app)) {
                 launchProgress.snapTo(0f)
-                launching = null
+                grid.launching = null
             }
             return@LaunchedEffect
         }
@@ -576,7 +550,7 @@ fun HomeScreen(
             if (!onLaunch(active.app)) {
                 forward.cancel()
                 launchProgress.animateTo(0f, tween(200))
-                launching = null
+                grid.launching = null
             }
             forward.join()
         }
@@ -586,158 +560,42 @@ fun HomeScreen(
     // from a full-screen card. The grid never moved, which is the tvOS rule of
     // pre-positioning the offset before the return frame.
     LaunchedEffect(resumeTick) {
-        if (resumeTick == 0 || launching == null) return@LaunchedEffect
+        if (resumeTick == 0 || grid.launching == null) return@LaunchedEffect
         if (reduceMotion) {
             launchProgress.snapTo(0f)
-            launching = null
+            grid.launching = null
             return@LaunchedEffect
         }
         // 12_SYSTEM_TRANSITIONS T2: the grid must already sit at its final
         // offset on the first return frame; animating the 340 pt back while the
         // card shrinks produces a visible double move. A launch from a folder
         // returns to an open panel, so the grid stays hidden there (T6).
-        if (openFolder == null) hideShift.snapTo(0f)
+        if (grid.openFolder == null) hideShift.snapTo(0f)
         launchProgress.snapTo(1f)
         launchProgress.animateTo(0f, LaunchSpec)
-        launching = null
+        grid.launching = null
     }
 
-    fun targetFor(dx: Int, dy: Int): Int {
-        val row = focusIndex / columns
-        val column = focusIndex % columns
-        return if (dx != 0) {
-            val nextColumn = column + dx
-            if (nextColumn !in 0 until columns) {
-                focusIndex
-            } else {
-                (focusIndex + dx).takeIf { it < items.size } ?: focusIndex
-            }
-        } else {
-            val targetRow = row + dy
-            if (targetRow < 0) {
-                focusIndex
-            } else {
-                // An incomplete last row has no cell under the same column;
-                // tvOS moves to the nearest cell of that row instead of
-                // refusing to leave the current one.
-                (targetRow * columns + column)
-                    .takeIf { it <= items.lastIndex }
-                    ?: items.lastIndex.coerceAtLeast(0)
-            }
-        }
-    }
-
-    fun moveFocus(dx: Int, dy: Int) {
-        val target = targetFor(dx, dy)
-        if (target == focusIndex) return
-        // A press that is still counting belongs to the cell that had focus:
-        // moving while OK is held must not launch the cell that receives focus.
-        if (holdJob != null) longPressHandled = true
-        holdJob?.cancel()
-        holdJob = null
-        confirmIndex = null
-        // A picked-up tile takes the new slot at once, so every neighbour
-        // between the two cells slides over instead of waiting for the drop
-        // (14_MOTION_DESIGN: the grid follows the drag, it does not jump).
-        val origin = pickupOrigin
-        if (pickupActive && origin != null && origin in items.indices && target in items.indices) {
-            val list = items.toMutableList()
-            val moving = list.removeAt(origin)
-            list.add(target, moving)
-            items = list
-            // The tile that was under the cursor now sits where the drag
-            // started; lingering on it is the folder gesture.
-            mergeVictim = if (target > origin) target - 1 else target + 1
-            pickupOrigin = target
-            focusIndex = target
-            return
-        }
-        focusIndex = target
-    }
+    fun moveFocus(dx: Int, dy: Int) = grid.moveFocus(dx, dy)
 
     // Up leaves the grid for the status pill. A running edit timer belongs to
     // the cell the cursor came from, so it is dropped with the move; the held
     // OK must not launch that cell when it is released over the pill either.
     fun focusCapsule(fromShelf: Boolean) {
-        holdJob?.cancel()
-        holdJob = null
-        longPressHandled = true
+        grid.holdJob?.cancel()
+        grid.holdJob = null
+        grid.longPressHandled = true
         okDown = false
-        confirmIndex = null
+        grid.confirmIndex = null
         capsuleFromShelf = fromShelf
         capsuleFocused = true
     }
 
-    fun endPickup() {
-        pickupActive = false
-        pickupOrigin = null
-        pickupSnapshot = null
-        pickupStart = -1
-        mergeVictim = null
-        confirmIndex = null
-    }
-
-    // Dropping only commits the order the drag already produced; the folder
-    // gesture belongs to the dwell timer, not to the release.
-    fun dropPickup() {
-        if (pickupSnapshot != null && pickupSnapshot !== items) onOrderChanged(items)
-        endPickup()
-    }
-
-    // 05_FOLDERS: two apps fold into one tile, an app dropped on a folder joins
-    // it. Both tiles are moved by the drag itself, so the merge works on the
-    // current positions.
-    fun mergePickupInto(victimIndex: Int) {
-        if (!pickupActive || pickupOrigin != focusIndex) return
-        val dragged = (items.getOrNull(focusIndex) as? HomeItem.AppItem)?.app ?: return
-        when (val victim = items.getOrNull(victimIndex)) {
-            is HomeItem.AppItem -> {
-                val folder = HomeItem.FolderItem(
-                    id = UUID.randomUUID().toString(),
-                    name = context.getString(R.string.folder_default),
-                    apps = listOf(dragged, victim.app),
-                )
-                val list = items.toMutableList()
-                list.removeAt(max(focusIndex, victimIndex))
-                list.removeAt(min(focusIndex, victimIndex))
-                val insertAt = min(focusIndex, victimIndex).coerceIn(0, list.size)
-                list.add(insertAt, folder)
-                items = list
-                focusIndex = insertAt
-            }
-
-            is HomeItem.FolderItem -> {
-                val list = items.toMutableList()
-                list.removeAt(focusIndex)
-                val folderPos = list.indexOfFirst {
-                    it is HomeItem.FolderItem && it.id == victim.id
-                }
-                if (folderPos < 0) return
-                val folder = list[folderPos] as HomeItem.FolderItem
-                list[folderPos] = folder.copy(apps = folder.apps + dragged)
-                items = list
-                focusIndex = folderPos
-            }
-
-            else -> return
-        }
-        endPickup()
-        onOrderChanged(items)
-    }
-
-    fun togglePickup() {
-        if (pickupActive) {
-            dropPickup()
-        } else {
-            // The hidden folder is a fixed bucket: dragging it would let the
-            // auto-created tile drift away from the end of the grid.
-            if (isHiddenFolder(items.getOrNull(focusIndex))) return
-            pickupActive = true
-            pickupOrigin = focusIndex
-            pickupStart = focusIndex
-            pickupSnapshot = items
-        }
-    }
+    fun endPickup() = grid.endPickup()
+    fun dropPickup() = grid.dropPickup(onOrderChanged)
+    fun mergePickupInto(victimIndex: Int) =
+        grid.mergePickupInto(victimIndex, context, onOrderChanged)
+    fun togglePickup() = grid.togglePickup(onOrderChanged)
 
     fun cellCenter(index: Int): Offset {
         val column = index % columns
@@ -750,30 +608,24 @@ fun HomeScreen(
         )
     }
 
-    fun openFolderAt(index: Int) {
-        val folder = items.getOrNull(index) as? HomeItem.FolderItem ?: return
-        val center = cellCenter(index)
-        editing = false
-        folderClosing = false
-        openFolder = OpenFolder(folder, center.x, center.y)
-    }
+    fun openFolderAt(index: Int) = grid.openFolderAt(index, cellCenter(index))
 
     fun startLaunch(app: TvApp, center: Offset) {
-        if (launching != null) return
+        if (grid.launching != null) return
         if (!app.available) {
             Toast.makeText(context, R.string.app_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
-        holdJob?.cancel()
-        holdJob = null
-        longPressHandled = false
-        editing = false
-        pickupActive = false
-        pickupOrigin = null
-        pickupSnapshot = null
-        pickupStart = -1
-        mergeVictim = null
-        confirmIndex = null
+        grid.holdJob?.cancel()
+        grid.holdJob = null
+        grid.longPressHandled = false
+        grid.editing = false
+        grid.pickupActive = false
+        grid.pickupOrigin = null
+        grid.pickupSnapshot = null
+        grid.pickupStart = -1
+        grid.mergeVictim = null
+        grid.confirmIndex = null
         // Kids mode: the launcher's own Settings tile opens through the PIN
         // gate the way the Control Center does. The launch zoom would only
         // have to reverse when the gate replaces the launch.
@@ -781,7 +633,7 @@ fun HomeScreen(
             onOpenSettings?.invoke()
             return
         }
-        launching = Launching(app, center)
+        grid.launching = Launching(app, center)
     }
 
     // A provider deep link is opened only when it resolves back to the app that
@@ -814,9 +666,9 @@ fun HomeScreen(
         }
         // A row whose deep link stopped resolving still opens its own app; it
         // must never open a foreign package or show invented content.
-        val app = homeApps(items).firstOrNull { it.packageName == card.packageName }
+        val app = homeApps(grid.items).firstOrNull { it.packageName == card.packageName }
         if (app != null) {
-            startLaunch(app, cellCenter(focusIndex))
+            startLaunch(app, cellCenter(grid.focusIndex))
         } else {
             Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
         }
@@ -867,165 +719,64 @@ fun HomeScreen(
 
     // TalkBack activates through semantics, not key events; run the same path a
     // short OK press would take on that cell.
-    fun activate(index: Int) {
-        if (launching != null || openFolder != null) return
-        if (index !in items.indices) return
-        focusIndex = index
-        if (editing) {
-            togglePickup()
-            return
-        }
-        when (val item = items[index]) {
-            is HomeItem.AppItem -> startLaunch(item.app, cellCenter(index))
-            is HomeItem.FolderItem -> openFolderAt(index)
-        }
-    }
-
-    fun updateFolderApps(folderId: String, apps: List<TvApp>) {
-        val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
-        if (index < 0) return
-        val current = items[index] as HomeItem.FolderItem
-        val updated = current.copy(apps = apps)
-        val list = items.toMutableList().also { it[index] = updated }
-        items = list
-        openFolder?.let { open ->
-            if (open.folder.id == folderId) openFolder = open.copy(folder = updated)
-        }
-        onOrderChanged(list)
-    }
-
-    fun renameFolder(folderId: String, name: String) {
-        val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
-        if (index < 0) return
-        val current = items[index] as HomeItem.FolderItem
-        if (current.name == name) return
-        val updated = current.copy(name = name)
-        val list = items.toMutableList().also { it[index] = updated }
-        items = list
-        openFolder?.let { open ->
-            if (open.folder.id == folderId) openFolder = open.copy(folder = updated)
-        }
-        onOrderChanged(list)
-    }
-
-    fun applyEdit(edit: HomeEdit) {
-        items = edit.items
-        focusIndex = edit.focusIndex.coerceIn(0, max(edit.items.lastIndex, 0))
-        onOrderChanged(edit.items)
-    }
-
-    fun removeFolderById(folderId: String) {
-        applyEdit(removeFolder(items, folderId) ?: return)
-    }
-
-    // Android TV launchers let the user hide an app from the grid without
-    // uninstalling it; the tile waits in the hidden folder.
-    fun hideAppFromHome(app: TvApp) {
-        applyEdit(
-            hideApp(items, app.packageName, context.getString(R.string.hidden_folder_name))
-                ?: return,
-        )
-    }
-
-    fun applyAppLabel(packageName: String, label: String) {
-        fun rename(app: TvApp): TvApp =
-            if (app.packageName == packageName) app.copy(label = label) else app
-        val list = items.map { item ->
-            when (item) {
-                is HomeItem.AppItem -> HomeItem.AppItem(rename(item.app))
-                is HomeItem.FolderItem -> item.copy(apps = item.apps.map(::rename))
-            }
-        }
-        items = list
-        openFolder?.let { open ->
-            val fresh = list.firstOrNull {
-                it is HomeItem.FolderItem && it.id == open.folder.id
-            } as? HomeItem.FolderItem
-            if (fresh != null) openFolder = open.copy(folder = fresh)
-        }
-    }
+    fun activate(index: Int) =
+        grid.activate(index, ::cellCenter, ::startLaunch, onOrderChanged)
+    fun updateFolderApps(folderId: String, apps: List<TvApp>) =
+        grid.updateFolderApps(folderId, apps, onOrderChanged)
+    fun renameFolder(folderId: String, name: String) =
+        grid.renameFolder(folderId, name, onOrderChanged)
+    fun removeFolderById(folderId: String) =
+        grid.removeFolderById(folderId, onOrderChanged)
+    fun hideAppFromHome(app: TvApp) =
+        grid.hideAppFromHome(app, context, onOrderChanged)
 
     fun renameAppInHome(app: TvApp, label: String) {
         AppLabelStore.setLabel(context, app.packageName, label, prefsName)
-        applyAppLabel(app.packageName, label)
+        grid.applyAppLabel(app.packageName, label)
         renameApp = null
     }
 
     fun resetAppLabel(app: TvApp) {
         AppLabelStore.clearLabel(context, app.packageName, prefsName)
-        applyAppLabel(app.packageName, AppLabelStore.defaultLabel(context, app))
+        grid.applyAppLabel(app.packageName, AppLabelStore.defaultLabel(context, app))
         renameApp = null
     }
 
-    // 05_FOLDERS §9: the app returns to the grid next to its folder; an emptied
-    // folder disappears, which takeAppOutOfFolder handles by keeping the app.
-    fun moveAppToHome(folderId: String, app: TvApp) {
-        applyEdit(takeAppOutOfFolder(items, folderId, app.packageName) ?: return)
-    }
+    fun moveAppToHome(folderId: String, app: TvApp) =
+        grid.moveAppToHome(folderId, app, onOrderChanged)
+    fun moveAppIntoFolder(app: TvApp, folderId: String) =
+        grid.moveAppIntoFolder(app, folderId, onOrderChanged)
+    fun createFolderWithApp(name: String, app: TvApp) =
+        grid.createFolderWithApp(name, app, context, onOrderChanged)
 
-    // "Move to Folder…" from the app menu: the tile leaves the grid and joins a
-    // user folder. Hidden apps keep their home in the "More Apps" bucket, so the
-    // picker never offers that one.
-    fun moveAppIntoFolder(app: TvApp, folderId: String) {
-        val from = items.indexOfFirst {
-            it is HomeItem.AppItem && it.app.packageName == app.packageName
-        }
-        if (from < 0) return
-        if (items.none { it is HomeItem.FolderItem && it.id == folderId }) return
-        val list = items.toMutableList()
-        list.removeAt(from)
-        val target = list.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
-        if (target < 0) return
-        val folder = list[target] as HomeItem.FolderItem
-        list[target] = folder.copy(apps = folder.apps + app)
-        items = list
-        focusIndex = target.coerceIn(0, max(list.lastIndex, 0))
-        onOrderChanged(list)
-    }
-
-    // "New Folder…" wraps the app in a named folder that takes its slot, so the
-    // rest of the grid does not shift; the Java launcher 1.1.17 made the same move.
-    fun createFolderWithApp(name: String, app: TvApp) {
-        val at = items.indexOfFirst {
-            it is HomeItem.AppItem && it.app.packageName == app.packageName
-        }
-        if (at < 0) return
-        val label = name.trim().ifEmpty { context.getString(R.string.folder_default) }
-        val folder = HomeItem.FolderItem(UUID.randomUUID().toString(), label, listOf(app))
-        val list = items.toMutableList().also { it[at] = folder }
-        items = list
-        focusIndex = at
-        onOrderChanged(list)
-    }
-
-    // A package change rebuilds `items`: an overlay that kept the old folder would
+    // A package change rebuilds `grid.items`: an overlay that kept the old folder would
     // show an app that no longer exists, and a drag would point past the list end.
     LaunchedEffect(initialItems) {
-        holdJob?.cancel()
-        holdJob = null
-        editing = false
-        pickupActive = false
-        pickupOrigin = null
-        pickupSnapshot = null
-        pickupStart = -1
-        mergeVictim = null
-        confirmIndex = null
-        longPressHandled = false
-        openFolder = openFolder?.let { open ->
-            val fresh = items.firstOrNull { it is HomeItem.FolderItem && it.id == open.folder.id }
+        grid.holdJob?.cancel()
+        grid.holdJob = null
+        grid.editing = false
+        grid.pickupActive = false
+        grid.pickupOrigin = null
+        grid.pickupSnapshot = null
+        grid.pickupStart = -1
+        grid.mergeVictim = null
+        grid.confirmIndex = null
+        grid.longPressHandled = false
+        grid.openFolder = grid.openFolder?.let { open ->
+            val fresh = grid.items.firstOrNull { it is HomeItem.FolderItem && it.id == open.folder.id }
             fresh?.let { open.copy(folder = it as HomeItem.FolderItem) }
         }
         // A menu whose tile vanished has no node left to dismiss it. Kept open,
         // it would gate the grid for TalkBack and swallow SEARCH with nothing
         // on screen to close.
         menuApp = menuApp?.takeIf { app ->
-            items.any { it is HomeItem.AppItem && it.app.packageName == app.packageName }
+            grid.items.any { it is HomeItem.AppItem && it.app.packageName == app.packageName }
         }
         menuFolderId = menuFolderId?.takeIf { id ->
-            items.any { it is HomeItem.FolderItem && it.id == id }
+            grid.items.any { it is HomeItem.FolderItem && it.id == id }
         }
         folderDeleteId = folderDeleteId?.takeIf { id ->
-            items.any { it is HomeItem.FolderItem && it.id == id }
+            grid.items.any { it is HomeItem.FolderItem && it.id == id }
         }
     }
 
@@ -1034,33 +785,33 @@ fun HomeScreen(
     // hold of OK (see the key handler); a drag alone never makes a folder.
     // The focus node sees BACK before the Activity dispatcher (see
     // FolderOverlay), so the grid is handled here as well.
-    BackHandler(enabled = editing) {
-        if (pickupActive) {
-            val start = pickupStart
-            pickupSnapshot?.let { items = it }
-            if (start in items.indices) focusIndex = start
+    BackHandler(enabled = grid.editing) {
+        if (grid.pickupActive) {
+            val start = grid.pickupStart
+            grid.pickupSnapshot?.let { grid.items = it }
+            if (start in grid.items.indices) grid.focusIndex = start
             endPickup()
         } else {
-            editing = false
+            grid.editing = false
         }
     }
 
     // tvOS returns from the app grid to the dock on BACK; doing it through the
     // column keeps the same app under the cursor on the way up.
     BackHandler(
-        enabled = libraryMode && !editing && openFolder == null && launching == null &&
+        enabled = libraryMode && !grid.editing && grid.openFolder == null && grid.launching == null &&
             menuFolderId == null && folderDeleteId == null && menuApp == null &&
             moveToFolderApp == null && newFolderApp == null && renameApp == null &&
             !searchOpen && !controlCenterOpen,
     ) {
-        focusIndex = focusIndex % columns
+        grid.focusIndex = grid.focusIndex % columns
     }
 
     val focusRequester = remember { FocusRequester() }
     // One real focus target per cell. TalkBack on a TV speaks the input focus,
     // and the custom engine alone never moves it; the engine still decides
     // where focus goes, this only mirrors that choice into Android's focus.
-    val tileRequesters = remember(items) { mutableMapOf<String, FocusRequester>() }
+    val tileRequesters = remember(grid.items) { mutableMapOf<String, FocusRequester>() }
     // The picked-up cell is drawn as the drag proxy, not as its own card, so it
     // needs its own target; focusing the grid root would make TalkBack read the
     // first tile instead of the one being moved.
@@ -1069,10 +820,10 @@ fun HomeScreen(
         menuApp != null || moveToFolderApp != null
     // The Java launcher hid the pill over a folder, the library and every panel.
     val weatherVisible = weatherEnabled && weatherData != null && !libraryMode &&
-        openFolder == null && launching == null && !menuOpen && renameApp == null &&
+        grid.openFolder == null && grid.launching == null && !menuOpen && renameApp == null &&
         !searchOpen && !controlCenterOpen && !weatherPanelOpen && shelf.focus < 0 &&
         !shelf.sectionFocused
-    val gridModal = openFolder != null || launching != null || menuOpen ||
+    val gridModal = grid.openFolder != null || grid.launching != null || menuOpen ||
         newFolderApp != null || renameApp != null || searchOpen || controlCenterOpen ||
         weatherPanelOpen || shelf.playingTrailer != null || shelf.onlineInfo != null
     // Layout gate instead of a blind delay: once the grid is placed every tile's
@@ -1084,10 +835,10 @@ fun HomeScreen(
         gridModal,
         capsuleFocused,
         weatherFocused,
-        focusIndex,
-        items,
-        editing,
-        pickupActive,
+        grid.focusIndex,
+        grid.items,
+        grid.editing,
+        grid.pickupActive,
         gridPlaced,
         shelf.focus,
         shelf.sectionFocused,
@@ -1108,11 +859,11 @@ fun HomeScreen(
         }
         // The proxy is the cell under the cursor while it is being moved, so it
         // carries the focus; the tiles the cursor passes over stay silent.
-        if (pickupActive) {
+        if (grid.pickupActive) {
             pickupRequester.requestHomeFocusWhenAttached()
             return@LaunchedEffect
         }
-        val requester = items.getOrNull(focusIndex)?.let { tileRequesters[it.key] }
+        val requester = grid.items.getOrNull(grid.focusIndex)?.let { tileRequesters[it.key] }
         val target = requester ?: focusRequester
         if (!target.requestHomeFocusWhenAttached()) return@LaunchedEffect
         // TalkBack installs its own first-node focus when the window opens, so a
@@ -1143,7 +894,7 @@ fun HomeScreen(
         }
     }
 
-    val searchableApps = remember(items) { homeApps(items) }
+    val searchableApps = remember(grid.items) { homeApps(grid.items) }
 
     // LauncherRoot already paints this exact gradient behind the whole home
     // layer, so the grid does not draw a second full-screen copy.
@@ -1163,7 +914,7 @@ fun HomeScreen(
             }
             .onKeyEvent { event ->
                 // The zoom owns the screen until the app or the return finishes.
-                if (launching != null) return@onKeyEvent true
+                if (grid.launching != null) return@onKeyEvent true
                 // Search is a separate surface: anything the panel did not use
                 // must not reach the grid behind it (a MENU press, for example).
                 if (searchOpen) return@onKeyEvent true
@@ -1183,7 +934,7 @@ fun HomeScreen(
                 when (event.type) {
                     KeyEventType.KeyDown -> {
                         // A held key used to repeat at the system rate: OK
-                        // restarted the edit timer and never opened editing.
+                        // restarted the edit timer and never opened grid.editing.
                         if (TvKeyRepeat.isOneShot(event.key) && !keyRepeat.firstPress(event)) {
                             return@onKeyEvent true
                         }
@@ -1205,7 +956,7 @@ fun HomeScreen(
                                     val fromShelf = weatherFromShelf
                                     weatherFocused = false
                                     weatherFromShelf = false
-                                    if (fromShelf && shelfCards.isNotEmpty() && !editing) {
+                                    if (fromShelf && shelfCards.isNotEmpty() && !grid.editing) {
                                         shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                                     }
                                     true
@@ -1237,7 +988,7 @@ fun HomeScreen(
                                     val fromShelf = capsuleFromShelf
                                     capsuleFocused = false
                                     capsuleFromShelf = false
-                                    if (fromShelf && shelfCards.isNotEmpty() && !editing) {
+                                    if (fromShelf && shelfCards.isNotEmpty() && !grid.editing) {
                                         shelf.focus = shelf.selected.coerceIn(0, shelfCards.lastIndex)
                                     }
                                     true
@@ -1274,7 +1025,7 @@ fun HomeScreen(
                         }
                         // The section bar sits above the rail: Left/Right
                         // switch the rail, Down/Back return to the cards.
-                        if (shelf.sectionFocused && rails.size > 1 && !editing) {
+                        if (shelf.sectionFocused && rails.size > 1 && !grid.editing) {
                             val index = rails.indexOfFirst { it.section == currentSection }
                             val handled = when (event.key) {
                                 Key.DirectionLeft -> {
@@ -1313,7 +1064,7 @@ fun HomeScreen(
                                 // Do not leak these into the dock branch below:
                                 // the bar is not the app grid. SEARCH stays a
                                 // grid/capsule action for now; MENU has no
-                                // section-specific items.
+                                // section-specific grid.items.
                                 Key.Menu, Key.Search, Key.Assist -> true
 
                                 else -> false
@@ -1322,7 +1073,7 @@ fun HomeScreen(
                         }
                         // The rail owns the remote while a card is focused so
                         // the grid cursor underneath cannot move.
-                        if (shelf.focus >= 0 && shelfCards.isNotEmpty() && !editing) {
+                        if (shelf.focus >= 0 && shelfCards.isNotEmpty() && !grid.editing) {
                             val held = shelfCards.getOrNull(shelf.focus)
                             val handled = when (event.key) {
                                 Key.DirectionLeft -> {
@@ -1364,11 +1115,11 @@ fun HomeScreen(
                                 // hold cannot activate the card as well.
                                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                                     okDown = true
-                                    longPressHandled = false
-                                    holdJob?.cancel()
-                                    holdJob = scope.launch {
+                                    grid.longPressHandled = false
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = scope.launch {
                                         delay(MENU_HOLD_MS)
-                                        longPressHandled = true
+                                        grid.longPressHandled = true
                                         okDown = false
                                         menuOpenedByHold = true
                                         shelf.menu = held
@@ -1377,10 +1128,10 @@ fun HomeScreen(
                                 }
 
                                 Key.Menu -> {
-                                    holdJob?.cancel()
-                                    holdJob = null
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = null
                                     okDown = false
-                                    longPressHandled = true
+                                    grid.longPressHandled = true
                                     menuOpenedByHold = false
                                     shelf.menu = held
                                     true
@@ -1404,7 +1155,7 @@ fun HomeScreen(
                             }
 
                             Key.DirectionUp -> {
-                                if (focusIndex < columns && !editing && !pickupActive) {
+                                if (grid.focusIndex < columns && !grid.editing && !grid.pickupActive) {
                                     if (rails.isNotEmpty()) {
                                         shelf.enterShelf()
                                     } else {
@@ -1429,25 +1180,25 @@ fun HomeScreen(
                                 okDown = true
                                 // The auto-repeat that follows a hold can arrive after the
                                 // edit-mode timer fires, so only the first KeyDown may toggle.
-                                if (editing && pickupActive) {
+                                if (grid.editing && grid.pickupActive) {
                                     // A short press drops the dragged tile where it
                                     // already sits; holding OK folds it with the
                                     // neighbour the drag pushed aside.
-                                    longPressHandled = false
-                                    holdJob?.cancel()
-                                    holdJob = scope.launch {
+                                    grid.longPressHandled = false
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = scope.launch {
                                         delay(FOLDER_HOLD_MS)
-                                        val victim = mergeVictim
-                                        if (pickupActive && victim != null &&
-                                            victim in items.indices
+                                        val victim = grid.mergeVictim
+                                        if (grid.pickupActive && victim != null &&
+                                            victim in grid.items.indices
                                         ) {
-                                            longPressHandled = true
-                                            confirmIndex = victim
+                                            grid.longPressHandled = true
+                                            grid.confirmIndex = victim
                                             delay(FOLDER_CONFIRM_MS)
-                                            if (pickupActive) mergePickupInto(victim)
+                                            if (grid.pickupActive) mergePickupInto(victim)
                                         }
                                     }
-                                } else if (editing) {
+                                } else if (grid.editing) {
                                     // tvOS lifts the icon and leaves it on the
                                     // cursor until the next click; the press is
                                     // consumed so KeyUp does not drop it again.
@@ -1457,15 +1208,15 @@ fun HomeScreen(
                                     // A long OK opens the context menu, as in the
                                     // Java build (showOptions on long click). The
                                     // edit mode lives inside that menu as "Move".
-                                    longPressHandled = false
-                                    holdJob?.cancel()
-                                    holdJob = scope.launch {
+                                    grid.longPressHandled = false
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = scope.launch {
                                         delay(MENU_HOLD_MS)
-                                        longPressHandled = true
+                                        grid.longPressHandled = true
                                         okDown = false
-                                        confirmIndex = null
+                                        grid.confirmIndex = null
                                         menuOpenedByHold = true
-                                        when (val focused = items.getOrNull(focusIndex)) {
+                                        when (val focused = grid.items.getOrNull(grid.focusIndex)) {
                                             is HomeItem.AppItem -> menuApp = focused.app
                                             is HomeItem.FolderItem ->
                                                 if (!isHiddenFolder(focused)) {
@@ -1481,13 +1232,13 @@ fun HomeScreen(
                                     // same delay the menu timer would take: a
                                     // short press must still launch the tile.
                                     // НЕ ТРОГАТЬ вслепую: установка
-                                    // longPressHandled = true здесь, до KeyUp,
+                                    // grid.longPressHandled = true здесь, до KeyUp,
                                     // делала мёртвым любое OK в детском режиме.
-                                    longPressHandled = false
-                                    holdJob?.cancel()
-                                    holdJob = scope.launch {
+                                    grid.longPressHandled = false
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = scope.launch {
                                         delay(MENU_HOLD_MS)
-                                        longPressHandled = true
+                                        grid.longPressHandled = true
                                     }
                                 }
                                 true
@@ -1498,14 +1249,14 @@ fun HomeScreen(
                             // Android TV remotes send ASSIST where tvOS sends Search,
                             // and some keyboards only have the magnifier key.
                             Key.Search, Key.Assist -> {
-                                if (!editing && openFolder == null && !menuOpen &&
-                                    launching == null
+                                if (!grid.editing && grid.openFolder == null && !menuOpen &&
+                                    grid.launching == null
                                 ) {
-                                    holdJob?.cancel()
-                                    holdJob = null
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = null
                                     okDown = false
-                                    longPressHandled = false
-                                    confirmIndex = null
+                                    grid.longPressHandled = false
+                                    grid.confirmIndex = null
                                     searchOpen = true
                                 }
                                 true
@@ -1518,14 +1269,14 @@ fun HomeScreen(
                                 // A running hold timer would fight the menu, and
                                 // a kids profile gets no menus at all: its tiles
                                 // must not offer uninstall or hiding.
-                                if (!editing && !kidsMode) {
-                                    holdJob?.cancel()
-                                    holdJob = null
+                                if (!grid.editing && !kidsMode) {
+                                    grid.holdJob?.cancel()
+                                    grid.holdJob = null
                                     okDown = false
-                                    longPressHandled = true
-                                    confirmIndex = null
+                                    grid.longPressHandled = true
+                                    grid.confirmIndex = null
                                     menuOpenedByHold = false
-                                    when (val focused = items.getOrNull(focusIndex)) {
+                                    when (val focused = grid.items.getOrNull(grid.focusIndex)) {
                                         is HomeItem.AppItem -> menuApp = focused.app
                                         // The hidden folder is not a user folder: no
                                         // rename, no delete, so it has no menu at all.
@@ -1548,19 +1299,19 @@ fun HomeScreen(
                             // matching MainActivity's OnBackPressedCallback.
                             Key.Back -> {
                                 when {
-                                    openFolder != null || menuOpen -> Unit
-                                    editing -> {
-                                        if (pickupActive) {
-                                            val start = pickupStart
-                                            pickupSnapshot?.let { items = it }
-                                            if (start in items.indices) focusIndex = start
+                                    grid.openFolder != null || menuOpen -> Unit
+                                    grid.editing -> {
+                                        if (grid.pickupActive) {
+                                            val start = grid.pickupStart
+                                            grid.pickupSnapshot?.let { grid.items = it }
+                                            if (start in grid.items.indices) grid.focusIndex = start
                                             endPickup()
                                         } else {
-                                            editing = false
+                                            grid.editing = false
                                         }
                                     }
 
-                                    libraryMode -> focusIndex = focusIndex % columns
+                                    libraryMode -> grid.focusIndex = grid.focusIndex % columns
                                 }
                                 true
                             }
@@ -1571,21 +1322,21 @@ fun HomeScreen(
 
                     KeyEventType.KeyUp -> when (event.key) {
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            holdJob?.cancel()
-                            holdJob = null
-                            if (!editing && shelf.focus >= 0 && okDown && !longPressHandled) {
+                            grid.holdJob?.cancel()
+                            grid.holdJob = null
+                            if (!grid.editing && shelf.focus >= 0 && okDown && !grid.longPressHandled) {
                                 shelfCards.getOrNull(shelf.focus)?.let(::activateShelfCard)
-                            } else if (editing && pickupActive) {
-                                if (okDown && !longPressHandled) dropPickup()
-                            } else if (!editing && okDown && !longPressHandled && shelf.focus < 0) {
-                                when (val item = items.getOrNull(focusIndex)) {
-                                    is HomeItem.AppItem -> startLaunch(item.app, cellCenter(focusIndex))
-                                    is HomeItem.FolderItem -> openFolderAt(focusIndex)
+                            } else if (grid.editing && grid.pickupActive) {
+                                if (okDown && !grid.longPressHandled) dropPickup()
+                            } else if (!grid.editing && okDown && !grid.longPressHandled && shelf.focus < 0) {
+                                when (val item = grid.items.getOrNull(grid.focusIndex)) {
+                                    is HomeItem.AppItem -> startLaunch(item.app, cellCenter(grid.focusIndex))
+                                    is HomeItem.FolderItem -> openFolderAt(grid.focusIndex)
                                     null -> Unit
                                 }
                             }
                             okDown = false
-                            longPressHandled = false
+                            grid.longPressHandled = false
                             true
                         }
 
@@ -1606,7 +1357,7 @@ fun HomeScreen(
                 // The overlay/zoom is modal on screen, so TalkBack must not keep
                 // offering the tiles it covers.
                 .then(
-                    if (openFolder != null || launching != null || menuOpen ||
+                    if (grid.openFolder != null || grid.launching != null || menuOpen ||
                         newFolderApp != null || renameApp != null || searchOpen ||
                         controlCenterOpen || weatherPanelOpen || shelf.menu != null ||
                         shelf.playingTrailer != null || shelf.onlineInfo != null
@@ -1617,7 +1368,7 @@ fun HomeScreen(
                     },
                 )
                 .graphicsLayer {
-                    val dockShift = if (focusIndex < columns) TvOs.DOCK_FOCUS_SHIFT else 0f
+                    val dockShift = if (grid.focusIndex < columns) TvOs.DOCK_FOCUS_SHIFT else 0f
                     translationY = (-(scroll.value + dockShift) + hideShift.value) *
                         scale.factor * density
                 },
@@ -1626,7 +1377,7 @@ fun HomeScreen(
             // the shelf stays put; the counter-shift cancels only that part.
             Box(
                 Modifier.graphicsLayer {
-                    val dockShift = if (focusIndex < columns) TvOs.DOCK_FOCUS_SHIFT else 0f
+                    val dockShift = if (grid.focusIndex < columns) TvOs.DOCK_FOCUS_SHIFT else 0f
                     translationY = dockShift * scale.factor * density
                     alpha = libraryFade.value
                 },
@@ -1652,8 +1403,8 @@ fun HomeScreen(
                         heroPreviewUri = onlinePreviewUri(
                             item = shelfCards.getOrNull(shelf.selected),
                             enabled = previewAutoplay && !kidsMode && !reduceMotion &&
-                                !libraryMode && !editing && !pickupActive &&
-                                !saverVisible && openFolder == null && launching == null &&
+                                !libraryMode && !grid.editing && !grid.pickupActive &&
+                                !saverVisible && grid.openFolder == null && grid.launching == null &&
                                 !menuOpen && newFolderApp == null && renameApp == null &&
                                 !searchOpen && !controlCenterOpen && !weatherPanelOpen &&
                                 shelf.menu == null &&
@@ -1676,7 +1427,7 @@ fun HomeScreen(
                 reduceMotion = reduceMotion,
                 scroll = scroll,
                 shift = { libraryShift.value - shelfHide },
-                focused = focusIndex < columns && shelf.focus < 0 && !capsuleFocused &&
+                focused = grid.focusIndex < columns && shelf.focus < 0 && !capsuleFocused &&
                     !weatherFocused,
                 fade = { libraryFade.value },
             )
@@ -1685,19 +1436,19 @@ fun HomeScreen(
             // animation still works on item indices, and this layer moves the
             // dock row to the top while the shelf fades out.
             HomeGridLayer(
-                items = items,
+                items = grid.items,
                 columns = columns,
                 libraryMode = libraryMode,
                 libraryVisible = libraryVisible,
                 libraryFade = libraryFade,
-                focusIndex = focusIndex,
+                focusIndex = grid.focusIndex,
                 shelfFocus = shelf.focus,
                 capsuleFocused = capsuleFocused,
                 weatherFocused = weatherFocused,
-                pickupActive = pickupActive,
-                pickupOrigin = pickupOrigin,
-                editing = editing,
-                confirmIndex = confirmIndex,
+                pickupActive = grid.pickupActive,
+                pickupOrigin = grid.pickupOrigin,
+                editing = grid.editing,
+                confirmIndex = grid.confirmIndex,
                 scale = scale,
                 reduceMotion = reduceMotion,
                 context = context,
@@ -1709,12 +1460,12 @@ fun HomeScreen(
             )
         }
 
-        openFolder?.let { open ->
+        grid.openFolder?.let { open ->
             FolderOverlay(
                 folder = open.folder,
                 tileCenter = Offset(open.tileX, open.tileY),
                 scale = scale,
-                launching = launching != null,
+                launching = grid.launching != null,
                 initialFocusKey = folderFocus[open.folder.id],
                 onFocusKeyChanged = { key ->
                     if (key == null) {
@@ -1724,10 +1475,10 @@ fun HomeScreen(
                     }
                 },
                 onLaunch = { app, center -> startLaunch(app, center) },
-                onClosing = { folderClosing = true },
+                onClosing = { grid.folderClosing = true },
                 onClose = {
-                    openFolder = null
-                    folderClosing = false
+                    grid.openFolder = null
+                    grid.folderClosing = false
                 },
                 onAppsChanged = { apps -> updateFolderApps(open.folder.id, apps) },
                 onRename = { name -> renameFolder(open.folder.id, name) },
@@ -1740,8 +1491,8 @@ fun HomeScreen(
         }
 
         menuFolderId?.let { folderId ->
-            val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
-            val folder = items.getOrNull(index) as? HomeItem.FolderItem
+            val index = grid.items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
+            val folder = grid.items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
                 FolderContextMenu(
                     folder = folder,
@@ -1750,10 +1501,10 @@ fun HomeScreen(
                     suppressOkUntilRelease = menuOpenedByHold,
                     onOpen = { openFolderAt(index) },
                     onMove = {
-                        focusIndex = index
-                        editing = true
-                        mergeVictim = null
-                        confirmIndex = null
+                        grid.focusIndex = index
+                        grid.editing = true
+                        grid.mergeVictim = null
+                        grid.confirmIndex = null
                         togglePickup()
                     },
                     onRequestDelete = {
@@ -1773,8 +1524,8 @@ fun HomeScreen(
         // Destructive confirmation for a folder. It is a second menu, not a
         // silent delete: the apps return home, but the user still chooses.
         folderDeleteId?.let { folderId ->
-            val index = items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
-            val folder = items.getOrNull(index) as? HomeItem.FolderItem
+            val index = grid.items.indexOfFirst { it is HomeItem.FolderItem && it.id == folderId }
+            val folder = grid.items.getOrNull(index) as? HomeItem.FolderItem
             if (folder != null) {
                 FolderDeleteMenu(
                     folder = folder,
@@ -1791,7 +1542,7 @@ fun HomeScreen(
         }
 
         menuApp?.let { app ->
-            val index = items.indexOfFirst {
+            val index = grid.items.indexOfFirst {
                 it is HomeItem.AppItem && it.app.packageName == app.packageName
             }
             if (index >= 0) {
@@ -1809,10 +1560,10 @@ fun HomeScreen(
                     suppressOkUntilRelease = menuOpenedByHold,
                     onOpen = { startLaunch(app, cellCenter(index)) },
                     onMove = {
-                        focusIndex = index
-                        editing = true
-                        mergeVictim = null
-                        confirmIndex = null
+                        grid.focusIndex = index
+                        grid.editing = true
+                        grid.mergeVictim = null
+                        grid.confirmIndex = null
                         togglePickup()
                     },
                     onMoveToFolder = { moveToFolderApp = app },
@@ -1865,14 +1616,14 @@ fun HomeScreen(
         // ends with "New Folder…", as the Java launcher did — a folder made here
         // is named first and takes the app with it.
         moveToFolderApp?.let { app ->
-            val folders = items.filterIsInstance<HomeItem.FolderItem>()
+            val folders = grid.items.filterIsInstance<HomeItem.FolderItem>()
                 .filterNot { isHiddenFolder(it) }
-            val tileIndex = items.indexOfFirst {
+            val tileIndex = grid.items.indexOfFirst {
                 it is HomeItem.AppItem && it.app.packageName == app.packageName
             }
             MoveToFolderMenu(
                 folders = folders,
-                anchor = cellCenter(if (tileIndex >= 0) tileIndex else focusIndex),
+                anchor = cellCenter(if (tileIndex >= 0) tileIndex else grid.focusIndex),
                 scale = scale,
                 onMove = { folder -> moveAppIntoFolder(app, folder.id) },
                 onNewFolder = { newFolderApp = app },
@@ -1930,7 +1681,7 @@ fun HomeScreen(
             ControlCenter(
                 scale = scale,
                 reduceMotion = reduceMotion,
-                libraryAvailable = items.size > columns,
+                libraryAvailable = grid.items.size > columns,
                 onClose = { returnFocus ->
                     controlCenterOpen = false
                     if (returnFocus) {
@@ -1941,7 +1692,7 @@ fun HomeScreen(
                     }
                 },
                 onStartSaver = onStartSaver,
-                onOpenLibrary = { focusIndex = columns },
+                onOpenLibrary = { grid.focusIndex = columns },
                 onOpenSearch = { searchOpen = true },
                 onOpenSettings = {
                     if (onOpenSettings != null) {
@@ -1977,8 +1728,8 @@ fun HomeScreen(
             profileEmoji = activeProfile?.emoji?.takeIf { it.isNotBlank() },
             profileColor = profileColor,
             profileName = activeProfile?.name,
-            openFolder = openFolder,
-            launching = launching,
+            openFolder = grid.openFolder,
+            launching = grid.launching,
             menuOpen = menuOpen,
             searchOpen = searchOpen,
             onCloseWeatherPanel = {
@@ -2004,7 +1755,7 @@ fun HomeScreen(
             playingTrailer = shelf.playingTrailer,
             onlineInfo = shelf.onlineInfo,
             onlineInfoTarget = shelf.onlineInfoTarget,
-            launching = launching,
+            launching = grid.launching,
             launchProgress = launchProgress,
             scale = scale,
             onOpenTrailerTarget = { target ->
