@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Startup/Startup-when страницы лежат в SettingsScreen | 0.5.44 (SettingsStartupPages) |
 | Страница System с Home-button/startup/AirPlay лежит в SettingsScreen | 0.5.43 (SettingsSystemPage) |
 | Device/About/Legal row builders лежат в SettingsScreen | 0.5.42 (SettingsAboutGroupRows) |
 | После серии split'ов остались мёртвые импорты в HomeScreen/SettingsScreen | 0.5.41 (20 imports removed) |
@@ -291,6 +292,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.44: Stage 2.3 — Startup pages
+
+- **Симптом.** После 0.5.43 `SettingsScreen.kt` оставался 4 591 строк; `PAGE_STARTUP` и `PAGE_STARTUP_WHEN` строили список приложений и boot/wake-выбор прямо в экране.
+- **Что сделано.**
+  - `SettingsStartupPages.kt` — `settingsStartupRows` и `settingsStartupWhenRows`.
+  - Выбор Home/приложения и `StartupPreferences` остались в `SettingsScreen`; builder только показывает строки и вызывает callback.
+  - `SettingsScreen.kt` уменьшился до **4 559 строк**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsStartupPages.kt`.
+- **Чего не делать.** Не переносить `StartupPreferences` в builder: экран владеет persistence и `back()`. Не менять фильтр собственного пакета в списке startup-приложений.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.44 / vc117; **6 618 107 B**, SHA-256 **`1a7cd9b21ed2bcc61dcbc0fa678891e31e64ddd370b4a1df4a8952103706ba08`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.43: Stage 2.2 — страница System
 

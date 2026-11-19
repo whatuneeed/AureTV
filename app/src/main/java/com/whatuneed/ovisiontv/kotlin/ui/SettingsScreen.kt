@@ -2610,68 +2610,36 @@ fun SettingsScreen(
             )
         }
 
-        PAGE_STARTUP -> buildList {
-            add(
-                SettingsRow(
-                    title = stringResource(R.string.settings_start_home),
-                    checked = startupTarget.isEmpty(),
-                    choice = true,
-                    action = {
-                        if (startupTarget.isNotEmpty()) {
-                            StartupPreferences.set(context, StartupPreferences.TARGET_HOME, "")
-                            startupTarget = StartupPreferences.TARGET_HOME
-                            startupLabel = StartupPreferences.label(context)
-                        }
-                        back()
-                    },
-                ),
-            )
-            catalog.orEmpty()
-                .filter { it.packageName.isNotEmpty() && it.packageName != context.packageName }
-                .forEach { app ->
-                    add(
-                        SettingsRow(
-                            title = app.label,
-                            checked = startupTarget == StartupPreferences.targetFor(app.packageName),
-                            choice = true,
-                            action = {
-                                StartupPreferences.set(
-                                    context,
-                                    StartupPreferences.targetFor(app.packageName),
-                                    app.label,
-                                )
-                                startupTarget = StartupPreferences.targetFor(app.packageName)
-                                startupLabel = app.label
-                                back()
-                            },
-                        ),
-                    )
+        PAGE_STARTUP -> settingsStartupRows(
+            startupTarget = startupTarget,
+            catalog = catalog,
+            context = context,
+            onSelectHome = {
+                if (startupTarget.isNotEmpty()) {
+                    StartupPreferences.set(context, StartupPreferences.TARGET_HOME, "")
+                    startupTarget = StartupPreferences.TARGET_HOME
+                    startupLabel = StartupPreferences.label(context)
                 }
-        }
+                back()
+            },
+            onSelectApp = { app ->
+                StartupPreferences.set(
+                    context,
+                    StartupPreferences.targetFor(app.packageName),
+                    app.label,
+                )
+                startupTarget = StartupPreferences.targetFor(app.packageName)
+                startupLabel = app.label
+                back()
+            },
+        )
 
-        PAGE_STARTUP_WHEN -> listOf(
-            SettingsRow(
-                title = stringResource(R.string.settings_start_when_boot),
-                checked = !startupOnWake,
-                choice = true,
-                action = {
-                    if (startupOnWake) {
-                        StartupPreferences.setOnWake(context, false)
-                        startupOnWake = false
-                    }
-                },
-            ),
-            SettingsRow(
-                title = stringResource(R.string.settings_start_when_wake),
-                checked = startupOnWake,
-                choice = true,
-                action = {
-                    if (!startupOnWake) {
-                        StartupPreferences.setOnWake(context, true)
-                        startupOnWake = true
-                    }
-                },
-            ),
+        PAGE_STARTUP_WHEN -> settingsStartupWhenRows(
+            startupOnWake = startupOnWake,
+            onSelectWake = { wake ->
+                StartupPreferences.setOnWake(context, wake)
+                startupOnWake = wake
+            },
         )
 
         PAGE_DEVICE_GROUP -> {
