@@ -2577,38 +2577,24 @@ fun SettingsScreen(
             onAirPlay = { openAirPlay(context) },
         )
 
-        PAGE_PERMISSIONS -> {
-            val powerSupported = SleepControls.adminSupported(context)
-            // The same rule feeds the root counter: taking the Home button over
-            // is a real route, so the row must not ask for the system HOME too.
-            val homeReady = PermissionSummary.homeReady(
-                defaultHome = defaultHome,
-                homeOverride = homeOverride,
-                accessibilityConnected = accessibility == AccessibilityStatus.State.CONNECTED,
-            )
-            val listingsAsked = ContentPreferences.READ_TV_LISTINGS in permissionsAsked
-            val locationAsked = DeviceFactsReader.wifiNamePermission() in permissionsAsked
-            permissionsRows(
-                accessibility = accessibility,
-                openAccessibility = { AccessibilityStatus.open(context) },
-                listingsAllowed = listingsAllowed,
-                listingsPermanent = !listingsAllowed &&
-                    isPermanentDenial(context, ContentPreferences.READ_TV_LISTINGS, listingsAsked),
-                requestListings = { listingsPermission.launch(ContentPreferences.READ_TV_LISTINGS) },
-                powerAllowed = powerAllowed,
-                powerSupported = powerSupported,
-                requestPower = { SleepControls.requestPermission(context) },
-                homeReady = homeReady,
-                openHome = { openSystemSettings(context) },
-                locationAllowed = locationAllowed,
-                locationPermanent = !locationAllowed &&
-                    isWifiNamePermanentDenial(context, locationAsked),
-                requestLocation = {
-                    locationPermission.launch(DeviceFactsReader.wifiNamePermissions())
-                },
-                openAppInfo = { openAppSettings(context) },
-            )
-        }
+        PAGE_PERMISSIONS -> settingsPermissionsRows(
+            accessibility = accessibility,
+            defaultHome = defaultHome,
+            homeOverride = homeOverride,
+            permissionsAsked = permissionsAsked,
+            listingsAllowed = listingsAllowed,
+            powerAllowed = powerAllowed,
+            locationAllowed = locationAllowed,
+            context = context,
+            onOpenAccessibility = { AccessibilityStatus.open(context) },
+            onRequestListings = { listingsPermission.launch(ContentPreferences.READ_TV_LISTINGS) },
+            onRequestPower = { SleepControls.requestPermission(context) },
+            onOpenHome = { openSystemSettings(context) },
+            onRequestLocation = {
+                locationPermission.launch(DeviceFactsReader.wifiNamePermissions())
+            },
+            onOpenAppInfo = { openAppSettings(context) },
+        )
 
         PAGE_STARTUP -> settingsStartupRows(
             startupTarget = startupTarget,
@@ -2642,40 +2628,25 @@ fun SettingsScreen(
             },
         )
 
-        PAGE_DEVICE_GROUP -> {
-            val kidsActive = remember(context) { KidsMode.isKids(context) }
-            val updateSummary = remember(context, resumeTick) {
-                UpdateStateStore(context).summary()
-            }
-            deviceGroupRows(
-                factsReady = factsReady,
-                network = if (factsReady) networkText else stringResource(R.string.settings_loading),
-                model = if (factsReady) facts?.model else null,
-                freeSpace = freeSpace,
-                permissions = permissionsSummary,
-                updateValue = if (kidsActive) {
-                    null
-                } else {
-                    updateSummary?.let {
-                        stringResource(R.string.settings_software_update_available)
-                    } ?: stringResource(R.string.settings_software_update_manual)
-                },
-                onUpdate = if (kidsActive) {
-                    null
-                } else {
-                    {
-                        context.startActivity(
-                            Intent(context, SoftwareUpdateActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }
-                },
-                onBackup = {
-                    context.startActivity(Intent(context, BackupActivity::class.java))
-                },
-                onOpen = ::open,
-            )
-        }
+        PAGE_DEVICE_GROUP -> settingsDeviceGroupRows(
+            factsReady = factsReady,
+            networkText = networkText,
+            facts = facts,
+            freeSpace = freeSpace,
+            permissionsSummary = permissionsSummary,
+            context = context,
+            resumeTick = resumeTick,
+            onOpen = ::open,
+            onUpdate = {
+                context.startActivity(
+                    Intent(context, SoftwareUpdateActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            },
+            onBackup = {
+                context.startActivity(Intent(context, BackupActivity::class.java))
+            },
+        )
 
         PAGE_ABOUT_GROUP -> aboutGroupRows(
             clipCount = clipList.size,

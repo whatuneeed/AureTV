@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Permissions и Device group страницы лежат в SettingsScreen | 0.5.45 (SettingsPermissions/DeviceGroup) |
 | Startup/Startup-when страницы лежат в SettingsScreen | 0.5.44 (SettingsStartupPages) |
 | Страница System с Home-button/startup/AirPlay лежит в SettingsScreen | 0.5.43 (SettingsSystemPage) |
 | Device/About/Legal row builders лежат в SettingsScreen | 0.5.42 (SettingsAboutGroupRows) |
@@ -292,6 +293,19 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.45: Stage 2.4 — Permissions и Device group
+
+- **Симптом.** После 0.5.44 `SettingsScreen.kt` оставался 4 559 строк; `PAGE_PERMISSIONS` и `PAGE_DEVICE_GROUP` содержали вычисления Home-ready, permanent denial, Kids Mode и Update summary.
+- **Что сделано.**
+  - `SettingsPermissionsPage.kt` — `settingsPermissionsRows`: те же `PermissionSummary.homeReady`, `isPermanentDenial`, `isWifiNamePermanentDenial`, `SleepControls.adminSupported`.
+  - `SettingsDeviceGroupPage.kt` — `settingsDeviceGroupRows`: Kids Mode скрывает Update, Backup остаётся; summary читается по `resumeTick`.
+  - Запуск Activity и `open()` остались в `SettingsScreen`.
+  - `SettingsScreen.kt` уменьшился до **4 530 строк**.
+- **Файлы.** `ui/SettingsScreen.kt`, `ui/SettingsPermissionsPage.kt`, `ui/SettingsDeviceGroupPage.kt`.
+- **Чего не делать.** Не переносить запуск `SoftwareUpdateActivity`/`BackupActivity` в builder. Не кэшировать `KidsMode`/`UpdateStateStore` без `resumeTick`: значения должны перечитываться после возврата.
+- **Проверка.** `SettingsScreenTest` — **59/59** на AVD. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не повторялся (owner directive: targeted runs only).
+- **Артефакт.** 0.5.45 / vc118; **6 618 107 B**, SHA-256 **`682dce43e38d95785bdb11cff4c31bc6a0511533b9dc16b26114970653ad9912`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.44: Stage 2.3 — Startup pages
 
