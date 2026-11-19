@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Package-intents и error states лежат в LauncherRoot | 0.5.56 (LauncherRootParts.kt) |
 | Плееры и caption saver лежат в SaverScreen | 0.5.55 (SaverPlayers/SaverCaption) |
 | Геометрия и status capsule лежат в ControlCenter | 0.5.54 (ControlCenterGeometry/Status) |
 | Rail-карточки и кэш обложек лежат в TopShelf | 0.5.53 (TopShelfRail.kt) |
@@ -303,6 +304,17 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.56: Stage 3.5 — LauncherRoot helpers
+
+- **Симптом.** `LauncherRoot.kt` был 944 строки; package-change фильтр, system intents и два error-surface жили в файле с 700-строчным корневым composable.
+- **Что сделано.**
+  - `LauncherRootParts.kt` — `appInfoIntent`, `uninstallIntent`, `startSystemIntent`, `packageChangeFilter`, `reloadsHomeFor`, `HomeLoadError`, `EmptyState`.
+  - `LauncherRoot.kt` — **809 строк**; навигация, lifecycle и reload-generation остались на месте.
+- **Файлы.** `ui/LauncherRoot.kt`, `ui/LauncherRootParts.kt`.
+- **Чего не делать.** Не менять `reloadsHomeFor`: `PACKAGE_REMOVED + EXTRA_REPLACING` должен игнорироваться, иначе плитка исчезает на кадр и сохранённый focus затирается соседом.
+- **Проверка.** `LauncherReloadTest` — **2/2**, `PackageChangeTest` — зелёный. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.56 / vc129; **6 618 107 B**, SHA-256 **`7a6e2ca741b61f7787810d5b2903de9ec6761ceef1c192848786fa4bf8af1ff5`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.55: Stage 3.4 — Saver layers
 
