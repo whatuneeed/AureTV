@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Password/row/SAF-хелперы Backup лежат в BackupScreen | 0.5.58 (BackupScreenParts.kt) |
 | PageDots и focus-retry папки лежат в FolderOverlay | 0.5.57 (FolderOverlayParts.kt) |
 | Package-intents и error states лежат в LauncherRoot | 0.5.56 (LauncherRootParts.kt) |
 | Плееры и caption saver лежат в SaverScreen | 0.5.55 (SaverPlayers/SaverCaption) |
@@ -305,6 +306,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.58: Stage 3.7 — Backup presentation
+
+- **Симптом.** `BackupScreen.kt` был 824 строки; password-поля, строка списка, подписи категорий и SAF-хелперы жили внутри экрана.
+- **Что сделано.**
+  - `BackupScreenParts.kt` — `PasswordFields`, `PasswordField`, `BackupRowView`, `categoryLabel`, `warningText`, `toSelection`, `displayLastLabel`, `lastLabel`, `fileName`, `requestBackupFocusWhenAttached`.
+  - `BackupUi`, `BackupRow`, `BackupPage`, `PasswordPurpose` стали internal: их используют и экран, и presentation-файл.
+  - `BackupScreen.kt` — **574 строки**; SAF launchers, state machine, create/restore и scheduler остались на месте.
+- **Файлы.** `ui/BackupScreen.kt`, `ui/BackupScreenParts.kt`.
+- **Чего не делать.** Не переносить `BackupManager`/`BackupScheduler` вызовы в presentation; не менять `toSelection` — это маска категорий для архива. Focus-extension namespaced, чтобы не конфликтовать с Home/Setup/Folder.
+- **Проверка.** `BackupScreenTest` — **3/3**, `BackupManagerInstrumentedTest` — **5/5**, `BackupCodecTest` — зелёный. Unit — **552/552**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.58 / vc131; **6 618 107 B**, SHA-256 **`41ae2e17752e23425aa0be8e960622410dc784f22d3e03df2008e9915d734e0b`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.57: Stage 3.6 — FolderOverlay parts
 
