@@ -59,7 +59,6 @@ import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
 import com.whatuneed.ovisiontv.kotlin.ui.components.LAUNCH_START_DELAY_MS
 import com.whatuneed.ovisiontv.kotlin.ui.components.LaunchSpec
-import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
@@ -842,32 +841,14 @@ fun HomeScreen(
             )
         }
 
-        overlays.newFolderApp?.let { app ->
-            RenameKeyboardOverlay(
-                title = context.getString(R.string.new_folder_title),
-                initial = "",
-                scale = scale,
-                onDone = { name ->
-                    overlays.newFolderApp = null
-                    createFolderWithApp(name, app)
-                },
-                onCancel = { overlays.newFolderApp = null },
-                placeholder = context.getString(R.string.keyboard_placeholder),
-                note = context.getString(R.string.new_folder_note),
-            )
-        }
-
-        overlays.renameApp?.let { app ->
-            RenameKeyboardOverlay(
-                title = context.getString(R.string.rename_app_title),
-                initial = AppLabelStore.label(context, app.packageName, prefsName) ?: app.label,
-                scale = scale,
-                onDone = { name -> renameAppInHome(app, name) },
-                onCancel = { overlays.renameApp = null },
-                placeholder = context.getString(R.string.keyboard_placeholder),
-                note = context.getString(R.string.rename_app_note),
-            )
-        }
+        HomeKeyboards(
+            overlays = overlays,
+            context = context,
+            scale = scale,
+            prefsName = prefsName,
+            createFolderWithApp = ::createFolderWithApp,
+            renameAppInHome = ::renameAppInHome,
+        )
 
         HomePanels(
             overlays = overlays,

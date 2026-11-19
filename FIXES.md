@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Клавиатуры создания папки и переименования приложения лежат в HomeScreen | 0.5.36 (HomeKeyboards) |
 | Слои Home (backdrop, shelf, dock band, grid) собираются в HomeScreen | 0.5.35 (HomeSceneLayers) |
 | Запрос фокуса после раскладки сетки и TalkBack-повтор лежат в HomeScreen | 0.5.34 (HomeFocusRequester) |
 | Погодные эффекты и три локальных state лежат в HomeScreen | 0.5.33 (HomeWeatherState/Effects) |
@@ -283,6 +284,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.36: клавиатуры Home
+
+- **Симптом.** После 0.5.35 `HomeScreen.kt` оставался 978 строк; два `RenameKeyboardOverlay` — новая папка и переименование приложения — были в главном composable.
+- **Что сделано.**
+  - `HomeKeyboards` показывает клавиатуру по `overlays.newFolderApp` / `overlays.renameApp`, закрывает overlay на submit и отдаёт текст в `createFolderWithApp` / `renameAppInHome`.
+  - Начальное имя приложения по-прежнему берётся из `AppLabelStore`; тексты — через `R.string.*`.
+  `HomeScreen.kt` уменьшился до **957 строк** (исходно 2 619, минус ~63%).
+- **Файлы.** `ui/HomeScreen.kt`, `ui/HomeKeyboards.kt`.
+- **Чего не делать.** Не переносить `createFolderWithApp`/`renameAppInHome` внутрь `HomeKeyboards`: они меняют `HomeGridState`, `DiscoveryEngine` и закрывают клавиатуру.
+- **Проверка.** `HomeScreenTest` — **41/41** на AVD `hume-tv`. Unit state-тесты — **15/15**. Lint — **0 errors / 15 warnings / 0 information**. Полный connected suite не запускался (owner directive: targeted runs only).
+- **Артефакт.** 0.5.36 / vc109; **6 601 723 B**, SHA-256 **`98ceb99071374ac7e81f5909b12dd5ed09da6701d0015272c4827357bcbfbe30`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.35: сборка слоёв Home
 
