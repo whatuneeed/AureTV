@@ -18,6 +18,10 @@ keystore.properties
 # Verification artifacts (166 MB of screenshots, regenerated on demand)
 screenshots/
 
+# The release gallery is part of the repository documentation.
+!GITHUB_RELEASE/screenshots/
+!GITHUB_RELEASE/screenshots/**
+
 # Local verification scratch (logs, pulled APKs, temporary captures)
 temp/
 connected.log
