@@ -1,0 +1,22 @@
+0.5.72 / vc145 — Stage 5.5 network helpers package move
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: ui/components/BoundedRead.kt and ImageRedirectPolicy.kt ->
+core/network. Only package and imports changed; 64 KiB chunk, cancellation check,
+cap enforcement and same-host redirect policy are untouched. Four clients and
+two unit tests updated.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:compileDebugUnitTestKotlin — BUILD SUCCESSFUL
+:app:compileDebugAndroidTestKotlin — BUILD SUCCESSFUL
+BoundedReadTest 3/3, ImageRedirectPolicyTest 3/3
+OnlineInfoOverlayTest + SaverPreviewTest + TopShelfTest — 24/24
+:app:testDebugUnitTest — 569/569 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 54c0415ab42e8f89030bfa2628cee92a76e1f28bb4fa57e3c047081fa7c54b5d
+versionCode 145, versionName 0.5.72, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 1169 ms, second 610 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; this is a package-only change.

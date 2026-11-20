@@ -1,4 +1,4 @@
-package com.whatuneed.ovisiontv.kotlin.ui.components
+package com.whatuneed.ovisiontv.kotlin.core.network
 
 import java.io.ByteArrayOutputStream
 import java.io.InputStream

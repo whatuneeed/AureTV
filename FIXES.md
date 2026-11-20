@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Сетевые helper'ы лежат в UI-пакете | 0.5.72 (`core.network`) |
 | `TvKeyRepeat` лежит среди экранов | 0.5.71 (`core.input`) |
 | Focus-light слой лежит среди экранов | 0.5.70 (`core.designsystem`) |
 | `TvListRowSurface` лежит среди экранов | 0.5.69 (`core.designsystem`) |
@@ -319,6 +320,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.72: Stage 5.5 — сетевые helper'ы в core.network
+
+- **Симптом.** `BoundedRead` и `ImageRedirectPolicy` жили в `ui.components`, хотя это транспортные правила, а не оформление.
+- **Что сделано.**
+  - Оба файла перемещены в `core/network`, `package` обновлён.
+  - `OnlineInfoOverlay`, `SaverPreviewImage`, `TopShelfRail` и `RedditImageStore` импортируют helper'ы из нового пакета; тесты обновлены.
+  - Лимит 64 KiB, cancellation и same-host policy не менялись.
+- **Файлы.** `core/network/BoundedRead.kt`, `core/network/ImageRedirectPolicy.kt`, 4 клиента, 2 теста.
+- **Чего не делать.** Не возвращать `readAtMost` в UI и не разрешать cross-host редирект: обе проверки — часть сетевого контракта.
+- **Проверка.** `BoundedReadTest` **3/3**, `ImageRedirectPolicyTest` **3/3**, `OnlineInfoOverlayTest` + `SaverPreviewTest` + `TopShelfTest` — **24/24**. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.72 / vc145; **6 618 107 B**, SHA-256 **`54c0415ab42e8f89030bfa2628cee92a76e1f28bb4fa57e3c047081fa7c54b5d`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.71: Stage 5.4 — TvKeyRepeat в core.input
 

@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.core.network.readAtMost
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import kotlinx.coroutines.CancellationException

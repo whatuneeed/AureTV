@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.core.network.imageRedirectIsTrusted
+import com.whatuneed.ovisiontv.kotlin.core.network.readAtMost
 import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import android.content.Context
 import android.graphics.BitmapFactory

@@ -9,7 +9,7 @@ import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LauncherUserAgent
 import com.whatuneed.ovisiontv.kotlin.data.resolveRedirectUrl
 import com.whatuneed.ovisiontv.kotlin.data.writeFileAtomically
-import com.whatuneed.ovisiontv.kotlin.ui.components.readAtMost
+import com.whatuneed.ovisiontv.kotlin.core.network.readAtMost
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.net.HttpURLConnection

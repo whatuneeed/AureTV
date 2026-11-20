@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.core.network.imageRedirectIsTrusted
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -195,6 +195,7 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
 | 5.2 | `TvListRowSurface.kt` | `ui.components` | `core.designsystem` | compile, Settings/Backup/Update 65/65 (1 teardown flake, repeat 1/1) |
 | 5.3 | `IconFocusLight.kt` | `ui.components` | `core.designsystem` | compile, `HomeScreenTest` 41/41, `FocusLightTest` 4/4 |
 | 5.4 | `TvKeyRepeat.kt` | `ui.components` | `core.input` | compile, `TvKeyRepeatTest` + `MainActivityInputTest` 9/9 |
+| 5.5 | `BoundedRead.kt`, `ImageRedirectPolicy.kt` | `ui.components` | `core.network` | compile, helper tests 6/6, UI 24/24 |
 
 Правило: один файл за коммит, только `package` и импорты; поведение, `internal`-видимость и имена не меняются.
 
