@@ -525,8 +525,15 @@
     }
   }
 
+  function activeScope() {
+    if (state.mode === "overlay" || state.mode === "search") return els.overlayCard;
+    if (state.mode === "settings") return els.settings;
+    if (state.mode === "ambient") return els.ambient;
+    return document;
+  }
+
   function visibleFocusables() {
-    return $$("[data-focusable]").filter((el) => {
+    return $$("[data-focusable]", activeScope()).filter((el) => {
       if (el.hidden || el.disabled) return false;
       if (el.closest("[hidden]")) return false;
       return el.getClientRects().length > 0;
