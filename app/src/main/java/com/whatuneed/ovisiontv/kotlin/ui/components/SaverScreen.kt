@@ -183,7 +183,7 @@ internal fun SaverScreen(
     // The saver is real playback, so the system may show its title and offer
     // play/pause. The session is released with the overlay; it never replaces
     // another app's session while the saver is not visible.
-    val mediaSession = remember(context) { MediaSession(context, "OVisionTVSaver") }
+    val mediaSession = remember(context) { MediaSession(context, "AURE TV Saver") }
     DisposableEffect(mediaSession, publishMediaSession) {
         mediaSession.setFlags(
             MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or
@@ -231,7 +231,7 @@ internal fun SaverScreen(
         mediaSession.setMetadata(
             MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, clip.name(language))
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "OVisionTV")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "AURE TV")
                 .putString(MediaMetadata.METADATA_KEY_ALBUM, "Aerial")
                 .build(),
         )

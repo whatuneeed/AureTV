@@ -14,7 +14,7 @@ class UpdateMetadataTest {
         channel: String = "stable",
         versionCode: Int = 81,
         versionName: String = "0.5.8",
-        assetUrl: String = "https://updates.example.com/OVisionTV-0.5.8.apk",
+        assetUrl: String = "https://updates.example.com/AURE-TV-0.6.0.apk",
         sha: String = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         size: Long = 4_771_546L,
         notesEn: String = "[\"Fixed focus restoration.\"]",

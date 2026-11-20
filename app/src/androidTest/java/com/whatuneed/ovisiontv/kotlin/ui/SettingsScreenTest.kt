@@ -668,7 +668,7 @@ class SettingsScreenTest {
             .assert(isHeading())
         // Every paragraph is its own accessibility stop; an exact match fails
         // against the former single 11 KB TextView.
-        rule.onNodeWithText("OVisionTV Launcher").assertIsDisplayed()
+        rule.onNodeWithText(string(R.string.app_name)).assertIsDisplayed()
         rule.onNodeWithText("TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION")
             .assertIsDisplayed()
         rule.onNodeWithText("1. Definitions.").assertExists()
@@ -1941,7 +1941,7 @@ class SettingsScreenTest {
         }
         press(Key.DirectionDown)
         rule.waitUntil(5_000) {
-            rule.onAllNodes(hasText("OVisionTV Launcher", substring = true) and isFocusable())
+            rule.onAllNodes(hasText(string(R.string.app_name), substring = true) and isFocusable())
                 .fetchSemanticsNodes()
                 .any { it.config.getOrNull(SemanticsProperties.Focused) == true }
         }

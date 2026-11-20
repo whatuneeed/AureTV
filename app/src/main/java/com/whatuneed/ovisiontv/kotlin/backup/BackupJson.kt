@@ -90,7 +90,7 @@ internal object BackupJson {
     fun decodeManifest(raw: String): BackupManifest {
         val root = parseObject(raw, "manifest")
         if (root.optString("kind") != BackupContract.KIND) {
-            throw BackupException(BackupStage.MANIFEST, "not an OVisionTV backup")
+            throw BackupException(BackupStage.MANIFEST, "not an AURE TV backup")
         }
         val selection = root.optJSONArray("selection")?.toStringSet()
             ?.mapNotNull(BackupCategory::fromId)

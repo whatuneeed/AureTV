@@ -1,4 +1,4 @@
-# OVisionTV Launcher
+# AURE TV
 
 Android TV launcher with a tvOS-inspired Home, app folders, profiles, weather,
 Aerial ambience, a local backup/restore stack and an optional in-app updater.

@@ -1073,7 +1073,7 @@ class HomeScreenTest {
     @Test
     fun menu_on_the_own_settings_tile_has_no_hide_or_uninstall() {
         setHome(
-            initialItems = listOf(app(context.packageName, "Настройки OVisionTV")),
+            initialItems = listOf(app(context.packageName, "Настройки AURE TV")),
         )
 
         press(Key.Menu)

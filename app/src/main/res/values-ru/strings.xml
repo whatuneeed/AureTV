@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OVisionTV Launcher</string>
-    <string name="accessibility_service_label">OVisionTV Launcher — «Домой» и запуск</string>
-    <string name="accessibility_service_desc">Позволяет OVisionTV открываться, когда кнопка «Домой» показывает главный экран телевизора, и запускать выбранное приложение при включении и пробуждении. Служба видит только пакет открывшегося окна, не читает содержимое экрана и не видит, что вы вводите.</string>
+    <string name="app_name">AURE TV</string>
+    <string name="accessibility_service_label">AURE TV — «Домой» и запуск</string>
+    <string name="accessibility_service_desc">Позволяет AURE TV открываться, когда кнопка «Домой» показывает главный экран телевизора, и запускать выбранное приложение при включении и пробуждении. Служба видит только пакет открывшегося окна, не читает содержимое экрана и не видит, что вы вводите.</string>
     <string name="startup_home">Главный экран</string>
     <string name="shelf_context">Приложение</string>
-    <string name="home_empty_title">Добро пожаловать в OVisionTV</string>
+    <string name="home_empty_title">Добро пожаловать в AURE TV</string>
     <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в «Настройки → Главная».</string>
     <string name="shelf_listings_denied">Рекомендации приложений отключены. Разрешите «Доступ к рекомендациям» в «Настройки → Главная».</string>
     <string name="discovery_section_continue">Продолжить просмотр</string>
@@ -96,7 +96,7 @@
     <string name="search_no_results">Ничего не найдено</string>
     <string name="search_no_results_hint">Попробуйте другое название.</string>
     <string name="settings_title">Настройки</string>
-    <string name="settings_tile_name">Настройки OVisionTV</string>
+    <string name="settings_tile_name">Настройки AURE TV</string>
     <string name="settings_language">Язык</string>
     <string name="settings_language_system">Системный</string>
     <string name="settings_language_russian">Русский</string>
@@ -246,10 +246,10 @@
     <string name="saver_aerial_quality_limited">1080p (ТВ без 4K/HDR)</string>
     <string name="saver_aerial_quality_hint">4K/HDR включается только при поддержке телевизора и расходует больше трафика; иначе используется 1080p.</string>
     <string name="saver_screen_description">Заставка, %1$s. Нажмите любую кнопку, чтобы выйти.</string>
-    <string name="aerial_dream_label">OVisionTV: заставка</string>
+    <string name="aerial_dream_label">AURE TV: заставка</string>
     <string name="saver_system_title">Системная заставка</string>
     <string name="saver_system_value">Выбрать в настройках ТВ</string>
-    <string name="saver_system_hint">Выберите «OVisionTV: заставка»: Настройки → Заставка.</string>
+    <string name="saver_system_hint">Выберите «AURE TV: заставка»: Настройки → Заставка.</string>
     <string name="saver_reset">Сбросить настройки заставки</string>
     <string name="saver_reset_title">Сбросить настройки заставки?</string>
     <string name="saver_reset_confirm">Сбросить</string>
@@ -279,7 +279,7 @@
     <string name="settings_terms">Условия использования</string>
     <string name="settings_privacy">Конфиденциальность</string>
     <string name="settings_aerial_sources">Источники заставок</string>
-    <string name="settings_launcher_name">Лаунчер OVisionTV</string>
+    <string name="settings_launcher_name">Лаунчер AURE TV</string>
 
     <string name="settings_catalogue_size">Роликов в каталоге</string>
     <string name="settings_aerial_update">Обновить каталог</string>
@@ -333,7 +333,7 @@
     <string name="update_storage">Недостаточно свободного места</string>
     <string name="update_integrity">Скачанный файл повреждён</string>
     <string name="update_signature">Обновление подписано не этим разработчиком</string>
-    <string name="update_permission">Разрешите установку для OVisionTV</string>
+    <string name="update_permission">Разрешите установку для AURE TV</string>
     <string name="update_permission_hint">Android потребует подтверждение в системных настройках, прежде чем установить обновление.</string>
     <string name="update_permission_open">Открыть настройки установки</string>
     <string name="update_incompatible">Обновление не поддерживает этот телевизор</string>
@@ -388,7 +388,7 @@
     <string name="settings_system_home">Лаунчер по умолчанию</string>
     <string name="settings_system_open">Системные настройки</string>
     <string name="settings_system_airplay">Приёмник AirPlay</string>
-    <string name="settings_home_button">Кнопка «Домой» открывает OVisionTV</string>
+    <string name="settings_home_button">Кнопка «Домой» открывает AURE TV</string>
     <string name="settings_home_button_not_needed">Не требуется</string>
     <string name="settings_home_button_on">Вкл</string>
     <string name="settings_home_button_off">Выкл</string>
@@ -402,22 +402,22 @@
     <string name="settings_start_when_boot">При включении</string>
     <string name="settings_start_when_wake">При включении и пробуждении</string>
     <string name="settings_start_when_title">Когда открывать</string>
-    <string name="settings_start_when_hint">При пробуждении Android разрешает запуск только с включённым переключателем специальных возможностей OVisionTV.</string>
+    <string name="settings_start_when_hint">При пробуждении Android разрешает запуск только с включённым переключателем специальных возможностей AURE TV.</string>
     <string name="settings_start_wake">При пробуждении</string>
     <string name="settings_airplay_installed">Установлен</string>
     <string name="settings_airplay_missing">Не установлен</string>
     <string name="settings_airplay_open">Открыть AirPlay</string>
-    <string name="settings_system_hint">Переключатель специальных возможностей открывает OVisionTV вместо главного экрана телевизора.</string>
+    <string name="settings_system_hint">Переключатель специальных возможностей открывает AURE TV вместо главного экрана телевизора.</string>
     <string name="settings_system_unavailable">Недоступно на этом устройстве</string>
-    <string name="settings_power_admin_explanation">Позволяет OVisionTV выключать экран для «Сна» и таймера сна. Больше приложение ничего не может.</string>
-    <string name="settings_power_accessibility_hint">Включите переключатель OVisionTV, чтобы приложение могло выключать экран.</string>
+    <string name="settings_power_admin_explanation">Позволяет AURE TV выключать экран для «Сна» и таймера сна. Больше приложение ничего не может.</string>
+    <string name="settings_power_accessibility_hint">Включите переключатель AURE TV, чтобы приложение могло выключать экран.</string>
     <string name="settings_power_unavailable">Этот телевизор не позволяет приложениям выключать экран. Используйте кнопку питания на пульте.</string>
 
     <string name="settings_permissions">Разрешения</string>
     <string name="settings_perms_home_button">Кнопка «Домой» и автозапуск</string>
     <string name="settings_perms_listings">Списки «Смотреть далее»</string>
     <string name="settings_perms_power">Выключение и таймер сна</string>
-    <string name="settings_perms_home">OVisionTV как главный экран</string>
+    <string name="settings_perms_home">AURE TV как главный экран</string>
     <string name="settings_perms_wifi">Имя Wi-Fi в быстрых настройках</string>
     <string name="settings_perms_allowed">Разрешено</string>
     <string name="settings_perms_allow">Разрешить…</string>
@@ -458,7 +458,7 @@
     <string name="settings_run_setup">Запустить мастер настройки</string>
 
     <string name="setup_language_system">Как в системе</string>
-    <string name="setup_welcome_title">Добро пожаловать в OVisionTV</string>
+    <string name="setup_welcome_title">Добро пожаловать в AURE TV</string>
     <string name="setup_welcome_hint">Нажмите OK на пульте, чтобы продолжить. Всё это можно изменить позже в Настройках.</string>
     <string name="setup_personal_title">Язык и профиль</string>
     <string name="setup_personal_hint">Выберите язык лаунчера, затем имя и аватар на Главной. И то и другое можно изменить позже.</string>
@@ -476,7 +476,7 @@
     <string name="setup_access_title">Главный экран и доступ</string>
     <string name="setup_home_app">Лаунчер по умолчанию</string>
     <string name="setup_accessibility">Кнопка «Домой» и запуск</string>
-    <string name="setup_accessibility_detail">OVisionTV вместо главного экрана телевизора</string>
+    <string name="setup_accessibility_detail">AURE TV вместо главного экрана телевизора</string>
     <string name="setup_accessibility_on">Включено</string>
     <string name="setup_accessibility_stale">Выключите и включите переключатель</string>
     <string name="setup_access_detail">Разрешает полке читать рекомендации приложений</string>
@@ -503,7 +503,7 @@
     <string name="setup_city_searching">Поиск…</string>
     <string name="setup_city_nothing">Ничего не найдено</string>
     <string name="setup_city_offline">Не удалось выполнить поиск. Проверьте подключение к интернету.</string>
-    <string name="home_settings_hint">Откройте Настройки → Главная и выберите OVisionTV</string>
+    <string name="home_settings_hint">Откройте Настройки → Главная и выберите AURE TV</string>
     <string name="setup_home_setup">Настроить</string>
     <string name="setup_allow_action">Разрешить</string>
     <string name="city_moscow">Москва</string>
@@ -522,7 +522,7 @@
     <string name="cc_not_connected">Нет подключения</string>
     <string name="cc_apps">Библиотека приложений</string>
     <string name="cc_search">Поиск</string>
-    <string name="cc_settings">Настройки OVisionTV</string>
+    <string name="cc_settings">Настройки AURE TV</string>
     <string name="cc_system">Настройки Android</string>
     <string name="cc_accessibility">Специальные возможности</string>
     <string name="cc_controllers">Контроллеры</string>
@@ -616,7 +616,7 @@
     <string name="profile_avatar_emoji">Эмодзи</string>
     <string name="profile_avatar_placeholder">?</string>
 
-    <string name="kids_boundary">Ограничения действуют только внутри OVisionTV. Системные настройки, другой лаунчер или стороннее приложение могут обойти этот режим.</string>
+    <string name="kids_boundary">Ограничения действуют только внутри AURE TV. Системные настройки, другой лаунчер или стороннее приложение могут обойти этот режим.</string>
     <string name="kids_profile_toggle">Этот профиль — детский</string>
     <string name="kids_pin">PIN выхода</string>
     <string name="kids_pin_set">Задан</string>
@@ -729,7 +729,7 @@
     <string name="menu_rename_app">Переименовать…</string>
     <string name="rename_app_title">Переименовать приложение</string>
     <string name="menu_reset_app_name">Сбросить название</string>
-    <string name="rename_app_note">Это название видно только в OVisionTV.</string>
+    <string name="rename_app_note">Это название видно только в AURE TV.</string>
     <string name="backup_selection_required">Выберите хотя бы одну группу данных.</string>
     <string name="backup_retention_hint">Старые локальные копии удаляются автоматически.</string>
     <string name="backup_error_format">Файл копии повреждён или не поддерживается.</string>

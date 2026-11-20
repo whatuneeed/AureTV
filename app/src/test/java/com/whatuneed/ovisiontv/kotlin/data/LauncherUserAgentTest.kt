@@ -11,7 +11,7 @@ class LauncherUserAgentTest {
     @Test
     fun userAgentCarriesTheCurrentVersionName() {
         assertTrue(LauncherUserAgent.value.contains("/${BuildConfig.VERSION_NAME} "))
-        assertTrue(LauncherUserAgent.value.startsWith("OVisionTV/"))
+        assertTrue(LauncherUserAgent.value.startsWith("AURETV/"))
         assertTrue(LauncherUserAgent.value.contains("Android TV launcher"))
     }
 

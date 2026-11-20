@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OVisionTV Launcher</string>
-    <string name="accessibility_service_label">OVisionTV Launcher — Home &amp; Startup</string>
-    <string name="accessibility_service_desc">Lets OVisionTV open when the Home button shows the TV\'s own home screen, and start the chosen app when the TV turns on or wakes. The service only notes which app\'s window opened; it does not read the screen and never sees what you type.</string>
+    <string name="app_name">AURE TV</string>
+    <string name="accessibility_service_label">AURE TV — Home &amp; Startup</string>
+    <string name="accessibility_service_desc">Lets AURE TV open when the Home button shows the TV\'s own home screen, and start the chosen app when the TV turns on or wakes. The service only notes which app\'s window opened; it does not read the screen and never sees what you type.</string>
     <string name="startup_home">Home Screen</string>
     <string name="shelf_context">Application</string>
-    <string name="home_empty_title">Welcome to OVisionTV</string>
+    <string name="home_empty_title">Welcome to AURE TV</string>
     <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings → Home.</string>
     <string name="shelf_listings_denied">App recommendations are off. Allow Recommendations Access in Settings → Home.</string>
     <string name="discovery_section_continue">Continue Watching</string>
@@ -94,7 +94,7 @@
     <string name="search_no_results">No apps found</string>
     <string name="search_no_results_hint">Try another name.</string>
     <string name="settings_title">Settings</string>
-    <string name="settings_tile_name">OVisionTV Settings</string>
+    <string name="settings_tile_name">AURE TV Settings</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System</string>
     <string name="settings_language_russian">Русский</string>
@@ -238,10 +238,10 @@
     <string name="saver_aerial_quality_limited">1080p (TV lacks 4K/HDR)</string>
     <string name="saver_aerial_quality_hint">4K/HDR is used only when the TV supports it and uses more data; otherwise 1080p.</string>
     <string name="saver_screen_description">Screen Saver, %1$s. Press any button to exit.</string>
-    <string name="aerial_dream_label">OVisionTV Ambient</string>
+    <string name="aerial_dream_label">AURE TV Ambient</string>
     <string name="saver_system_title">System screen saver</string>
     <string name="saver_system_value">Choose in TV settings</string>
-    <string name="saver_system_hint">Choose OVisionTV Ambient under Settings → Screen saver</string>
+    <string name="saver_system_hint">Choose AURE TV Ambient under Settings → Screen saver</string>
     <string name="saver_reset">Reset Screen Saver</string>
     <string name="saver_reset_title">Reset screen saver?</string>
     <string name="saver_reset_confirm">Reset</string>
@@ -269,7 +269,7 @@
     <string name="settings_terms">Terms of Use</string>
     <string name="settings_privacy">Privacy Policy</string>
     <string name="settings_aerial_sources">Aerial Sources</string>
-    <string name="settings_launcher_name">OVisionTV Launcher</string>
+    <string name="settings_launcher_name">AURE TV Launcher</string>
 
     <string name="settings_catalogue_size">Clips in catalogue</string>
     <string name="settings_aerial_update">Update Catalogue</string>
@@ -323,7 +323,7 @@
     <string name="update_storage">Not enough free space</string>
     <string name="update_integrity">The downloaded file is damaged</string>
     <string name="update_signature">The update is not signed by this developer</string>
-    <string name="update_permission">Allow installs for OVisionTV</string>
+    <string name="update_permission">Allow installs for AURE TV</string>
     <string name="update_permission_hint">Android requires a confirmation in system settings before it can install an update.</string>
     <string name="update_permission_open">Open install settings</string>
     <string name="update_incompatible">This update does not support this TV</string>
@@ -378,7 +378,7 @@
     <string name="settings_system_home">Default Home App</string>
     <string name="settings_system_open">System Settings</string>
     <string name="settings_system_airplay">AirPlay Receiver</string>
-    <string name="settings_home_button">Home Button Opens OVisionTV</string>
+    <string name="settings_home_button">Home Button Opens AURE TV</string>
     <string name="settings_home_button_not_needed">Not needed</string>
     <string name="settings_home_button_on">On</string>
     <string name="settings_home_button_off">Off</string>
@@ -392,22 +392,22 @@
     <string name="settings_start_when_boot">On power-on</string>
     <string name="settings_start_when_wake">On power-on and wake</string>
     <string name="settings_start_when_title">When to Open</string>
-    <string name="settings_start_when_hint">On wake Android allows the launch only while the OVisionTV accessibility switch is on.</string>
+    <string name="settings_start_when_hint">On wake Android allows the launch only while the AURE TV accessibility switch is on.</string>
     <string name="settings_start_wake">On Wake</string>
     <string name="settings_airplay_installed">Installed</string>
     <string name="settings_airplay_missing">Not installed</string>
     <string name="settings_airplay_open">Open AirPlay</string>
-    <string name="settings_system_hint">The accessibility switch opens OVisionTV instead of the TV\'s own home screen.</string>
+    <string name="settings_system_hint">The accessibility switch opens AURE TV instead of the TV\'s own home screen.</string>
     <string name="settings_system_unavailable">Not available on this device</string>
-    <string name="settings_power_admin_explanation">Lets OVisionTV Launcher turn the screen off for Sleep and the Sleep Timer. The app can\'t do anything else.</string>
-    <string name="settings_power_accessibility_hint">Turn on the OVisionTV switch to let it put the TV to sleep.</string>
+    <string name="settings_power_admin_explanation">Lets AURE TV Launcher turn the screen off for Sleep and the Sleep Timer. The app can\'t do anything else.</string>
+    <string name="settings_power_accessibility_hint">Turn on the AURE TV switch to let it put the TV to sleep.</string>
     <string name="settings_power_unavailable">This TV doesn\'t let apps turn the screen off. Use the power button on the remote.</string>
 
     <string name="settings_permissions">Permissions</string>
     <string name="settings_perms_home_button">Home Button and Start with the TV</string>
     <string name="settings_perms_listings">Watch Next Lists</string>
     <string name="settings_perms_power">Power and Sleep Timer</string>
-    <string name="settings_perms_home">OVisionTV as the Home Screen</string>
+    <string name="settings_perms_home">AURE TV as the Home Screen</string>
     <string name="settings_perms_wifi">Wi-Fi Name in Control Center</string>
     <string name="settings_perms_allowed">Allowed</string>
     <string name="settings_perms_allow">Allow…</string>
@@ -444,7 +444,7 @@
     <string name="settings_run_setup">Run Setup Again</string>
 
     <string name="setup_language_system">Same as System</string>
-    <string name="setup_welcome_title">Welcome to OVisionTV</string>
+    <string name="setup_welcome_title">Welcome to AURE TV</string>
     <string name="setup_welcome_hint">Press OK on the remote to continue. Everything here can be changed later in Settings.</string>
     <string name="setup_personal_title">Language &amp; Profile</string>
     <string name="setup_personal_hint">Choose the launcher language, then the name and picture on your Home Screen. You can change both later.</string>
@@ -462,7 +462,7 @@
     <string name="setup_access_title">Home and Access</string>
     <string name="setup_home_app">Default Home App</string>
     <string name="setup_accessibility">Home Button and Startup</string>
-    <string name="setup_accessibility_detail">OVisionTV instead of the TV\'s own home screen</string>
+    <string name="setup_accessibility_detail">AURE TV instead of the TV\'s own home screen</string>
     <string name="setup_accessibility_on">On</string>
     <string name="setup_accessibility_stale">Turn the switch off and on</string>
     <string name="setup_access_detail">Lets the shelf read app recommendations</string>
@@ -489,7 +489,7 @@
     <string name="setup_city_searching">Searching…</string>
     <string name="setup_city_nothing">Nothing found</string>
     <string name="setup_city_offline">Could not search. Check the internet connection.</string>
-    <string name="home_settings_hint">Open Settings → Home and choose OVisionTV</string>
+    <string name="home_settings_hint">Open Settings → Home and choose AURE TV</string>
     <string name="setup_home_setup">Set Up</string>
     <string name="setup_allow_action">Allow</string>
     <string name="city_moscow">Moscow</string>
@@ -508,7 +508,7 @@
     <string name="cc_not_connected">Not connected</string>
     <string name="cc_apps">App Library</string>
     <string name="cc_search">Search</string>
-    <string name="cc_settings">OVisionTV Settings</string>
+    <string name="cc_settings">AURE TV Settings</string>
     <string name="cc_system">Android Settings</string>
     <string name="cc_accessibility">Accessibility</string>
     <string name="cc_controllers">Controllers</string>
@@ -602,7 +602,7 @@
     <string name="profile_avatar_emoji">Emoji</string>
     <string name="profile_avatar_placeholder">?</string>
 
-    <string name="kids_boundary">Limits apply only inside OVisionTV. System Settings, another HOME app, or a third-party app can bypass this mode.</string>
+    <string name="kids_boundary">Limits apply only inside AURE TV. System Settings, another HOME app, or a third-party app can bypass this mode.</string>
     <string name="kids_profile_toggle">This Profile Is Kids</string>
     <string name="kids_pin">Exit PIN</string>
     <string name="kids_pin_set">Set</string>
@@ -715,7 +715,7 @@
     <string name="menu_rename_app">Rename App…</string>
     <string name="rename_app_title">Rename App</string>
     <string name="menu_reset_app_name">Reset Name</string>
-    <string name="rename_app_note">This name is shown only in OVisionTV.</string>
+    <string name="rename_app_note">This name is shown only in AURE TV.</string>
     <string name="backup_selection_required">Choose at least one data group.</string>
     <string name="backup_retention_hint">Older local copies are deleted automatically.</string>
     <string name="backup_error_format">The backup file is damaged or unsupported.</string>

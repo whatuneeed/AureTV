@@ -12,7 +12,7 @@ class KidsSettingsTest {
     fun theLauncherItselfNeverAppearsInTheAllowlist() {
         val apps = listOf(
             app("tv.kinopoisk", "КиноПоиск"),
-            app("com.whatuneed.ovisiontv.kotlin", "OVisionTV"),
+            app("com.whatuneed.ovisiontv.kotlin", "AURE TV"),
         )
         assertEquals(
             listOf("tv.kinopoisk"),

@@ -7,5 +7,5 @@ import com.whatuneed.ovisiontv.kotlin.BuildConfig
  * A hard-coded version goes stale after one release; `BuildConfig` cannot.
  */
 object LauncherUserAgent {
-    val value: String = "OVisionTV/${BuildConfig.VERSION_NAME} (Android TV launcher)"
+    val value: String = "AURETV/${BuildConfig.VERSION_NAME} (Android TV launcher)"
 }
