@@ -50,6 +50,7 @@ import kotlinx.coroutines.delay
 
 /** Marks the moving welcome backdrop in UI tests and screenshots. */
 internal const val SETUP_BACKDROP_TAG = "setup_backdrop"
+internal const val SETUP_BACKDROP_ASSET_DIR = "aerial_previews"
 
 private const val SETUP_BACKDROP_ZOOM_MIN = 1.02f
 private const val SETUP_BACKDROP_ZOOM_MAX = 1.08f
@@ -183,15 +184,13 @@ private fun SetupAerialVideo(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    // The welcome video is the one place where the best available rendition is
-    // worth it: on a 4K panel the same clip has a 4K file, not an upscaled
-    // 1080p stream. The chain stays finite and falls back to 1080p on a
-    // decoder/network error.
+    // H.264 1080p is the compatible rendition: every minSdk 28 decoder can
+    // play it, and it keeps the first-run screen light on weak TV hardware.
     val urls = remember(clip, context) {
         runCatching {
             AerialQualityPolicy.order(
                 clip = clip,
-                quality = AerialQuality.BEST,
+                quality = AerialQuality.COMPATIBLE,
                 capabilities = AerialDeviceCapabilities.from(context),
             ).map { it.url }.filter { it.isNotBlank() }
         }.getOrDefault(emptyList()).ifEmpty { listOf(clip.videoUrl) }
@@ -271,7 +270,7 @@ private fun SetupAerialVideo(
                     isFocusable = false
                     isFocusableInTouchMode = false
                     descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-                    this.alpha = 0f
+                    this.alpha = 0.01f
                     visibility = View.VISIBLE
                 }
         },

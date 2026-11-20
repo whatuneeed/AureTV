@@ -90,11 +90,45 @@ class AerialCatalogTest {
     @Test
     fun a_stale_smaller_or_previewless_saved_catalogue_falls_back_to_bundled() {
         val bundled = listOf(clip("a", "https://sylvan.apple.com/a.png"), clip("b", "https://sylvan.apple.com/b.png"))
-        assertEquals(bundled, preferredCatalogue(emptyList(), bundled))
-        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "")), bundled))
-        assertEquals(bundled, preferredCatalogue(listOf(clip("a", "https://x/a.png")), bundled))
+        val normalizedBundled = bundled.map {
+            it.copy(
+                videoUrl = "http://sylvan.apple.com/${it.id}.mov",
+                previewUrl = "http://sylvan.apple.com/${it.id}.png",
+            )
+        }
+        assertEquals(normalizedBundled, preferredCatalogue(emptyList(), bundled))
+        assertEquals(normalizedBundled, preferredCatalogue(listOf(clip("a", "")), bundled))
+        assertEquals(normalizedBundled, preferredCatalogue(listOf(clip("a", "https://x/a.png")), bundled))
         val saved = bundled + clip("c", "https://sylvan.apple.com/c.png")
-        assertEquals(saved, preferredCatalogue(saved, bundled))
+        val normalizedSaved = normalizedBundled + clip("c", "http://sylvan.apple.com/c.png").copy(
+            videoUrl = "http://sylvan.apple.com/c.mov",
+        )
+        assertEquals(normalizedSaved, preferredCatalogue(saved, bundled))
+    }
+
+    @Test
+    fun a_saved_catalogue_normalizes_apple_variants_to_http() {
+        val variant = AerialVariant(
+            label = "h264",
+            url = "https://sylvan.apple.com/Videos/a.mov",
+            width = 1920,
+            height = 1080,
+            codec = AerialCodec.H264,
+            hdr = false,
+        )
+        val bundled = listOf(clip("a", "asset:aerial_previews/a.jpg"))
+        val saved = listOf(
+            clip("a", "https://sylvan.apple.com/a.png").copy(
+                videoUrl = "https://sylvan.apple.com/Videos/a.mov",
+                variants = listOf(variant),
+            ),
+        )
+
+        val preferred = preferredCatalogue(saved, bundled).single()
+
+        assertEquals("http://sylvan.apple.com/Videos/a.mov", preferred.videoUrl)
+        assertEquals("http://sylvan.apple.com/Videos/a.mov", preferred.variants.single().url)
+        assertEquals("http://sylvan.apple.com/a.png", preferred.previewUrl)
     }
 
     private fun clip(id: String, preview: String) = AerialClip(

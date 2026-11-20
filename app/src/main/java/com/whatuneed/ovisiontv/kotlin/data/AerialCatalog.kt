@@ -79,7 +79,15 @@ internal fun preferredCatalogue(
     val source = bundled.firstOrNull { it.id == clip.id }
     val previewUrl = clip.previewUrl.ifEmpty { source?.previewUrl.orEmpty() }
     val variants = if (clip.variants.isNotEmpty()) clip.variants else source?.variants.orEmpty()
-    clip.copy(previewUrl = previewUrl, variants = variants)
+    // A catalogue saved by an older build can still carry https:// Apple
+    // media URLs. Some TV trust stores reject Apple's chain, so normalize the
+    // saved clip and its renditions to the same scoped HTTP host as a fresh
+    // catalogue; external URLs are left untouched.
+    clip.copy(
+        videoUrl = aerialStreamUrl(clip.videoUrl),
+        previewUrl = if (previewUrl.startsWith("asset:")) previewUrl else aerialStreamUrl(previewUrl),
+        variants = variants.map { variant -> variant.copy(url = aerialStreamUrl(variant.url)) },
+    )
 }
 
 private fun isNetworkUrl(url: String): Boolean = isAerialMediaUrl(url)

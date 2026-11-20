@@ -268,13 +268,28 @@ fun SetupScreen(
     LaunchedEffect(Unit) {
         val loaded = withContext(Dispatchers.IO) {
             runCatching {
-                setupWelcomeClips(AerialCatalog.load(context)).mapNotNull { clip ->
-                    AerialPreviewStore.load(context, clip.previewUrl)?.let { frame -> clip to frame }
-                }
-            }.getOrDefault(emptyList())
+                val clips = AerialCatalog.load(context)
+                // The catalogue can be a refreshed/saved copy with no
+                // `asset:` previews, so read the bundled frames directly.
+                val frames = context.assets.list(SETUP_BACKDROP_ASSET_DIR)
+                    .orEmpty()
+                    .sorted()
+                    .take(3)
+                    .mapNotNull { name ->
+                        runCatching {
+                            AerialPreviewStore.load(
+                                context,
+                                "asset:$SETUP_BACKDROP_ASSET_DIR/$name",
+                            )
+                        }.getOrNull()
+                    }
+                val clip = setupWelcomeClips(clips).firstOrNull()
+                    ?: clips.firstOrNull { it.videoUrl.isNotBlank() }
+                clip to frames
+            }.getOrNull()
         }
-        aerialClip = loaded.firstOrNull()?.first
-        aerialFrames = loaded.map { it.second }
+        aerialClip = loaded?.first
+        aerialFrames = loaded?.second.orEmpty()
     }
 
     // Which way the page slides in. Java pushed forward pages in from the right
