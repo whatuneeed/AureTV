@@ -31,11 +31,11 @@ composeCompiler {
 }
 
 android {
-    namespace = "com.whatuneed.ovisiontv.kotlin"
+    namespace = "app.aure.tv"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.whatuneed.ovisiontv.kotlin"
+        applicationId = "app.aure.tv"
         minSdk = 28
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;

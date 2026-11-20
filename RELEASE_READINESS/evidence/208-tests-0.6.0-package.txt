@@ -1,0 +1,21 @@
+0.6.0 / app.aure.tv verification (2026-11-17)
+
+Package identity: app.aure.tv (new application; old com.whatuneed.ovisiontv.kotlin remains separate)
+Signing certificate unchanged.
+
+Unit: 582/582 passed
+
+Connected (emulator-5554, hume-tv API 34): 128/128 passed
+  SettingsScreenTest, HomeScreenTest, SetupScreenTest
+  Class filter uses app.aure.tv.ui.*
+
+Lint: 0 errors, 17 warnings
+
+Release: 6 960 986 bytes
+  sha256 df6b96724c3feeef1d6025fc5046a0c890cedacbd89adba04ca5f266639b120a
+  versionCode 154, versionName 0.6.0, APK Signature Scheme v2
+  certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10
+
+Runtime: installed app.aure.tv on hume-tv; app info shows AURE TV,
+version 0.6.0 and package app.aure.tv. Full 304-test suite was not rerun
+after the package move; the 128 tests covering Settings/Home/Setup passed.

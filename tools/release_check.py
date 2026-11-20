@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release artifact gate for OVisionTV_Kotlin.
+"""Release artifact gate for AURE TV.
 
 Checks the distributable APK, not the source tree:
   * versionCode/versionName/applicationId from output-metadata.json
@@ -27,7 +27,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 EXPECTED_CERT = "327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10"
-EXPECTED_APPLICATION_ID = "com.whatuneed.ovisiontv.kotlin"
+EXPECTED_APPLICATION_ID = "app.aure.tv"
 EXPECTED_MIN_SDK = 28
 EXPECTED_TARGET_SDK = 35
 

@@ -1,0 +1,16 @@
+APK   C:\OpenCode Project\OVisionTV\OVisionTV_Kotlin\app\build\outputs\apk\release\app-release.apk
+size  6960986 bytes
+sha256 df6b96724c3feeef1d6025fc5046a0c890cedacbd89adba04ca5f266639b120a
+ok    versionCode 154
+ok    versionName 0.6.0
+ok    applicationId app.aure.tv
+ok    minSdk 28
+ok    targetSdk 35
+ok    apksigner verify
+ok    APK Signature Scheme v2
+ok    signing certificate
+ok    RU/EN resource names (668 entries)
+
+Evidence:
+  sha256=df6b96724c3feeef1d6025fc5046a0c890cedacbd89adba04ca5f266639b120a
+  certificate=327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10

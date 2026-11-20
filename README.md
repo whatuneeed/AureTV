@@ -3,7 +3,7 @@
 Android TV launcher with a tvOS-inspired Home, app folders, profiles, weather,
 Aerial ambience, a local backup/restore stack and an optional in-app updater.
 
-- **Package:** `com.whatuneed.ovisiontv.kotlin`
+- **Package:** `app.aure.tv`
 - **Min SDK:** 28
 - **Compile/target SDK:** 35
 - **Language/UI:** Kotlin, Jetpack Compose for TV
@@ -45,7 +45,7 @@ Prefer targeted runs while iterating:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest
+  -Pandroid.testInstrumentationRunnerArguments.class=app.aure.tv.ui.HomeScreenTest
 ```
 
 The launcher UI supports RU and EN. UI tests should resolve strings through

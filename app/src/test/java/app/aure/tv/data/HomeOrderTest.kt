@@ -1,0 +1,220 @@
+package app.aure.tv.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class HomeOrderTest {
+
+    private fun app(packageName: String) = TvApp(
+        packageName = packageName,
+        activityName = "$packageName.Main",
+        label = packageName,
+        banner = null,
+        icon = null,
+    )
+
+    private val apps = listOf(app("alpha"), app("beta"), app("gamma"), app("delta"))
+
+    @Test
+    fun missingOrderListsEveryAppInInstallOrder() {
+        val result = buildHomeOrder(null, apps, "Folder")
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), result.keys())
+    }
+
+    @Test
+    fun mixedOrderKeepsFoldersAndAppPositions() {
+        val saved = """["gamma",{"id":"f1","name":"Папка","apps":["alpha","beta"]},"delta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("gamma", "folder:f1", "delta"), result.keys())
+        val folder = result[1] as HomeItem.FolderItem
+        assertEquals("Папка", folder.name)
+        assertEquals(listOf("alpha", "beta"), folder.apps.map { it.packageName })
+    }
+
+    @Test
+    fun uninstalledAppsKeepTheirPositionAsUnavailableTiles() {
+        val saved = """[{"id":"f1","name":"Папка","apps":["gone"]},"beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("folder:f1", "beta", "alpha", "gamma", "delta"), result.keys())
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals(listOf("gone"), folder.apps.map { it.packageName })
+        assertEquals(false, folder.apps.single().available)
+    }
+
+    @Test
+    fun folderKeepsSurvivingAndMissingChildren() {
+        val saved = """[{"id":"f1","name":"Папка","apps":["alpha","gone"]},"beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals(listOf("alpha", "gone"), folder.apps.map { it.packageName })
+        assertEquals(true, folder.apps[0].available)
+        assertEquals(false, folder.apps[1].available)
+    }
+
+    @Test
+    fun aMissingRootAppStaysWhereTheUserPutIt() {
+        val saved = """["gone","beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("gone", "beta", "alpha", "gamma", "delta"), result.keys())
+        assertEquals(false, (result.first() as HomeItem.AppItem).app.available)
+    }
+
+    @Test
+    fun newlyInstalledAppIsAppended() {
+        val saved = """["beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("beta", "alpha", "gamma", "delta"), result.keys())
+    }
+
+    @Test
+    fun packageInsideFolderIsNotDuplicated() {
+        val saved = """[{"id":"f1","name":"Папка","apps":["alpha"]},"alpha","beta"]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("folder:f1", "beta", "gamma", "delta"), result.keys())
+    }
+
+    @Test
+    fun brokenJsonFallsBackToInstallOrder() {
+        val result = buildHomeOrder("not json", apps, "Folder")
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), result.keys())
+    }
+
+    @Test
+    fun emptyArrayFallsBackToInstallOrder() {
+        val result = buildHomeOrder("[]", apps, "Folder")
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), result.keys())
+    }
+
+    @Test
+    fun renamedFolderKeepsItsName() {
+        val saved = """[{"id":"f1","name":"Кино и сериалы","apps":["alpha","beta"]}]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals("Кино и сериалы", folder.name)
+    }
+
+    @Test
+    fun blankFolderNameUsesTheGivenName() {
+        val saved = """[{"id":"f1","name":"","apps":["alpha","beta"]}]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals("Folder", folder.name)
+    }
+
+    @Test
+    fun blankFolderNameUsesTheProvidedLocalizedName() {
+        val saved = """[{"id":"f1","name":"   ","apps":["alpha","beta"]}]"""
+        val result = buildHomeOrder(saved, apps, "Папка")
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals("Папка", folder.name)
+    }
+
+    @Test
+    fun duplicateFolderIdsAreRegenerated() {
+        val saved = """[
+            {"id":"same","name":"A","apps":["alpha","beta"]},
+            {"id":"same","name":"B","apps":["gamma","delta"]}
+        ]"""
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(2, result.size)
+        assertEquals("A", (result[0] as HomeItem.FolderItem).name)
+        assertEquals("B", (result[1] as HomeItem.FolderItem).name)
+        assertEquals(2, result.map { it.key }.toSet().size)
+    }
+
+    @Test
+    fun newAppsAreInsertedBeforeTheHiddenFolder() {
+        val saved = """["beta",{"id":"hidden","name":"Ещё приложения","apps":["alpha"]}]"""
+        val result = buildHomeOrder(saved, apps, "Папка", "More Apps")
+        assertEquals(
+            listOf("beta", "gamma", "delta", "folder:hidden"),
+            result.keys(),
+        )
+    }
+
+    @Test
+    fun hiddenFolderTakesTheNameOfTheCurrentLanguage() {
+        val saved = """[{"id":"hidden","name":"Ещё приложения","apps":["alpha","beta"]}]"""
+        val result = buildHomeOrder(saved, apps, "Папка", "More Apps")
+        // Newly installed apps fill in before the hidden folder, which stays last.
+        val folder = result.last() as HomeItem.FolderItem
+        assertEquals("More Apps", folder.name)
+    }
+
+    @Test
+    fun userNamedFolderKeepsItsNameWhenAHiddenNameIsProvided() {
+        val saved = """[{"id":"f1","name":"Кино","apps":["alpha","beta"]}]"""
+        val result = buildHomeOrder(saved, apps, "Папка", "More Apps")
+        val folder = result.first() as HomeItem.FolderItem
+        assertEquals("Кино", folder.name)
+    }
+
+    @Test
+    fun orderCoveringEveryAppCountsAsComplete() {
+        val saved = """["gamma",{"id":"f1","name":"Папка","apps":["alpha","beta"]},"delta"]"""
+        assertTrue(savedOrderCovers(saved, apps))
+    }
+
+    @Test
+    fun orderMissingAnAppIsIncomplete() {
+        val saved = """["gamma",{"id":"f1","name":"Папка","apps":["alpha","beta"]}]"""
+        assertEquals(false, savedOrderCovers(saved, apps))
+    }
+
+    @Test
+    fun orderAlsoListingUninstalledAppsStillCoversInstalledOnes() {
+        val saved = """["alpha","beta","gamma","delta","gone"]"""
+        assertTrue(savedOrderCovers(saved, apps))
+    }
+
+    @Test
+    fun absentCorruptOrEmptyOrderIsIncomplete() {
+        assertEquals(false, savedOrderCovers(null, apps))
+        assertEquals(false, savedOrderCovers("not json", apps))
+        assertEquals(false, savedOrderCovers("[]", apps))
+    }
+
+    @Test
+    fun a_repaired_folder_id_is_stable_once_persisted() {
+        val saved = """[{"name":"Folder","apps":["alpha"]}]"""
+        val first = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(first.repairedIds)
+        val firstId = first.items.filterIsInstance<HomeItem.FolderItem>().single().id
+        // This is what HomeOrderStore.saveOrder writes after the repair.
+        val persisted = """[{"id":"$firstId","name":"Folder","apps":["alpha"]}]"""
+        val second = buildHomeOrderRepair(persisted, apps, "Folder")
+        assertEquals(false, second.repairedIds)
+        assertEquals(firstId, second.items.filterIsInstance<HomeItem.FolderItem>().single().id)
+    }
+
+    @Test
+    fun a_duplicate_folder_id_is_repaired_once() {
+        val saved = """[
+            {"id":"same","name":"A","apps":["alpha"]},
+            {"id":"same","name":"B","apps":["beta"]}
+        ]"""
+        val built = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(built.repairedIds)
+        val ids = built.items.filterIsInstance<HomeItem.FolderItem>().map { it.id }
+        assertEquals(2, ids.toSet().size)
+    }
+
+    @Test
+    fun an_order_with_too_many_entries_is_truncated_and_rewritten() {
+        val saved = (0 until 1_001).joinToString(",", "[", "]") { "\"alpha\"" }
+        val built = buildHomeOrderRepair(saved, apps, "Folder")
+        assertTrue(built.repairedIds)
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), built.items.keys())
+    }
+
+    @Test
+    fun an_oversized_order_is_ignored_before_it_is_parsed() {
+        val saved = "[\"alpha\"]" + " ".repeat(512 * 1024)
+        val result = buildHomeOrder(saved, apps, "Folder")
+        assertEquals(listOf("alpha", "beta", "gamma", "delta"), result.keys())
+        assertEquals(false, savedOrderCovers(saved, apps))
+    }
+
+    private fun List<HomeItem>.keys(): List<String> = map { it.key }
+}
