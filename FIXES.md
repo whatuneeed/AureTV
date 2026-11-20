@@ -321,6 +321,15 @@
 
 ## Записи
 
+### 18.11.2026 — 0.5.72: финальная проверка рефакторинга
+
+- **Что проверено.** Clean build; полный unit; полный connected; lint; release APK; установка и два cold start на эмуляторе.
+- **Результат.** Unit **569/569**, connected **302/302**, lint **0 errors / 15 warnings / 0 information**. APK **6 618 107 B**, clean SHA-256 **`baa12400100e126c4753da2b8cd2f2897adc6e3a5c24c60a15cb5464b7eb7478`**, v2, прежний сертификат, RU/EN **661**.
+- **Установка.** Успешно; cold starts **1183 / 1333 ms**; процесс жив, `FATAL EXCEPTION` нет.
+- **Вердикт.** **CONDITIONAL GO**; физический ТВ, 4K/HDR и отложенные P1–P3 остаются **NOT TESTED / deferred**.
+- **Отчёт.** `ARCHITECTURE_REVIEW/02_FINAL_VERIFICATION.md`; evidence `186-release-check-final.txt`, `187-connected-final-0.5.72.txt`.
+- **Чего не делать.** Не публиковать APK без отдельного разрешения. Не считать эмулятор доказательством работы физического ТВ.
+
 ### 18.11.2026 — 0.5.72: Stage 5.5 — сетевые helper'ы в core.network
 
 - **Симптом.** `BoundedRead` и `ImageRedirectPolicy` жили в `ui.components`, хотя это транспортные правила, а не оформление.

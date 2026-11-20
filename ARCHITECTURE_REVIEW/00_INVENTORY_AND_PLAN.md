@@ -1,7 +1,7 @@
 # OVISIONTV — CODEBASE REVIEW, INVENTORY & SAFE MODULARIZATION PLAN
 
-Дата: 18.11.2026  
-Версия на входе: **0.5.40 / vc113**, HEAD `f5466c0`  
+Дата: 18.11.2026
+Версия на входе: **0.5.40 / vc113**, HEAD `f5466c0`
 Статус: **Phase 1–3 завершены, Phase 4 начат (safe import cleanup)**. Полная модуляризация не заявляется завершённой.
 
 ---
@@ -139,7 +139,7 @@ com.whatuneed.ovisiontv.kotlin
 - Поведение не менялось; compile успешен, unit 552/552.
 - Оставшиеся кандидаты (ещё ~88) не удалялись: часть импортов нужна Kotlin-делегатам (`getValue`/`setValue`) и не видна текстовому поиску.
 
-### Stage 2 — Settings decomposition (следующий безопасный крупный шаг)
+### Stage 2 — Settings decomposition (выполнено)
 Порядок:
 1. `SettingsModels` / `SettingsMetrics` / `SettingsRowCard` — уже есть, расширить.
 2. Вынести независимые страницы: About, Device, Appearance, Language, Ambient, Aerial, Kids, Profiles.
@@ -149,22 +149,22 @@ com.whatuneed.ovisiontv.kotlin
 
 Риск: средний. Контракт — те же `testTag`, строки, порядок фокуса, те же prefs-ключи.
 
-### Stage 3 — Setup decomposition
+### Stage 3 — Setup decomposition (выполнено)
 Вынести страницы welcome/language/profile/weather/ambient/finish в отдельные файлы; сохранить `SetupProgress` и порядок.
 
-### Stage 4 — Large UI components
+### Stage 4 — Large UI components (выполнено)
 `TopShelf`, `ControlCenter`, `SaverScreen`, `LauncherRoot`, `FolderOverlay` — разделить на presentation + state/focus, не меняя API.
 
-### Stage 5 — Network consolidation
+### Stage 5 — Network consolidation (выполнено)
 Сначала инвентаризация 41 `HttpURLConnection` по контрактам (timeouts, TLS, headers, retry). Только после этого — общий helper. Нельзя объединять запросы с разным поведением.
 
-### Stage 6 — Package moves
+### Stage 6 — Package moves (выполнено частично: 5 файлов)
 `ui.components` → `core.designsystem`; feature-пакеты. Только после стабилизации файлов; каждый перенос — отдельный коммит.
 
 ### Stage 7 — Dependency review
 Проверить фактическое использование, удалить только подтверждённо лишнее. Обновления версий — отдельная ветка, не в этом рефакторинге.
 
-### Stage 8 — Final verification
+### Stage 8 — Final verification (выполнено)
 Clean build, unit, connected, lint, release APK, regression checklist, финальный отчёт.
 
 ---
@@ -182,12 +182,12 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
   -Pandroid.testInstrumentationRunnerArguments.class=<affected tests>
 ```
 
-Полный connected suite — на финальном этапе и после рискованных переносов.  
+Полный connected suite — на финальном этапе и после рискованных переносов.
 Для каждого этапа фиксировать: изменённые файлы, число тестов, lint, APK SHA-256.
 
 ---
 
-## 8. STAGE 5 — PACKAGE MOVES
+## 5A. STAGE 5 — PACKAGE MOVES (ВЫПОЛНЕНО)
 
 | Шаг | Файл | Из | В | Проверка |
 |---|---|---|---|---|
@@ -214,7 +214,15 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
 
 ---
 
-## 7. СЛЕДУЮЩИЙ КОНКРЕТНЫЙ ШАГ
+## 7. РЕЗУЛЬТАТ
 
-**Stage 2, первый вынос:** `SettingsScreen.kt` → страница About/Device как отдельный composable-файл, с сохранением всех `testTag`, строк и callback'ов.  
-Критерий готовности: `SettingsScreenTest` 59/59, unit 552/552, lint без новых ошибок, diff без изменения поведения.
+Рефакторинг и финальная проверка завершены. Итог: **CONDITIONAL GO**.
+
+- clean build — успешно;
+- unit **569/569**;
+- connected **302/302**;
+- lint **0 errors / 15 warnings / 0 information**;
+- release APK 0.5.72 / vc145 собран, установлен и запущен.
+
+Полный A–G отчёт: `ARCHITECTURE_REVIEW/02_FINAL_VERIFICATION.md`.
+Публикация APK без отдельного разрешения владельца не выполнялась.
