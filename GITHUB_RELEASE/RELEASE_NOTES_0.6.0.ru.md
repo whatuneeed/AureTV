@@ -46,6 +46,20 @@
 - `09-ambient-settings.jpg` — темы и качество Aerial
 - `10-setup.jpg` — первичная настройка
 
+## Галерея
+
+| Реальные рекомендации из Flux | Приложения и док |
+| --- | --- |
+| ![Главная с рекомендациями](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/01-home-recommendations.jpg) | ![Приложения](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/02-home-apps.jpg) |
+
+| Control Center | Погода |
+| --- | --- |
+| ![Control Center](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/03-control-center.jpg) | ![Погода](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/04-weather.jpg) |
+
+| Aerial-заставка | Резервные копии |
+| --- | --- |
+| ![Aerial-заставка](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/06-ambient-aerial.jpg) | ![Backup and Restore](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/07-backup-restore.jpg) |
+
 ## Установка
 
 Требования: Android TV 9+ (API 28). Для самого лаунчера аккаунт Google не нужен.

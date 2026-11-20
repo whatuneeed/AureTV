@@ -43,6 +43,20 @@ the release page:
 - `09-ambient-settings.jpg` — Aerial themes and quality
 - `10-setup.jpg` — first-run setup
 
+## Gallery
+
+| Real recommendations from Flux | Home apps and dock |
+| --- | --- |
+| ![Home with recommendations](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/01-home-recommendations.jpg) | ![Home apps](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/02-home-apps.jpg) |
+
+| Control Center | Weather |
+| --- | --- |
+| ![Control Center](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/03-control-center.jpg) | ![Weather](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/04-weather.jpg) |
+
+| Aerial ambience | Backup & Restore |
+| --- | --- |
+| ![Aerial ambience](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/06-ambient-aerial.jpg) | ![Backup and Restore](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/07-backup-restore.jpg) |
+
 ## Install
 
 Requirements: Android TV 9+ (API 28). No Google account is required for the
