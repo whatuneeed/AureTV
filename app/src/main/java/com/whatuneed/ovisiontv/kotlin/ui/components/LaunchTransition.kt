@@ -12,6 +12,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.IconEdgeLight
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.IconSpecular
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.focusLightAlpha
 import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.TravelEasing

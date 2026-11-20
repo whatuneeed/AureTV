@@ -40,6 +40,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.IconEdgeLight
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.IconSpecular
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.focusLightAlpha
 import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherColors
 import com.whatuneed.ovisiontv.kotlin.ui.LocalReduceMotion

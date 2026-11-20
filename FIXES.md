@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Focus-light слой лежит среди экранов | 0.5.70 (`core.designsystem`) |
 | `TvListRowSurface` лежит среди экранов | 0.5.69 (`core.designsystem`) |
 | `SectionGlyph` лежит среди экранов | 0.5.68 (`core.designsystem`) |
 | Разбор `Location` продублирован в 9 клиентах | 0.5.67 (общий `resolveRedirectUrl`) |
@@ -317,6 +318,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.70: Stage 5.3 — IconFocusLight в core.designsystem
+
+- **Симптом.** Рисованные tvOS-подсветки (`IconEdgeLight`, `IconSpecular`) жили в `ui.components` рядом с экранными и сетевыми файлами.
+- **Что сделано.**
+  - `IconFocusLight.kt` перемещён в `core/designsystem`, `package` обновлён.
+  - `CardShell` и `LaunchTransition` импортируют три символа из нового пакета; тест `FocusLightTest` тоже.
+  - Геометрия, альфы и `internal`-видимость не менялись.
+- **Файлы.** `core/designsystem/IconFocusLight.kt`, `CardShell.kt`, `LaunchTransition.kt`, `FocusLightTest.kt`.
+- **Чего не делать.** Не менять `TOP_LIGHT`/`SPECULAR_*`/`RIM_*` и не переносить подсветку в экран: её используют и карточки, и launch-переход.
+- **Проверка.** `HomeScreenTest` — **41/41**, `FocusLightTest` — **4/4**. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.70 / vc143; **6 618 107 B**, SHA-256 **`ae9fbfe1f47f88f7b03404350bce57dd1e110929544ae0bbe9623269b33e30b3`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.69: Stage 5.2 — TvListRowSurface в core.designsystem
 

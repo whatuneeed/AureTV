@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.focusLightAlpha
 import com.whatuneed.ovisiontv.kotlin.ui.TvOs
 import org.junit.Assert.assertEquals
 import org.junit.Test
