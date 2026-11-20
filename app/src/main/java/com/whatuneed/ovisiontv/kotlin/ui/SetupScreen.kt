@@ -139,6 +139,8 @@ private const val PAGE_FIRST_MS = 120
 // The wizard's backdrop is the launcher's only colour field, drawn as
 // decoration at the alpha Java used for every page but the Look step (0.5).
 private const val BACKDROP_DIM = 0.5f
+// Rows are translucent, so the moving image needs a quieter field on form pages.
+private const val SETUP_PAGE_DIM = 0.42f
 
 // The city picker reuses the app's Search split: field and keyboard on the
 // left, the results column on the right (09_SEARCH §7: tvOS builds Search in
@@ -219,6 +221,7 @@ fun SetupScreen(
     resumeTick: Int,
     onLanguageChanged: (String) -> Unit,
     onFinish: () -> Unit,
+    videoBackdrop: Boolean = false,
 ) {
     val context = LocalContext.current
     val scale = rememberTvScale()
@@ -261,13 +264,17 @@ fun SetupScreen(
     // Aerial frames, loaded locally, never a network request before the user
     // has even chosen a language. Other pages keep the aurora field.
     var aerialFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
+    var aerialClip by remember { mutableStateOf<com.whatuneed.ovisiontv.kotlin.data.AerialClip?>(null) }
     LaunchedEffect(Unit) {
-        aerialFrames = withContext(Dispatchers.IO) {
+        val loaded = withContext(Dispatchers.IO) {
             runCatching {
-                setupWelcomeClips(AerialCatalog.load(context))
-                    .mapNotNull { clip -> AerialPreviewStore.load(context, clip.previewUrl) }
+                setupWelcomeClips(AerialCatalog.load(context)).mapNotNull { clip ->
+                    AerialPreviewStore.load(context, clip.previewUrl)?.let { frame -> clip to frame }
+                }
             }.getOrDefault(emptyList())
         }
+        aerialClip = loaded.firstOrNull()?.first
+        aerialFrames = loaded.map { it.second }
     }
 
     // Which way the page slides in. Java pushed forward pages in from the right
@@ -627,15 +634,20 @@ fun SetupScreen(
         // the page dim; both together are what keep white body text readable
         // over the brightest part of the field.
         Crossfade(
-            targetState = page == PAGE_WELCOME && aerialFrames.isNotEmpty(),
+            targetState = aerialFrames.isNotEmpty(),
             animationSpec = tween(if (reduceMotion) 0 else 900),
             label = "setupBackdrop",
         ) { aerial ->
             if (aerial) {
                 // The aerial frame is photographic, so it carries its own
                 // contrast; the veils below already keep the copy readable.
-                // Dimming it again made the welcome screen look grey.
-                SetupAerialBackdrop(frames = aerialFrames, reduceMotion = reduceMotion)
+                // The same moving backdrop runs behind every wizard page.
+                SetupAerialBackdrop(
+                    frames = aerialFrames,
+                    reduceMotion = reduceMotion,
+                    videoClip = aerialClip,
+                    videoEnabled = videoBackdrop,
+                )
             } else {
                 backdrop?.let { image ->
                     Image(
@@ -648,6 +660,13 @@ fun SetupScreen(
                     )
                 }
             }
+        }
+        if (page != PAGE_WELCOME) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = SETUP_PAGE_DIM)),
+            )
         }
         Box(
             Modifier

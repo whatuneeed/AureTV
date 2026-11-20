@@ -58,6 +58,7 @@ class SetupActivity : TvRemoteActivity() {
                     BackupRecoveryGate {
                         SetupScreen(
                             resumeTick = resumeTick.intValue,
+                            videoBackdrop = true,
                             onLanguageChanged = { language ->
                                 LocalePreference.set(this, language)
                                 appliedLanguage = language
