@@ -2,7 +2,7 @@
 
 **A remote-first Android TV launcher with a tvOS-inspired Home, real Watch Next recommendations, Aerial ambience and local-first backup.**
 
-[Русская версия](README.ru.md) · [Download AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[Русская версия](README.ru.md) · [Download AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · [Interactive preview](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -11,6 +11,14 @@ you already use into one quiet surface: a focus-driven app grid, folders,
 profiles, the system Watch Next shelf, weather, a Control Center and a
 customisable ambient screen. Recommendations are published by installed apps;
 AURE TV does not invent titles or fake a content library.
+
+## Try it in a browser
+
+[Open the interactive preview](https://whatuneeed.github.io/AureTV/) to click
+through the Home shelf, search, Control Center, weather, Settings and Aerial
+mode. It uses keyboard, D-pad and mouse navigation, switches between Russian and
+English, and keeps everything local in the page. The preview uses fictional demo
+titles and is not the installable APK.
 
 ## Screenshots
 

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AURE TV — интерактивное превью</title>
+  <meta name="description" content="Интерактивное веб-превью лаунчера AURE TV для Android TV: Главная, полка рекомендаций, погода, поиск, настройки и Aerial-заставка.">
+  <meta name="theme-color" content="#070b14">
+  <meta property="og:title" content="AURE TV — интерактивное превью">
+  <meta property="og:description" content="Потыкайте в лаунчер AURE TV прямо в браузере: D-pad, полка, погода, настройки и Aerial.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/cover.jpg">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="tv-frame">
+      <div id="homeView" class="home-view">
+        <section id="hero" class="hero" aria-label="Главная AURE TV">
+          <div class="hero-photo" aria-hidden="true"></div>
+          <div class="hero-tint" aria-hidden="true"></div>
+          <div class="hero-shade" aria-hidden="true"></div>
+
+          <header class="topbar">
+            <button class="weather-pill focusable" data-focusable data-action="weather" aria-label="Погода">
+              <span class="weather-glyph" aria-hidden="true">☁</span>
+              <span class="weather-copy">
+                <strong id="weatherTemp">4°</strong>
+                <small id="weatherCity">Москва</small>
+              </span>
+              <span class="weather-state" id="weatherState">Облачно</span>
+            </button>
+
+            <div class="top-actions">
+              <span class="preview-label" id="previewLabel">Интерактивное превью</span>
+              <button class="icon-button focusable" data-focusable data-action="search" aria-label="Поиск" title="Поиск (S)">
+                <span class="icon" aria-hidden="true">⌕</span>
+              </button>
+              <button class="status-pill focusable" data-focusable data-action="control" aria-label="Control Center" title="Control Center (C)">
+                <time id="clock">23:10</time>
+                <span class="status-net" aria-hidden="true">◔</span>
+                <span class="avatar" aria-hidden="true">☺</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="hero-content">
+            <p class="hero-kicker" id="heroKicker">AURE ORIGINAL · ДЕМО</p>
+            <h1 id="heroTitle">Полночный горизонт</h1>
+            <p class="hero-meta" id="heroMeta">2026 · Сериал · 8 эпизодов</p>
+            <p class="hero-description" id="heroDescription">Тихий город на краю света просыпается после странного заката. Всё, что казалось знакомым, начинает меняться.</p>
+            <div class="hero-actions">
+              <button class="button primary focusable" data-focusable data-action="details" id="watchButton">Смотреть</button>
+              <button class="button ghost focusable" data-focusable data-action="details" id="infoButton">Подробнее</button>
+            </div>
+          </div>
+
+          <span class="hero-corner" id="heroCorner">01 / 06</span>
+        </section>
+
+        <section class="shelf" aria-labelledby="shelfHeading">
+          <div class="shelf-heading">
+            <div>
+              <p class="eyebrow" id="shelfKicker">Новое в приложении</p>
+              <h2 id="shelfHeading">Для вас</h2>
+            </div>
+            <span class="shelf-count" id="shelfCount">6</span>
+          </div>
+          <div id="rail" class="rail" role="list"></div>
+        </section>
+
+        <nav id="dock" class="dock" aria-label="Приложения"></nav>
+
+        <div class="home-foot">
+          <span class="foot-brand"><span class="brand-dot"></span>AURE TV</span>
+          <span class="foot-hint" id="homeHint">Стрелки — выбор · Enter — открыть · Esc — назад</span>
+          <span class="foot-version">0.6.0 · web preview</span>
+        </div>
+      </div>
+
+      <section id="settingsView" class="settings-view" hidden aria-label="Настройки">
+        <header class="settings-head">
+          <button id="settingsBack" class="back-button focusable" data-focusable data-action="settings-back" aria-label="Назад">←</button>
+          <div>
+            <p class="eyebrow" id="settingsEyebrow">AURE TV</p>
+            <h1 id="settingsTitle">Настройки</h1>
+          </div>
+          <span class="settings-version">0.6.0 · web preview</span>
+        </header>
+        <div class="settings-body">
+          <aside id="settingsNav" class="settings-nav" aria-label="Разделы настроек"></aside>
+          <div id="settingsPanel" class="settings-panel"></div>
+        </div>
+      </section>
+
+      <div id="overlayRoot" class="overlay" hidden>
+        <div class="overlay-backdrop" data-close="overlay"></div>
+        <div id="overlayCard" class="overlay-card" role="dialog" aria-modal="true"></div>
+      </div>
+
+      <section id="ambient" class="ambient" hidden aria-label="Aerial-заставка">
+        <div class="ambient-photo"></div>
+        <div class="ambient-shade"></div>
+        <div class="ambient-content">
+          <p class="ambient-kicker">AERIAL · AURE TV</p>
+          <time id="ambientClock" class="ambient-clock">23:10</time>
+          <div class="ambient-caption">
+            <h2 id="ambientTitle">Закат над городом</h2>
+            <p id="ambientHint">Нажмите любую клавишу, чтобы выйти</p>
+          </div>
+        </div>
+        <button id="ambientExit" class="ambient-exit focusable" data-focusable data-action="ambient-exit">Выйти</button>
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 **Лаунчер для Android TV, заточенный под пульт: Главная в духе tvOS, реальные рекомендации Watch Next, Aerial-заставка и локальные резервные копии.**
 
-[English version](README.md) · [Скачать AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[English version](README.md) · [Скачать AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -11,6 +11,14 @@ AURE TV — это Главная, а не ещё один каталог стр
 папки, профили, системная полка Watch Next, погода, Control Center и настраиваемая
 заставка. Рекомендации публикуют сами приложения; AURE TV не выдумывает тайтлы и
 не подменяет пустую полку декоративными карточками.
+
+## Попробовать в браузере
+
+[Откройте интерактивное превью](https://whatuneeed.github.io/AureTV/), чтобы
+пройтись по полке, поиску, Control Center, погоде, настройкам и Aerial-заставке.
+Работают клавиатура, D-pad и мышь, переключение русского и английского языков;
+всё остаётся локально в странице. В превью используются вымышленные демо-тайтлы,
+это не установочный APK.
 
 ## Скриншоты
 
