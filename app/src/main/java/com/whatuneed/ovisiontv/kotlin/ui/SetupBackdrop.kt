@@ -41,6 +41,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.data.AerialClip
+import com.whatuneed.ovisiontv.kotlin.data.AerialDeviceCapabilities
+import com.whatuneed.ovisiontv.kotlin.data.AerialQuality
+import com.whatuneed.ovisiontv.kotlin.data.AerialQualityPolicy
 import com.whatuneed.ovisiontv.kotlin.data.SaverTheme
 import com.whatuneed.ovisiontv.kotlin.ui.components.createPlayer
 import kotlinx.coroutines.delay
@@ -180,6 +183,19 @@ private fun SetupAerialVideo(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // The welcome video is the one place where the best available rendition is
+    // worth it: on a 4K panel the same clip has a 4K file, not an upscaled
+    // 1080p stream. The chain stays finite and falls back to 1080p on a
+    // decoder/network error.
+    val urls = remember(clip, context) {
+        runCatching {
+            AerialQualityPolicy.order(
+                clip = clip,
+                quality = AerialQuality.BEST,
+                capabilities = AerialDeviceCapabilities.from(context),
+            ).map { it.url }.filter { it.isNotBlank() }
+        }.getOrDefault(emptyList()).ifEmpty { listOf(clip.videoUrl) }
+    }
     var player by remember(clip.videoUrl) { mutableStateOf<ExoPlayer?>(null) }
     var firstFrame by remember(clip.videoUrl) { mutableStateOf(false) }
     val alpha by animateFloatAsState(
@@ -188,8 +204,9 @@ private fun SetupAerialVideo(
         label = "setupBackdropVideoAlpha",
     )
 
-    DisposableEffect(clip.videoUrl, context) {
+    DisposableEffect(clip.videoUrl, context, urls) {
         val created = runCatching { createPlayer(context) }.getOrNull()
+        var attempt = 0
         val listener = created?.let {
             object : Player.Listener {
                 override fun onRenderedFirstFrame() {
@@ -198,13 +215,21 @@ private fun SetupAerialVideo(
 
                 override fun onPlayerError(error: PlaybackException) {
                     firstFrame = false
+                    // Try the next real rendition instead of leaving the
+                    // welcome screen without its moving backdrop.
+                    if (attempt < urls.lastIndex) {
+                        attempt++
+                        created.setMediaItem(MediaItem.fromUri(urls[attempt]))
+                        created.prepare()
+                        created.playWhenReady = true
+                    }
                 }
             }
         }
         if (created != null && listener != null) {
             created.addListener(listener)
             created.repeatMode = Player.REPEAT_MODE_ONE
-            created.setMediaItem(MediaItem.fromUri(clip.videoUrl))
+            created.setMediaItem(MediaItem.fromUri(urls[attempt]))
             created.prepare()
             created.playWhenReady = true
             player = created
