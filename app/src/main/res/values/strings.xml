@@ -50,8 +50,6 @@
     <string name="discovery_source_note">Cards come from apps that publish recommendations for Android TV. When Flux is installed, films with an official preview from the public chart appear as Flux cards in For You: OK plays the trailer, then opens the title in Flux. A muted preview can autoplay on the selected card.</string>
     <string name="menu_add_favorite">Add to Favorites</string>
     <string name="menu_remove_favorite">Remove from Favorites</string>
-    <string name="library_favorites">Favorites</string>
-    <string name="library_all_apps">All Apps</string>
     <string name="empty_title">No applications</string>
     <string name="empty_hint">Install apps for Android TV and they will appear here.</string>
     <string name="home_load_failed">Could not load the app list</string>

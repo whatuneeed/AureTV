@@ -50,8 +50,6 @@
     <string name="discovery_source_note">Карточки берутся из приложений, которые публикуют рекомендации для Android TV. Если установлен Flux, фильмы с официальным трейлером из публичного чарта показываются в «Для вас» как карточки Flux: OK запускает трейлер, затем открывает фильм в Flux. Беззвучное превью может воспроизводиться автоматически на выбранной карточке.</string>
     <string name="menu_add_favorite">В избранное</string>
     <string name="menu_remove_favorite">Убрать из избранного</string>
-    <string name="library_favorites">Избранное</string>
-    <string name="library_all_apps">Все приложения</string>
     <string name="empty_title">Приложения не найдены</string>
     <string name="empty_hint">Установите приложения для Android TV — они появятся здесь.</string>
     <string name="home_load_failed">Не удалось загрузить список приложений</string>

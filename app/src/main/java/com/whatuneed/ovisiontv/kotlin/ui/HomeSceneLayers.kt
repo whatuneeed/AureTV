@@ -149,8 +149,6 @@ internal fun HomeSceneLayers(
             items = grid.items,
             columns = columns,
             libraryMode = libraryMode,
-            libraryVisible = libraryFade.value < 0.999f,
-            libraryFade = libraryFade,
             focusIndex = grid.focusIndex,
             shelfFocus = shelf.focus,
             capsuleFocused = overlays.capsuleFocused,

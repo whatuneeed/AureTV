@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
@@ -63,30 +62,6 @@ internal fun TileLabel(text: String, x: Float, y: Float, scale: TvScale) {
             // of TalkBack while leaving it inspectable for layout tests.
             .semantics { invisibleToUser() }
             .testTag("tile_label"),
-    )
-}
-
-/**
- * Section title inside the full-screen grid. It shares the grid's shifted layer
- * so it scrolls with the row it names, and fades with the shelf.
- */
-@Composable
-internal fun LibraryHeading(
-    text: String,
-    y: Float,
-    fade: Animatable<Float, AnimationVector1D>,
-    scale: TvScale,
-) {
-    val locale = LocalConfiguration.current.locales[0]
-    Text(
-        text = text.uppercase(locale),
-        color = Color.White.copy(alpha = 0.55f),
-        fontSize = scale.sp(TvType.callout),
-        letterSpacing = (21f * scale.factor * 0.08f).sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier
-            .offset(x = scale.dp(TvOs.SAFE_AREA), y = scale.dp(y))
-            .graphicsLayer { alpha = 1f - fade.value },
     )
 }
 

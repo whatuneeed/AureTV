@@ -1,0 +1,22 @@
+0.5.80 verification (2026-11-17)
+
+Unit: 582/582 passed
+  GRADLE_USER_HOME=C:/gradle-home ./gradlew :app:testDebugUnitTest -Pkotlin.incremental=false
+
+Connected (emulator-5554, hume-tv API 34):
+  HomeScreenTest 42/42 passed
+  New regression: the_library_has_no_section_headings
+  GRADLE_USER_HOME=C:/gradle-home ./gradlew :app:connectedDebugAndroidTest \
+    -Pandroid.testInstrumentationRunnerArguments.class=com.whatuneed.ovisiontv.kotlin.ui.HomeScreenTest
+
+Lint: 0 errors, 16 warnings
+  GRADLE_USER_HOME=C:/gradle-home ./gradlew :app:lintDebug -Pkotlin.incremental=false
+
+Release: 6 639 207 bytes
+  sha256 72b907512c7ad135fa5bd869508e0b900f462bf0ec57d6387b6fcd00c950bc26
+  versionCode 153, versionName 0.5.80, APK Signature Scheme v2
+  certificate 327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10
+
+Runtime check (emulator, release 0.5.80):
+  Resting Home and the expanded library both show tiles without
+  "Favorites" / "All Apps" headings. Tile labels under icons remain.

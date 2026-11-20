@@ -1,8 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
 import android.content.Context
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -18,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -37,8 +34,6 @@ internal fun HomeGridLayer(
     items: List<HomeItem>,
     columns: Int,
     libraryMode: Boolean,
-    libraryVisible: Boolean,
-    libraryFade: Animatable<Float, AnimationVector1D>,
     focusIndex: Int,
     shelfFocus: Int,
     capsuleFocused: Boolean,
@@ -70,23 +65,6 @@ internal fun HomeGridLayer(
                 translationY = shift() * scale.factor * density
             },
     ) {
-        // 04_APP_LIBRARY: the screen is one full list, but tvOS keeps the
-        // favourites row apart from everything else, so both get a heading.
-        // Headings sit in the same shifted layer and scroll with their rows.
-        if (libraryVisible) {
-            LibraryHeading(
-                text = stringResource(R.string.library_favorites),
-                y = TvOs.ROW_TOP - 52f,
-                fade = libraryFade,
-                scale = scale,
-            )
-            LibraryHeading(
-                text = stringResource(R.string.library_all_apps),
-                y = TvOs.ROW_TOP + TvOs.ROW_PITCH - 52f,
-                fade = libraryFade,
-                scale = scale,
-            )
-        }
         // The resting Home is the dock row only. A seventh app used to
         // leave a 26 px white sliver at the bottom edge: a real tile, but
         // with no room for its label or focus ring. DOWN moves the cursor

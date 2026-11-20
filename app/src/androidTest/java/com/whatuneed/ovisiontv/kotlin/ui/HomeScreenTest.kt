@@ -27,6 +27,7 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -155,6 +156,18 @@ class HomeScreenTest {
 
         rule.onAllNodesWithTag("tile_label", useUnmergedTree = true)
             .assertCountEquals(4)
+    }
+
+    @Test
+    fun the_library_has_no_section_headings() {
+        setHome()
+        press(Key.DirectionDown)
+        rule.waitForIdle()
+
+        // tvOS shows the favourites row and the full grid without titles.
+        for (heading in listOf("Favorites", "All Apps", "Избранное", "Все приложения")) {
+            rule.onAllNodesWithText(heading).assertCountEquals(0)
+        }
     }
 
     @Test
