@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| Три `!!` в WatchNext/OnlineModels/WeatherText | 0.5.73 (0 `!!` в main) |
 | Сетевые helper'ы лежат в UI-пакете | 0.5.72 (`core.network`) |
 | `TvKeyRepeat` лежит среди экранов | 0.5.71 (`core.input`) |
 | Focus-light слой лежит среди экранов | 0.5.70 (`core.designsystem`) |
@@ -320,6 +321,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.73: hygiene — ноль `!!`
+
+- **Симптом.** В `main` оставались три `!!`: `WatchNext`, `OnlineModels`, `WeatherText`.
+- **Что сделано.**
+  - `WatchNext`: dedupe через `intentUri?.let { seen.add(it) } == true`; предварительный фильтр уже гарантирует непустой URI.
+  - `OnlineModels`: `best` читается в локальную `currentBest` перед сравнением.
+  - `WeatherText`: неразобранная дата возвращает пустую строку через `return@runCatching`.
+- **Файлы.** `data/WatchNext.kt`, `online/OnlineModels.kt`, `ui/components/WeatherText.kt`.
+- **Чего не делать.** Не заменять проверки на `lateinit`/`requireNotNull`: это снова падение вместо пустого результата.
+- **Проверка.** `WatchNextTest` **11/11**, `OnlineModelsTest` **17/17**, `HomeScreenTest` **41/41**. `!!` в `main` — **0**. Clean build: unit **569/569**, connected **302/302**, lint **0 errors / 15 warnings / 0 information**; cold starts **1512 / 1099 ms**.
+- **Артефакт.** 0.5.73 / vc146; **6 618 107 B**, SHA-256 **`fdac34ed74a9df6aa9e2faf1d26ce27386152a23b6c49d35c6f22508f41d75b7`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.72: финальная проверка рефакторинга
 

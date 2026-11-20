@@ -1,0 +1,22 @@
+0.5.73 / vc146 — hygiene: zero `!!`
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: WatchNext dedupe, OnlineModels best-enclosure selection and WeatherText
+date parsing no longer use `!!`. Missing values keep the previous empty/null
+outcomes.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:compileDebugUnitTestKotlin — BUILD SUCCESSFUL
+:app:compileDebugAndroidTestKotlin — BUILD SUCCESSFUL
+WatchNextTest 11/11, OnlineModelsTest 17/17
+HomeScreenTest 41/41 (after one AVD restart caused by "No connected devices")
+`!!` occurrences in main — 0
+:app:testDebugUnitTest — 569/569 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 fdac34ed74a9df6aa9e2faf1d26ce27386152a23b6c49d35c6f22508f41d75b7
+versionCode 146, versionName 0.5.73, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 1512 ms, second 1099 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was rerun after the clean build: 302/302.

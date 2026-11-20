@@ -1,0 +1,22 @@
+0.5.73 / vc146 — final full connected suite
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Command:
+  ./gradlew :app:connectedDebugAndroidTest -Pkotlin.incremental=false
+
+Result:
+  Finished 302 tests on hume-tv(AVD)
+  302 / 302 passed, 0 skipped, 0 failed
+  BUILD SUCCESSFUL in 11m 16s
+
+Run after the clean build of 0.5.73; no targeted subset was substituted.
+The release APK was uninstalled before instrumentation.
+
+Clean release artifact:
+  APK 6618107 B
+  sha256 fdac34ed74a9df6aa9e2faf1d26ce27386152a23b6c49d35c6f22508f41d75b7
+  release_check.py PASS, v2, RU/EN 661
+  install Success; cold starts 1512 ms and 1099 ms; no FATAL EXCEPTION
+
+Not covered: physical TV, 4K/HDR decode, 720p+ trailers, ARM devices, API 28-33,
+RTL, TalkBack voice, IR/BT/HDMI-CEC, hostile network and 24 h soak.

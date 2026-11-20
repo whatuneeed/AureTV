@@ -67,7 +67,7 @@ internal fun rankWatchNext(
         .filter { it.title.isNotBlank() && !it.intentUri.isNullOrBlank() }
         .filter { includeContinue || !it.continueRow }
         .sortedByDescending { it.engagement }
-        .filter { seen.add(it.intentUri!!) }
+        .filter { row -> row.intentUri?.let { seen.add(it) } == true }
         .take(limit)
         .toList()
 }

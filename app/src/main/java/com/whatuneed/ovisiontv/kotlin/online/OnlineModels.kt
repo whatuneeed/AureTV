@@ -202,7 +202,8 @@ private fun previewUrl(value: Any?): String? {
             ?.getOrNull(2)
             ?.toIntOrNull()
             ?: 0
-        if (best == null || height > best!!.first) best = height to url
+        val currentBest = best
+        if (currentBest == null || height > currentBest.first) best = height to url
     }
     return best?.second
 }

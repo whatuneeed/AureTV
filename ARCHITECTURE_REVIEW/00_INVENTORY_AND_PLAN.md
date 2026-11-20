@@ -222,7 +222,7 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
 - unit **569/569**;
 - connected **302/302**;
 - lint **0 errors / 15 warnings / 0 information**;
-- release APK 0.5.72 / vc145 собран, установлен и запущен.
+- release APK 0.5.73 / vc146 собран, установлен и запущен.
 
 Полный A–G отчёт: `ARCHITECTURE_REVIEW/02_FINAL_VERIFICATION.md`.
 Публикация APK без отдельного разрешения владельца не выполнялась.

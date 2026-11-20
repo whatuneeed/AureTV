@@ -71,7 +71,8 @@ internal fun weatherDayLabel(date: String, first: Boolean, russian: Boolean): St
     val raw = remember(date, locale) {
         runCatching {
             val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)
-            SimpleDateFormat("EE", locale).format(parsed!!).replace(".", "").trim()
+                ?: return@runCatching ""
+            SimpleDateFormat("EE", locale).format(parsed).replace(".", "").trim()
         }.getOrDefault("")
     }
     if (raw.length < 2) return raw
