@@ -13,6 +13,18 @@
 
 | Симптом | Запись |
 |---|---|
+| Wi-Fi-плитка после отказа в разрешении навсегда ведёт только в системные настройки | 0.5.75 (один запрос, затем настройки) |
+| Полный suite падает, если в данных приложения сохранён русский язык | 0.5.75 (тесты читают локаль через `LocalePreference.wrap`) |
+| Backup показывает английские технические ошибки и «KB» | 0.5.75 (локализованные стадии и единицы) |
+| Пустой выбор категорий Backup: кнопка «Создать» ничего не делает | 0.5.75 (Toast, выбор не может стать пустым) |
+| Информационные строки Backup перехватывают фокус и не имеют действия | 0.5.75 (focusable только action-строки) |
+| Update обещает GitHub-источник, которого нет по умолчанию | 0.5.75 (честный текст, источник только после настройки) |
+| Setup/LauncherRoot молча не открывают системный экран | 0.5.75 (Toast `settings_system_unavailable`) |
+| В Setup повторный проход не показывает текущий режим Photos/Reddit | 0.5.75 (подпись с текущим режимом) |
+| «Скрыть» в меню приложения выглядит как необратимое удаление | 0.5.75 (обычный, не destructive) |
+| Кнопки «Настроить»/«Разрешить» содержат лишний символ `›` | 0.5.75 (текст без шеврона) |
+| Подсказка сброса каталога заставки говорила о «загрузке версии» | 0.5.75 (точный текст про проверку каталога) |
+| Выбор языка пересоздаёт Activity и экран мигает | 0.5.74 (in-place locale, без `recreate()`) |
 | Три `!!` в WatchNext/OnlineModels/WeatherText | 0.5.73 (0 `!!` в main) |
 | Сетевые helper'ы лежат в UI-пакете | 0.5.72 (`core.network`) |
 | `TvKeyRepeat` лежит среди экранов | 0.5.71 (`core.input`) |
@@ -321,6 +333,43 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 20.11.2026 — 0.5.75: полный аудит лаунчера
+
+- **Симптом.** Полный аудит экранов, текстов, кнопок, фокуса и состояний выявил несколько несвязанных дефектов: тупик Wi-Fi после отказа, сырые английские ошибки Backup, мёртвые фокусные строки, нечестный текст Update, молчаливые отказы системных переходов и неточные формулировки.
+- **Что сделано.**
+  - `ControlCenter`: `shouldAskForWifiName()` — запрос имени Wi-Fi только один раз и только при выданном Wi-Fi; после отказа плитка открывает системные настройки. `wifiAsked` не даёт повторять запрос.
+  - `BackupScreen`: `backupErrorRes(stage)` переводит стадию в локализованную строку; `fail()` разворачивает `BackupException.stage`; пустой выбор категорий даёт Toast `backup_selection_required`; «KB» — `unit_kb`; строка хранения использует `backup_retention_hint`; предупреждения `UNKNOWN_COMPONENT`/`SOURCE_UNREADABLE` получили свои строки.
+  - `BackupScreenParts`: информационные/warning-строки больше не `clickable`/`focusable` и не перехватывают OK; фокус ищет первую строку с `action != null`.
+  - `SoftwareUpdateParts`: `formatSize()` — `@Composable`, `unit_mb`; `update_subtitle`, `update_source_missing_hint`, `update_rate_limited` больше не обещают GitHub, пока `OVISIONTV_UPDATE_URL` пуст.
+  - `SetupScreen`/`LauncherRootParts`: при неудачном открытии системного экрана показывается `settings_system_unavailable`; Home-настройки — тот же Toast.
+  - `LauncherRoot`: `orderStore`/`discoveryStore` привязаны к `applicationContext`, чтобы смена языка не очищала сетку.
+  - `HomeMenus`: «Скрыть» больше не destructive; «Переименовать…» и «Новая папка…» с многоточием; `menu_hide` не пугает удалением.
+  - `SettingsSaverMainSections`: у «Обновить Reddit сейчас» убран шеврон — действие выполняется на месте.
+  - `SettingsScreen`: OK на уже выбранном Home закрывает страницу; убраны `›` из `setup_home_setup`/`setup_allow_action`.
+  - `SetupPages`: при текущем режиме Photos/Reddit страница заставки показывает `setup_saver_unsupported_hint` с названием режима.
+  - Тесты `KidsGateTest`, `SettingsEntryGrantTest`, `AppRepositoryTest` читают подписи через `LocalePreference.wrap`: сохранённый русский язык приложения больше не выдаётся за английские ожидания.
+  - RU-тексты: «во Flux» → «в приложении Flux», «5-ДНЕВНЫЙ ПРОГНОЗ» → «ПРОГНОЗ ПО ДНЯМ», «Минимализм» → «Минимальные», «Загрузка версии» → проверка каталога; единицы °C/°F, «Сон», «Имя Wi-Fi в быстрых настройках».
+  - Документы: privacy/terms/aerial_sources — версия 11, дата 18.11.2026; GitHub-обновления описаны как необязательные и только при настроенном источнике; исправлен путь к каталогу Aerial; убрано жёсткое «100 клипов».
+- **Файлы.** `ControlCenter.kt`, `BackupScreen.kt`, `BackupScreenParts.kt`, `SoftwareUpdateParts.kt`, `SetupScreen.kt`, `SetupPages.kt`, `LauncherRoot.kt`, `LauncherRootParts.kt`, `HomeMenus.kt`, `SettingsSaverMainSections.kt`, `SettingsScreen.kt`, `strings.xml` (EN/RU), три raw-документа, `PrivacyPolicyTextTest.kt`, новые `WifiNameRequestTest.kt`/`BackupErrorTextTest.kt`.
+- **Чего не делать.** Не возвращать запрос Wi-Fi на каждый OK; не делать info-строки Backup кликабельными; не показывать `BackupException.message` пользователю; не возвращать «GitHub» в текст Update без реального источника; не красить обратимое «Скрыть» в destructive; не добавлять `›` внутрь текста кнопки.
+- **Проверка.** Unit **578/578** (569 + 9 новых), connected **304/304**, lint **0 errors / 12 warnings**; `SettingsScreenTest#legal_page_opens_the_terms_document` после восстановления LF в raw-документах. Полный отчёт — `FULL_LAUNCHER_AUDIT/00_FULL_LAUNCHER_AUDIT.md`.
+- **Артефакт.** 0.5.75 / vc148; APK **6 623 683 B**, SHA-256 **`808fb6080963f4867b914d0f7b057f2306549cadc7747bc9fab17a45f87193bc`**; v2, прежний сертификат; evidence `193-release-check-0.5.75.txt`.
+
+### 18.11.2026 — 0.5.74: выбор языка без мигания
+
+- **Симптом.** При выборе языка в Setup экран мигал: `SetupActivity` вызывала `recreate()`, окно и aurora-фон пересоздавались. То же делали Settings и возврат в Home.
+- **Причина.** `LocalePreference` применялся только через `attachBaseContext` при создании Activity; смена языка означала новую Activity.
+- **Что сделано.**
+  - `ui/AppLocale.kt`: `LocaleRuntime` + `ProvideAppLocale`; Compose получает новый `Configuration` и локализованный `ContextWrapper`, без пересоздания окна и без глобальной мутации ресурсов процесса.
+  - `SetupActivity`, `SettingsActivity`, `MainActivity` больше не вызывают `recreate()` при смене языка.
+  - Launcher пересобирает подписи при смене контекста, не очищая сетку; `context as? Activity` заменён на `findActivity()` под обёрткой.
+  - `SettingsScreen` читает язык из prefs на каждом recomposition; `selectLanguage` только пишет prefs и уведомляет `LocaleRuntime`.
+  - `ProfileAvatarPicker` кэш имён эмодзи теперь зависит от локали.
+- **Файлы.** `ui/AppLocale.kt`, три Activity, `SettingsScreen.kt`, `ProfilePicker.kt`, два новых instrumented-теста.
+- **Чего не делать.** Не возвращать `recreate()` и не менять `LocalePreference.wrap`: это снова даст чёрный кадр. Не кэшировать `context.getString` в `remember` без ключа локали.
+- **Проверка.** `AppLocaleTest` **1/1** (stringResource и `context.getString`), `SetupLanguageSwitchTest` **1/1** (та же Activity, заголовок сразу на русском). `SetupScreenTest` 27/27, `SettingsScreenTest` 59/59, `MainActivityInputTest` 4/4 — один teardown-flake, см. evidence. Clean build: unit **569/569**, connected **304/304**, lint **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.74 / vc147; **APK и SHA-256 — см. evidence `192-release-check-0.5.74.txt`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.73: hygiene — ноль `!!`
 

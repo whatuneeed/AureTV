@@ -38,6 +38,7 @@ import com.whatuneed.ovisiontv.kotlin.data.AppRepository
 import com.whatuneed.ovisiontv.kotlin.data.KidsMode
 import com.whatuneed.ovisiontv.kotlin.data.KidsStore
 import com.whatuneed.ovisiontv.kotlin.data.LauncherPrefs
+import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.data.SaverDelay
 import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
@@ -76,6 +77,10 @@ class KidsGateTest {
     private val context: Context =
         InstrumentationRegistry.getInstrumentation().targetContext
 
+    /** The app follows its saved language, not the test device locale. */
+    private fun string(id: Int, vararg args: Any): String =
+        LocalePreference.wrap(context).getString(id, *args)
+
     private val pin = "1234"
     private val kidsName = "Малыш"
     private lateinit var kidsProfileId: String
@@ -101,7 +106,7 @@ class KidsGateTest {
     }
 
     private val settingsLabel: String =
-        context.getString(R.string.settings_tile_name)
+        string(R.string.settings_tile_name)
 
     @Before
     fun seedKidsProfile() {
@@ -226,7 +231,7 @@ class KidsGateTest {
         waitForTile(allowedApp.label)
         click(settingsLabel)
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_title))
+            rule.onAllNodesWithContentDescription(string(R.string.kids_pin_title))
                 .fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -273,13 +278,13 @@ class KidsGateTest {
         openGate()
 
         // The gate names the surface it protects.
-        rule.onNodeWithText(context.getString(R.string.kids_gate_settings))
+        rule.onNodeWithText(string(R.string.kids_gate_settings))
             .assertExists()
 
         typePin("0000")
         waitForFailedPin(1)
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithText(context.getString(R.string.kids_pin_wrong))
+            rule.onAllNodesWithText(string(R.string.kids_pin_wrong))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         assertTrue(
@@ -303,13 +308,13 @@ class KidsGateTest {
         press(Key.DirectionCenter)
         rule.mainClock.advanceTimeBy(300)
         rule.waitForIdle()
-        rule.onNodeWithContentDescription(context.getString(R.string.cc_power))
+        rule.onNodeWithContentDescription(string(R.string.cc_power))
             .assertIsFocused()
 
         // Down from the tile row drops into the circles; Right walks them.
         press(Key.DirectionDown)
         press(Key.DirectionDown)
-        val systemLabel = context.getString(R.string.cc_system)
+        val systemLabel = string(R.string.cc_system)
         var steps = 0
         while (focusedDescription() != systemLabel && steps < 8) {
             press(Key.DirectionRight)
@@ -321,10 +326,10 @@ class KidsGateTest {
         rule.mainClock.advanceTimeBy(300)
         rule.waitForIdle()
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_title))
+            rule.onAllNodesWithContentDescription(string(R.string.kids_pin_title))
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onNodeWithText(context.getString(R.string.kids_gate_system)).assertExists()
+        rule.onNodeWithText(string(R.string.kids_gate_system)).assertExists()
     }
 
     @Test
@@ -337,7 +342,7 @@ class KidsGateTest {
         }
         // The countdown ticks, so the match must use the part before the
         // number: the substituted 30 marks where the digits begin.
-        val lockPrefix = context.getString(R.string.kids_lock_wait, 30)
+        val lockPrefix = string(R.string.kids_lock_wait, 30)
             .substringBefore("30")
         rule.waitUntil(10_000) {
             rule.onAllNodesWithText(lockPrefix, substring = true)
@@ -373,7 +378,7 @@ class KidsGateTest {
 
         click(parentName)
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithText(context.getString(R.string.kids_pin_leave))
+            rule.onAllNodesWithText(string(R.string.kids_pin_leave))
                 .fetchSemanticsNodes().isNotEmpty()
         }
 
@@ -423,13 +428,13 @@ class KidsGateTest {
 
         press(Key.DirectionCenter)
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithText(context.getString(R.string.kids_pin_leave))
+            rule.onAllNodesWithText(string(R.string.kids_pin_leave))
                 .fetchSemanticsNodes().isNotEmpty()
         }
 
         press(Key.Back)
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithText(context.getString(R.string.kids_pin_leave))
+            rule.onAllNodesWithText(string(R.string.kids_pin_leave))
                 .fetchSemanticsNodes().isEmpty()
         }
         rule.onNodeWithContentDescription(parentName).assertIsFocused()
@@ -447,15 +452,15 @@ class KidsGateTest {
 
         openGate()
 
-        click(context.getString(R.string.kids_forgot))
+        click(string(R.string.kids_forgot))
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithText(context.getString(R.string.kids_gate_recover_title))
+            rule.onAllNodesWithText(string(R.string.kids_gate_recover_title))
                 .fetchSemanticsNodes().isNotEmpty()
         }
 
         // The keyboard follows the device language; force the Latin layout
         // when the mode key is offered, then spell the answer.
-        val modeLatin = context.getString(R.string.keyboard_mode_latin)
+        val modeLatin = string(R.string.keyboard_mode_latin)
         if (rule.onAllNodesWithContentDescription(modeLatin)
                 .fetchSemanticsNodes().isNotEmpty()
         ) {
@@ -465,18 +470,18 @@ class KidsGateTest {
         // The caret is painted, not spoken: the field's semantics text is the
         // typed value alone (RenameKeyboardTest pins the same rule).
         rule.onNodeWithText("test").assertExists()
-        click(context.getString(R.string.keyboard_done))
+        click(string(R.string.keyboard_done))
 
         // A correct answer opens the new-PIN pad, not the gated action.
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_new))
+            rule.onAllNodesWithContentDescription(string(R.string.kids_pin_new))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         typePin("9999")
         click("OK")
 
         rule.waitUntil(10_000) {
-            rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_new))
+            rule.onAllNodesWithContentDescription(string(R.string.kids_pin_new))
                 .fetchSemanticsNodes().isEmpty() &&
                 runBlocking { store.checkPin(kidsProfileId, "9999") }
         }
@@ -513,7 +518,7 @@ class KidsGateTest {
             "the saver started behind the PIN pad",
             rule.onAllNodesWithTag(SAVER_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty(),
         )
-        rule.onNodeWithText(context.getString(R.string.kids_gate_settings)).assertExists()
+        rule.onNodeWithText(string(R.string.kids_gate_settings)).assertExists()
     }
 }
 
@@ -531,6 +536,10 @@ class SettingsEntryGrantTest {
 
     private val context: Context =
         InstrumentationRegistry.getInstrumentation().targetContext
+
+    /** The app follows its saved language, not the test device locale. */
+    private fun string(id: Int, vararg args: Any): String =
+        LocalePreference.wrap(context).getString(id, *args)
 
     private lateinit var savedProfiles: Map<String, Any?>
     private lateinit var savedKids: Map<String, Any?>
@@ -566,13 +575,13 @@ class SettingsEntryGrantTest {
     }
 
     private fun gateVisible(): Boolean =
-        rule.onAllNodesWithContentDescription(context.getString(R.string.kids_pin_title))
+        rule.onAllNodesWithContentDescription(string(R.string.kids_pin_title))
             .fetchSemanticsNodes().isNotEmpty()
 
     private fun awaitSettingsRoot() {
         rule.waitUntil(20_000) {
             rule.onAllNodesWithContentDescription(
-                context.getString(R.string.settings_profiles),
+                string(R.string.settings_profiles),
                 substring = true,
             ).fetchSemanticsNodes().isNotEmpty()
         }

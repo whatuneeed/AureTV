@@ -844,18 +844,24 @@ private fun openHomeSettings(context: Context) {
     }.isSuccess
     if (fallback) {
         Toast.makeText(context, R.string.home_settings_hint, Toast.LENGTH_LONG).show()
+    } else {
+        Toast.makeText(context, R.string.settings_system_unavailable, Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun openSystem(context: Context, intent: Intent, fallback: Boolean = true) {
-    runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        .recoverCatching {
-            if (fallback) {
-                context.startActivity(
-                    Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-        }
+    val opened = runCatching {
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.isSuccess
+    if (opened) return
+    val fallbackOpened = fallback && runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }.isSuccess
+    if (!fallbackOpened) {
+        Toast.makeText(context, R.string.settings_system_unavailable, Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun systemLanguage(): String {

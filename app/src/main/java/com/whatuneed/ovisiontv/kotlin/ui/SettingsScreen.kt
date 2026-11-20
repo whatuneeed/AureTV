@@ -2,7 +2,6 @@ package com.whatuneed.ovisiontv.kotlin.ui
 
 import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -467,7 +466,7 @@ fun SettingsScreen(
     // Numbers follow the screen language, not the system locale: a Russian UI
     // must not print "1.5 MB" only because the TV itself is set to English.
     val formatLocale = configuration.locales[0] ?: Locale.getDefault()
-    val language = remember { LocalePreference.get(context) }
+    val language = LocalePreference.get(context)
     val profileStore = remember(context) { ProfileStore(context) }
     var profiles by remember { mutableStateOf(profileStore.list()) }
     var currentProfileId by remember { mutableStateOf(profileStore.current().id) }
@@ -2234,6 +2233,8 @@ fun SettingsScreen(
                     startupTarget = StartupPreferences.TARGET_HOME
                     startupLabel = StartupPreferences.label(context)
                 }
+                // Home is already selected on a fresh install; confirming it
+                // must close the list instead of swallowing OK.
                 back()
             },
             onSelectApp = { app ->
@@ -2651,6 +2652,7 @@ fun SettingsScreen(
         page,
         focusIndex,
         docFocus,
+        docParagraphs.size,
         rows.size,
         filteredClips.size,
         inSidebar,
@@ -4109,7 +4111,7 @@ private fun languageLabel(language: String): String = stringResource(
 private fun selectLanguage(context: Context, language: String) {
     if (LocalePreference.get(context) == language) return
     LocalePreference.set(context, language)
-    (context as? Activity)?.recreate()
+    LocaleRuntime.notifyChanged()
 }
 
 // The layout pass, not a fixed 60 ms, decides when a row can take focus.

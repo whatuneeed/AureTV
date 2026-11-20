@@ -1,8 +1,8 @@
 Privacy
 
-Policy version 10, updated 2026-11-17.
+Policy version 11, updated 2026-11-18.
 
-The launcher needs no account and has no developer-operated server. Updates, when enabled, are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
+The launcher needs no account and has no developer-operated server. If an update source is configured, updates are downloaded from GitHub. It contains no advertising, analytics or crash-upload libraries. This page describes what stays on the TV and what goes over the network.
 
 Stored on the device
 
@@ -44,7 +44,7 @@ TV listings access is used to read the recommendation rows that TV apps publish.
 
 The accessibility switch is optional. It lets the launcher take over the TV's Home button and open a chosen app after boot or wake. The service looks only at the package and window class that opened; it does not read the screen or anything you type.
 
-Device admin is optional and used only for standby / the sleep timer. Android asks for confirmation and the launcher requests only the force-lock policy.
+Device admin is optional and used only to turn the screen off for Sleep and the sleep timer. Android asks for confirmation and the launcher requests only the force-lock policy.
 
 The launcher does not request contacts, microphone, camera, calendar, SMS, call log or broad user storage/media access. Photos for the screen saver use only the folder or photos you choose in the system picker.
 

@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -217,9 +218,12 @@ internal fun formatDateTime(value: Long): String = runCatching {
         .format(Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault()))
 }.getOrDefault("—")
 
-internal fun formatSize(bytes: Long): String = if (bytes < 0) "—" else {
-    val megabytes = bytes / (1024.0 * 1024.0)
-    String.format(Locale.getDefault(), "%.1f MB", megabytes)
+@Composable
+internal fun formatSize(bytes: Long): String = if (bytes < 0) {
+    "—"
+} else {
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    String.format(locale, "%.1f %s", bytes / (1024.0 * 1024.0), stringResource(R.string.unit_mb))
 }
 
 internal fun percent(done: Long, total: Long): Int =

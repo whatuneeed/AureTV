@@ -43,6 +43,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -350,7 +351,10 @@ fun ProfileAvatarPicker(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val names = remember(context) { context.resources.getStringArray(R.array.profile_emoji_names) }
+    val configuration = LocalConfiguration.current
+    val names = remember(context, configuration) {
+        context.resources.getStringArray(R.array.profile_emoji_names)
+    }
     val free = remember(profiles, editingId) {
         ProfileCatalog.freeEmojis(profiles, editingId).toHashSet()
     }

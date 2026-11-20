@@ -11,7 +11,9 @@ import com.whatuneed.ovisiontv.kotlin.data.Adaptive
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
 import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoveryGate
+import com.whatuneed.ovisiontv.kotlin.ui.LocaleRuntime
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
+import com.whatuneed.ovisiontv.kotlin.ui.ProvideAppLocale
 import com.whatuneed.ovisiontv.kotlin.ui.SetupScreen
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 
@@ -51,17 +53,20 @@ class SetupActivity : TvRemoteActivity() {
 
         setContent {
             OVisionTheme {
+                ProvideAppLocale {
                 TvCanvas {
                     BackupRecoveryGate {
                         SetupScreen(
                             resumeTick = resumeTick.intValue,
                             onLanguageChanged = { language ->
                                 LocalePreference.set(this, language)
-                                recreate()
+                                appliedLanguage = language
+                                LocaleRuntime.notifyChanged()
                             },
                             onFinish = { finish() },
                         )
                     }
+                }
                 }
             }
         }
@@ -69,7 +74,11 @@ class SetupActivity : TvRemoteActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (LocalePreference.get(this) != appliedLanguage) recreate()
+        val language = LocalePreference.get(this)
+        if (language != appliedLanguage) {
+            appliedLanguage = language
+            LocaleRuntime.notifyChanged()
+        }
         resumeTick.intValue++
     }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,8 @@ internal fun startSystemIntent(context: Context, intent: Intent) {
         // this runs only after the gate authorized the navigation.
         if (intent.action == DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN) {
             SleepControls.requestPermission(context)
+        } else {
+            Toast.makeText(context, R.string.settings_system_unavailable, Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -27,6 +27,7 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.SEARCH_FIELD_TAG
 import kotlinx.coroutines.runBlocking
 import java.util.Locale
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
@@ -34,12 +35,12 @@ import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
- * The language is chosen in Settings, a separate activity. Home only applies it
- * on the resume that follows, by recreating itself. This walks that path with
- * the real Settings screen: the grid starts in Russian, English is picked in
- * Settings, BACK returns, and Home must come back in English with the saved
- * layout intact. A second test sends real remote keys after that recreation:
- * the new window and composition must still receive input.
+ * The language is chosen in Settings, a separate activity. Home applies it on
+ * the resume that follows without recreating its window. This walks that path
+ * with the real Settings screen: the grid starts in Russian, English is picked
+ * in Settings, BACK returns, and Home must come back in English with the saved
+ * layout intact. A second test sends real remote keys after that switch: the
+ * same window and composition must still receive input.
  */
 @RunWith(AndroidJUnit4::class)
 class LanguageReturnTest {
@@ -118,13 +119,15 @@ class LanguageReturnTest {
         return found
     }
 
-    // Settings recreates itself when the language is picked, so the instance
-    // that matches the new locale is not the one that was clicked.
-    private fun waitForSettings(language: String): SettingsActivity {
+    // The language page redraws in place: the English row label only exists
+    // after the switch, and the activity instance must be the same one.
+    private fun waitForEnglishSettings(sameAs: SettingsActivity?) {
         composeRule.waitUntil(20_000) {
-            resumedSettings()?.resources?.configuration?.locales?.get(0)?.language == language
+            composeRule.onAllNodesWithContentDescription(
+                string(R.string.settings_language_english, LocalePreference.ENGLISH),
+            ).fetchSemanticsNodes().isNotEmpty()
         }
-        return checkNotNull(resumedSettings())
+        if (sameAs != null) assertSame(sameAs, resumedSettings())
     }
 
     private fun back() {
@@ -135,26 +138,27 @@ class LanguageReturnTest {
         composeRule.waitForIdle()
     }
 
-    // Picks English in the real Settings screen and closes it. Both activities
-    // recreate on the way: Settings when the language is picked, Home on resume.
+    // Picks English in the real Settings screen and closes it. Neither activity
+    // recreates: Settings redraws in place and Home follows on resume.
     private fun pickEnglishAndReturn() {
         // The tile label is the Russian one: the test starts in Russian.
         click(string(R.string.settings_tile_name, LocalePreference.RUSSIAN))
-        waitForSettings(LocalePreference.RUSSIAN)
+        val settings = checkNotNull(resumedSettings())
 
         // The redesign nests the language under Appearance.
         click(string(R.string.settings_interface, LocalePreference.RUSSIAN), substring = true)
         click(string(R.string.settings_language, LocalePreference.RUSSIAN), substring = true)
         click(string(R.string.settings_language_english, LocalePreference.RUSSIAN))
 
-        // The screen itself must have been recreated in English before BACK.
-        waitForSettings(LocalePreference.ENGLISH)
+        // The same Settings window must already show English before BACK.
+        waitForEnglishSettings(settings)
 
         // Language page -> General -> root, then close Settings.
         back()
         back()
         back()
         composeRule.waitUntil(20_000) { resumedSettings() == null }
+        assertNotNull(resumedMain())
     }
 
     private fun resumedMain(): MainActivity? {
@@ -197,22 +201,21 @@ class LanguageReturnTest {
     }
 
     @Test
-    fun a_language_picked_in_settings_reaches_home_through_recreate() {
+    fun a_language_picked_in_settings_reaches_home_in_place() {
         waitForVisible(FOLDER_NAME)
         pickEnglishAndReturn()
 
-        // Home sees the changed preference on resume and recreates itself; the
-        // English tile label cannot be drawn by the old Russian composition.
+        // Home sees the changed preference on resume and redraws the same
+        // window; the launcher's own tile is renamed in English.
         waitForVisible(string(R.string.settings_tile_name, LocalePreference.ENGLISH))
-        // The saved layout survives the recreation.
+        // The saved layout survives the switch.
         waitForVisible(FOLDER_NAME)
     }
 
-    // The recreate path swaps the activity and its window. The grid is drawn
-    // from the first frame, but the remote only works once the new composition
-    // has taken focus — a state a screenshot cannot show.
+    // The switch keeps the activity and its window. The grid is drawn from the
+    // first frame, but the remote only works once Home has focus again.
     @Test
-    fun the_remote_works_after_home_recreates() {
+    fun the_remote_works_after_home_switches_language() {
         waitForVisible(FOLDER_NAME)
         pickEnglishAndReturn()
         waitForVisible(string(R.string.settings_tile_name, LocalePreference.ENGLISH))

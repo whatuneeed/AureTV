@@ -6,8 +6,8 @@
     <string name="startup_home">Главный экран</string>
     <string name="shelf_context">Приложение</string>
     <string name="home_empty_title">Добро пожаловать в OVisionTV</string>
-    <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в настройках.</string>
-    <string name="shelf_listings_denied">Рекомендации приложений отключены. Разрешите «Доступ к рекомендациям» в настройках.</string>
+    <string name="home_empty_body">Приложения — в доке ниже. Рекомендации можно включить в «Настройки → Главная».</string>
+    <string name="shelf_listings_denied">Рекомендации приложений отключены. Разрешите «Доступ к рекомендациям» в «Настройки → Главная».</string>
     <string name="discovery_section_continue">Продолжить просмотр</string>
     <string name="discovery_section_for_you">Для вас</string>
     <string name="discovery_section_from_app">Из «%1$s»</string>
@@ -25,7 +25,7 @@
     <string name="discovery_reason_diverse">Попробуйте что-то новое</string>
     <string name="discovery_settings_title">Рекомендации</string>
     <string name="discovery_personalization">Персонализация</string>
-    <string name="discovery_section_online">Фильмы</string>
+    <string name="discovery_section_online">Популярные фильмы</string>
     <string name="online_source_label">JustWatch</string>
     <string name="discovery_online">Онлайн-трейлеры и описания</string>
     <string name="discovery_preview_autoplay">Автовоспроизведение превью</string>
@@ -47,7 +47,7 @@
     <string name="discovery_clear_confirm">Очистить историю</string>
     <string name="discovery_clear_hint">Удаляет историю запусков и недавние. Избранное и скрытые карточки сохраняются.</string>
     <string name="discovery_clear_done">История рекомендаций очищена</string>
-    <string name="discovery_source_note">Карточки берутся из приложений, которые публикуют рекомендации для Android TV. Если установлен Flux, фильмы с официальным трейлером из публичного чарта показываются в «Для вас» как карточки Flux: OK запускает трейлер, затем открывает фильм во Flux. Беззвучное превью может воспроизводиться автоматически на выбранной карточке.</string>
+    <string name="discovery_source_note">Карточки берутся из приложений, которые публикуют рекомендации для Android TV. Если установлен Flux, фильмы с официальным трейлером из публичного чарта показываются в «Для вас» как карточки Flux: OK запускает трейлер, затем открывает фильм в Flux. Беззвучное превью может воспроизводиться автоматически на выбранной карточке.</string>
     <string name="menu_add_favorite">В избранное</string>
     <string name="menu_remove_favorite">Убрать из избранного</string>
     <string name="library_favorites">Избранное</string>
@@ -57,7 +57,7 @@
     <string name="home_load_failed">Не удалось загрузить список приложений</string>
     <string name="home_load_retry">Повторить</string>
     <string name="settings_load_failed">Не удалось загрузить список приложений</string>
-    <string name="settings_load_retry">Нажмите, чтобы повторить</string>
+    <string name="settings_load_retry">Нажмите OK, чтобы повторить</string>
     <string name="app_unavailable">Недоступно на этом телевизоре</string>
     <string name="launch_failed">Не удалось открыть приложение</string>
     <string name="folder_default">Папка</string>
@@ -136,7 +136,7 @@
     <string name="saver_mode_minimal">Минимализм</string>
     <string name="saver_mode_photos">Фотографии</string>
     <string name="saver_mode_reddit">Reddit</string>
-    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и минимальный режим рисуются локально. Фотографии берутся из выбранной папки или выбранных снимков. Reddit загружает публичную ленту сабреддита.</string>
+    <string name="saver_mode_hint">Виды с воздуха — реальные ролики Apple. Часы и режим «Минимализм» рисуются локально. Фотографии берутся из выбранной папки или выбранных снимков. Reddit загружает публичную ленту сабреддита.</string>
     <string name="saver_clock_format">Формат часов</string>
     <string name="saver_clock_format_system">Системный</string>
     <string name="saver_clock_format_12">12-часовой</string>
@@ -149,7 +149,7 @@
     <string name="saver_dim_10">10 мин</string>
     <string name="saver_dim_20">20 мин</string>
     <string name="saver_dim_30">30 мин</string>
-    <string name="saver_dim_hint" formatted="false">Через выбранное время часы и минимальная заставка тускнеют до 80%, ещё через пять минут — до 60%. Экран не становится чёрным.</string>
+    <string name="saver_dim_hint" formatted="false">Через выбранное время часы и режим «Минимализм» тускнеют до 80%, ещё через пять минут — до 60%. Экран не становится чёрным.</string>
     <string name="saver_max_session">Максимальная сессия</string>
     <string name="saver_session_never">Никогда</string>
     <string name="saver_session_30">30 мин</string>
@@ -188,7 +188,7 @@
     <string name="saver_reddit_refreshed">Лента Reddit обновлена.</string>
     <string name="saver_reddit_stale">Показана последняя сохранённая лента Reddit.</string>
     <string name="saver_reddit_catalog_title">Изображения Reddit</string>
-    <string name="saver_reddit_catalog_hint">Выберите изображения. Назад — возврат в Ambient Experience.</string>
+    <string name="saver_reddit_catalog_hint">Выберите изображения. Назад — возврат к настройкам заставки.</string>
     <string name="saver_reddit_forget">Очистить источник Reddit</string>
     <string name="saver_reddit_forgotten">Источник Reddit очищен.</string>
     <plurals name="saver_reddit_images">
@@ -224,7 +224,7 @@
     <string name="saver_all_themes">Все темы</string>
     <string name="saver_themes_count">%1$d из %2$d</string>
     <string name="saver_themes_hint">Хотя бы одна тема должна оставаться включённой.</string>
-    <string name="saver_theme_landscapes">Природа</string>
+    <string name="saver_theme_landscapes">Пейзажи</string>
     <string name="saver_theme_cities">Города</string>
     <string name="saver_theme_underwater">Под водой</string>
     <string name="saver_theme_earth">Планета Земля</string>
@@ -251,11 +251,11 @@
     <string name="aerial_dream_label">OVisionTV: заставка</string>
     <string name="saver_system_title">Системная заставка</string>
     <string name="saver_system_value">Выбрать в настройках ТВ</string>
-    <string name="saver_system_hint">Выберите «OVisionTV: заставка» в Настройки → Заставка</string>
+    <string name="saver_system_hint">Выберите «OVisionTV: заставка»: Настройки → Заставка.</string>
     <string name="saver_reset">Сбросить настройки заставки</string>
     <string name="saver_reset_title">Сбросить настройки заставки?</string>
     <string name="saver_reset_confirm">Сбросить</string>
-    <string name="saver_reset_hint">Режим, темы, задержка и загрузка вернутся к значениям по умолчанию, скрытые ролики — снова видны.</string>
+    <string name="saver_reset_hint">Режим, темы, задержка, показ во время музыки и проверка каталога сбросятся; скрытые ролики снова появятся.</string>
     <plurals name="settings_hidden_count">
         <item quantity="one">%d приложение</item>
         <item quantity="few">%d приложения</item>
@@ -296,7 +296,7 @@
     <string name="settings_software_update_manual">Вручную</string>
 
     <string name="update_title">Обновление ПО</string>
-    <string name="update_subtitle">Обновления публикуются в релизах проекта на GitHub.</string>
+    <string name="update_subtitle">Подписанные обновления из источника релизов проекта.</string>
     <string name="update_kids_blocked">В детском режиме обновления недоступны.</string>
     <string name="update_current">Текущая версия</string>
     <string name="update_version_value">%1$s (%2$d)</string>
@@ -330,7 +330,7 @@
     <string name="update_retry">Повторить</string>
     <string name="update_network">Нет подключения к интернету</string>
     <string name="update_server">Сервер обновлений недоступен</string>
-    <string name="update_rate_limited">Сервер обновлений просит подождать</string>
+    <string name="update_rate_limited">Слишком много запросов. Повторите позже.</string>
     <string name="update_metadata">Данные об обновлении некорректны</string>
     <string name="update_storage">Недостаточно свободного места</string>
     <string name="update_integrity">Скачанный файл повреждён</string>
@@ -344,7 +344,7 @@
     <string name="update_incompatible_version">Эта сборка не новее установленной</string>
     <string name="update_eol">Эта версия больше не поддерживается</string>
     <string name="update_source_missing">Источник обновлений ещё не настроен</string>
-    <string name="update_source_missing_hint">GitHub не используется, пока нет страницы релизов.</string>
+    <string name="update_source_missing_hint">Источник обновлений появится после публикации страницы релизов.</string>
 
     <string name="settings_connection">Подключение</string>
     <string name="settings_network_wifi">Wi-Fi</string>
@@ -382,7 +382,7 @@
     <string name="settings_storage_stills">Кэш кадров заставок</string>
     <string name="settings_storage_posters">Кэш постеров</string>
     <string name="settings_storage_clear">Очистить кэш</string>
-    <string name="settings_storage_hint">Кадры и постеры заставок будут загружены снова, когда понадобятся. Очистка освобождает место.</string>
+    <string name="settings_storage_hint">Кэшированные кадры и постеры будут загружены снова, когда понадобятся. Очистка освободит место.</string>
     <string name="settings_cache_clear_title">Очистить кэш?</string>
     <string name="settings_cache_clear_confirm">Очистить</string>
     <string name="settings_cache_clear_hint">Скачанные кадры и постеры будут загружены снова, когда понадобятся.</string>
@@ -395,7 +395,7 @@
     <string name="settings_home_button_on">Вкл</string>
     <string name="settings_home_button_off">Выкл</string>
     <string name="settings_home_button_allow">Разрешить…</string>
-    <string name="settings_home_button_stale">Перезапустите переключатель</string>
+    <string name="settings_home_button_stale">Выключите и включите переключатель</string>
     <string name="settings_start_open">Запуск вместе с телевизором</string>
     <string name="settings_start_title">Запуск вместе с телевизором</string>
     <string name="settings_start_hint">Что открывать при включении телевизора. «Главный экран» оставляет всё как есть.</string>
@@ -409,10 +409,10 @@
     <string name="settings_airplay_installed">Установлен</string>
     <string name="settings_airplay_missing">Не установлен</string>
     <string name="settings_airplay_open">Открыть AirPlay</string>
-    <string name="settings_system_hint">Переключатель специальных возможностей открывает OVisionTV вместо чужого главного экрана.</string>
+    <string name="settings_system_hint">Переключатель специальных возможностей открывает OVisionTV вместо главного экрана телевизора.</string>
     <string name="settings_system_unavailable">Недоступно на этом устройстве</string>
-    <string name="settings_power_admin_explanation">Позволяет OVisionTV Launcher переводить телевизор в режим ожидания и работать таймеру сна. Больше ничего приложение делать не может.</string>
-    <string name="settings_power_accessibility_hint">Включите переключатель OVisionTV, чтобы он мог переводить телевизор в спящий режим.</string>
+    <string name="settings_power_admin_explanation">Позволяет OVisionTV выключать экран для «Сна» и таймера сна. Больше приложение ничего не может.</string>
+    <string name="settings_power_accessibility_hint">Включите переключатель OVisionTV, чтобы приложение могло выключать экран.</string>
     <string name="settings_power_unavailable">Этот телевизор не позволяет приложениям выключать экран. Используйте кнопку питания на пульте.</string>
 
     <string name="settings_permissions">Разрешения</string>
@@ -420,7 +420,7 @@
     <string name="settings_perms_listings">Списки «Смотреть далее»</string>
     <string name="settings_perms_power">Выключение и таймер сна</string>
     <string name="settings_perms_home">OVisionTV как главный экран</string>
-    <string name="settings_perms_wifi">Имя Wi-Fi в пункте управления</string>
+    <string name="settings_perms_wifi">Имя Wi-Fi в быстрых настройках</string>
     <string name="settings_perms_allowed">Разрешено</string>
     <string name="settings_perms_allow">Разрешить…</string>
     <string name="settings_perms_denied">Запрещено</string>
@@ -465,23 +465,23 @@
     <string name="setup_personal_title">Язык и профиль</string>
     <string name="setup_personal_hint">Выберите язык лаунчера, затем имя и аватар на Главной. И то и другое можно изменить позже.</string>
     <string name="setup_home_weather_title">Главная и погода</string>
-    <string name="setup_home_weather_hint">Что показывать над плитками. Погода добавляет прогноз на 5 дней в углу.</string>
+    <string name="setup_home_weather_hint">Что показывать над плитками. Погода добавляет в угол прогноз на срок до пяти дней.</string>
     <string name="setup_saver_hint">Что показывать, когда экран простаивает. Темы, «Фото» и Reddit — в Настройках → Персонализация → Заставка.</string>
     <string name="setup_saver_delay">Запускать через</string>
     <string name="setup_saver_delay_hint">Нажмите OK, чтобы сменить интервал</string>
     <string name="setup_saver_music_hint">Запускать заставку, даже когда играет музыка.</string>
     <string name="setup_access_hint">Необязательные системные настройки. Их можно изменить позже в Настройках → Система.</string>
-    <string name="setup_home_app_detail">Если телевизор предложит выбор домашнего экрана</string>
+    <string name="setup_home_app_detail">Если телевизор позволяет выбрать главный экран</string>
     <string name="setup_recommendations_detail">Карточки фильмов и передач над плитками</string>
     <string name="setup_continue_detail">Недосмотренные фильмы из ваших приложений</string>
     <string name="setup_saver_title">Заставка</string>
     <string name="setup_access_title">Главный экран и доступ</string>
     <string name="setup_home_app">Лаунчер по умолчанию</string>
     <string name="setup_accessibility">Кнопка «Домой» и запуск</string>
-    <string name="setup_accessibility_detail">OVisionTV вместо чужого экрана</string>
+    <string name="setup_accessibility_detail">OVisionTV вместо главного экрана телевизора</string>
     <string name="setup_accessibility_on">Включено</string>
-    <string name="setup_accessibility_stale">Перезапустите переключатель</string>
-    <string name="setup_access_detail">Рекомендации приложений на полке</string>
+    <string name="setup_accessibility_stale">Выключите и включите переключатель</string>
+    <string name="setup_access_detail">Разрешает полке читать рекомендации приложений</string>
     <string name="setup_access_permanent">Откройте «О приложении», чтобы разрешить вручную</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_continue">Продолжить</string>
@@ -495,19 +495,19 @@
     <string name="setup_summary_shelf">Полка: рекомендации — %1$s, продолжение просмотра — %2$s</string>
     <string name="setup_summary_saver">Заставка: %1$s · %2$s · во время музыки: %3$s</string>
     <string name="setup_summary_weather">Погода: %1$s</string>
-    <string name="setup_summary_weather_auto">по интернет-соединению</string>
+    <string name="setup_summary_weather_auto">по сети</string>
     <string name="setup_hello">Добро пожаловать</string>
     <string name="setup_weather_auto">Определять местоположение</string>
     <string name="setup_weather_city">Выбрать город…</string>
     <string name="setup_weather_off">Не показывать погоду</string>
     <string name="setup_city_title">Выберите город</string>
     <string name="setup_city_hint">Название города, например Москва</string>
-    <string name="setup_city_searching">Ищем…</string>
+    <string name="setup_city_searching">Поиск…</string>
     <string name="setup_city_nothing">Ничего не найдено</string>
-    <string name="setup_city_offline">Не удалось найти. Проверьте подключение к интернету.</string>
-    <string name="home_settings_hint">Откройте Настройки → Домой и выберите OVisionTV</string>
-    <string name="setup_home_setup">Настроить ›</string>
-    <string name="setup_allow_action">Разрешить ›</string>
+    <string name="setup_city_offline">Не удалось выполнить поиск. Проверьте подключение к интернету.</string>
+    <string name="home_settings_hint">Откройте Настройки → Главная и выберите OVisionTV</string>
+    <string name="setup_home_setup">Настроить</string>
+    <string name="setup_allow_action">Разрешить</string>
     <string name="city_moscow">Москва</string>
     <string name="city_spb">Санкт-Петербург</string>
     <string name="city_novosibirsk">Новосибирск</string>
@@ -528,7 +528,7 @@
     <string name="cc_system">Настройки Android</string>
     <string name="cc_accessibility">Специальные возможности</string>
     <string name="cc_controllers">Контроллеры</string>
-    <string name="cc_power">Режим ожидания</string>
+    <string name="cc_power">Сон</string>
     <string name="cc_sleep_timer">Таймер сна</string>
     <string name="cc_minutes">%1$d мин</string>
     <string name="weather_title">Погода</string>
@@ -553,7 +553,7 @@
     <string name="weather_snow">Снег</string>
     <string name="weather_thunderstorm">Гроза</string>
     <string name="weather_hourly">ПОЧАСОВОЙ ПРОГНОЗ</string>
-    <string name="weather_daily">ПРОГНОЗ НА 5 ДНЕЙ</string>
+    <string name="weather_daily">ПРОГНОЗ ПО ДНЯМ</string>
     <string name="weather_high">Макс.</string>
     <string name="weather_low">Мин.</string>
     <string name="weather_high_low">%1$s: %2$d°  %3$s: %4$d°</string>
@@ -565,8 +565,8 @@
     <string name="weather_automatic">Автоматически</string>
     <string name="weather_choose_city">Выбрать город…</string>
     <string name="weather_temperature">Температура</string>
-    <string name="weather_units_c">Цельсий (°C)</string>
-    <string name="weather_units_f">Фаренгейт (°F)</string>
+    <string name="weather_units_c">Градусы Цельсия (°C)</string>
+    <string name="weather_units_f">Градусы Фаренгейта (°F)</string>
     <string name="weather_source">Источник</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>
     <string name="weather_source_met">MET Norway (Yr)</string>
@@ -618,7 +618,7 @@
     <string name="profile_avatar_emoji">Эмодзи</string>
     <string name="profile_avatar_placeholder">?</string>
 
-    <string name="kids_boundary">Ограничения действуют только внутри OVisionTV. Системные Настройки, другой HOME или стороннее приложение могут обойти этот режим.</string>
+    <string name="kids_boundary">Ограничения действуют только внутри OVisionTV. Системные настройки, другой лаунчер или стороннее приложение могут обойти этот режим.</string>
     <string name="kids_profile_toggle">Этот профиль — детский</string>
     <string name="kids_pin">PIN выхода</string>
     <string name="kids_pin_set">Задан</string>
@@ -673,23 +673,22 @@
         <item>Единорог</item>
         <item>Ракета</item>
     </string-array>
-    <string name="backup_title">Резервное копирование</string>
+    <string name="backup_title">Резервное копирование и восстановление</string>
     <string name="backup_subtitle">Копии остаются на этом телевизоре, пока вы их не экспортируете</string>
     <string name="backup_create">Создать копию</string>
     <string name="backup_export">Экспортировать в файл</string>
     <string name="backup_import">Импортировать из файла</string>
     <string name="backup_restore_local">Восстановить локальную копию</string>
     <string name="backup_auto">Автоматическая локальная копия</string>
-    <string name="backup_auto_hint">Раз в день, локально. Система может отложить запуск</string>
     <string name="backup_last">Последняя копия: %1$s</string>
     <string name="backup_category_profiles">Профили и раскладка</string>
     <string name="backup_category_home">Раскладка и папки</string>
     <string name="backup_category_discovery">Избранное и рекомендации</string>
-    <string name="backup_category_kids">Список приложений Kids</string>
+    <string name="backup_category_kids">Приложения детского профиля</string>
     <string name="backup_category_weather">Настройки погоды</string>
     <string name="backup_category_saver">Заставка</string>
     <string name="backup_category_language">Язык и контент</string>
-    <string name="backup_category_startup">Запуск с телевизором</string>
+    <string name="backup_category_startup">Запуск вместе с телевизором</string>
     <string name="backup_encrypt">Защитить паролем</string>
     <string name="backup_password">Пароль</string>
     <string name="backup_password_confirm">Повторите пароль</string>
@@ -703,20 +702,20 @@
     <string name="backup_recovery_wait">Восстанавливаем предыдущие данные…</string>
     <string name="backup_export_done">Копия экспортирована</string>
     <string name="backup_local_done">Копия сохранена на этом телевизоре</string>
-    <string name="backup_no_files">На этом телевизоре нет файлового менеджера</string>
+    <string name="backup_no_files">На этом телевизоре нет системного выбора файлов</string>
     <string name="backup_no_copies">Локальных копий нет</string>
     <string name="backup_encrypted">Защищена паролем</string>
     <string name="backup_plain">Без пароля</string>
     <string name="backup_schema">Версия данных %1$d</string>
     <string name="backup_warning_missing_apps">Некоторые приложения не установлены; их места останутся помечены как недоступные</string>
-    <string name="backup_warning_kids">Детским профилям потребуется новый PIN</string>
-    <string name="backup_warning_permissions">Разрешения и роль Home не восстанавливаются</string>
-    <string name="backup_warning_discovery">Избранному и истории нужен зашифрованный файл</string>
-    <string name="backup_warning_weather">Сохранённому городу нужен зашифрованный файл</string>
+    <string name="backup_warning_kids">Детский режим останется выключенным, пока вы не зададите новый PIN.</string>
+    <string name="backup_warning_permissions">Разрешения и роль главного экрана не восстанавливаются</string>
+    <string name="backup_warning_discovery">Для избранного и истории нужен зашифрованный файл</string>
+    <string name="backup_warning_weather">Для сохранённого города нужен зашифрованный файл</string>
     <string name="backup_warning_repaired">Некоторые значения были исправлены</string>
     <string name="backup_warning_empty">В этой группе нечего сохранять</string>
     <string name="backup_warning_profile_limit">Слишком много профилей для этого лаунчера</string>
-    <string name="backup_error">Не удалось выполнить копирование: %1$s</string>
+    <string name="backup_error">Не удалось выполнить операцию: %1$s</string>
     <string name="backup_password_required">Введите пароль для этой копии</string>
     <string name="backup_password_wrong">Неверный пароль или повреждённый файл</string>
     <string name="backup_working">Выполняется…</string>
@@ -729,8 +728,18 @@
     <string name="backup_password_mismatch">Пароли не совпадают</string>
     <string name="backup_category_content">Источники контента</string>
     <string name="backup_password_too_short">Используйте не меньше 8 символов</string>
-    <string name="menu_rename_app">Переименовать</string>
+    <string name="menu_rename_app">Переименовать…</string>
     <string name="rename_app_title">Переименовать приложение</string>
     <string name="menu_reset_app_name">Сбросить название</string>
     <string name="rename_app_note">Это название видно только в OVisionTV.</string>
+    <string name="backup_selection_required">Выберите хотя бы одну группу данных.</string>
+    <string name="backup_retention_hint">Старые локальные копии удаляются автоматически.</string>
+    <string name="backup_error_format">Файл копии повреждён или не поддерживается.</string>
+    <string name="backup_error_integrity">Копия не прошла проверку целостности.</string>
+    <string name="backup_error_io">Не удалось прочитать или записать файл.</string>
+    <string name="backup_error_restore">Не удалось восстановить настройки.</string>
+    <string name="backup_warning_unknown_component">Часть данных из неподдерживаемой версии пропущена.</string>
+    <string name="backup_warning_source_unreadable">Часть сохранённых данных не удалось прочитать.</string>
+    <string name="new_folder_action">Новая папка…</string>
+    <string name="setup_saver_unsupported_hint">Текущий режим: %1$s. «Фотографии» и Reddit настраиваются в «Настройки → Персонализация → Заставка».</string>
 </resources>

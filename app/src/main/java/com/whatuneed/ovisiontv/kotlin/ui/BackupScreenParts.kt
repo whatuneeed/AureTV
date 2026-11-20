@@ -72,11 +72,9 @@ internal fun warningText(warning: BackupWarning): String = stringResource(
         BackupWarning.PERMISSIONS_NOT_RESTORED -> R.string.backup_warning_permissions
         BackupWarning.DISCOVERY_REQUIRES_ENCRYPTION -> R.string.backup_warning_discovery
         BackupWarning.WEATHER_REQUIRES_ENCRYPTION -> R.string.backup_warning_weather
-        BackupWarning.UNKNOWN_COMPONENT,
-        BackupWarning.REPAIRED,
-        BackupWarning.SOURCE_UNREADABLE,
-        -> R.string.backup_warning_repaired
-
+        BackupWarning.UNKNOWN_COMPONENT -> R.string.backup_warning_unknown_component
+        BackupWarning.REPAIRED -> R.string.backup_warning_repaired
+        BackupWarning.SOURCE_UNREADABLE -> R.string.backup_warning_source_unreadable
         BackupWarning.EMPTY -> R.string.backup_warning_empty
         BackupWarning.PROFILE_LIMIT -> R.string.backup_warning_profile_limit
     },
@@ -183,20 +181,26 @@ internal fun BackupRowView(
     onClick: (() -> Unit)?,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    TvListRowSurface(
-        focused = focused,
-        scale = scale,
-        modifier = Modifier
-            .width(scale.dp(TV_TOOL_LIST_WIDTH))
-            .focusRequester(requester)
-            .onFocusChanged { if (it.isFocused) onFocus() }
-            // Every row is a focus target even when it only carries a warning;
-            // an info row with no action must still be reachable and must not
-            // leave the page without an initial focus owner. The default
-            // indication would tint the focused white row grey.
-            .clickable(interactionSource = interactionSource, indication = null) {
-                onClick?.invoke()
+    // A warning or status row is text, not a button. Making it clickable with
+    // an empty callback left a focus stop where OK did nothing; only rows with
+    // an action join the focus order.
+    val rowModifier = Modifier
+        .width(scale.dp(TV_TOOL_LIST_WIDTH))
+        .focusRequester(requester)
+        .onFocusChanged { if (it.isFocused) onFocus() }
+        .then(
+            if (onClick != null) {
+                Modifier.clickable(interactionSource = interactionSource, indication = null) {
+                    onClick()
+                }
+            } else {
+                Modifier
             },
+        )
+    TvListRowSurface(
+        focused = focused && onClick != null,
+        scale = scale,
+        modifier = rowModifier,
     ) { focusAmount ->
         val titleColor = if (row.destructive) {
             LauncherColors.destructive

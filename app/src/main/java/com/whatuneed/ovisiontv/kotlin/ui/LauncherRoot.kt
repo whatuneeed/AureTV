@@ -106,18 +106,21 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
     // The repository only reads the package manager and resources, and it
     // outlives a single activity instance; the application context is the
     // safe owner (PHASE 33, memory review).
-    val repository = remember(context) { AppRepository(context.applicationContext) }
+    val repository = remember(context) { AppRepository(context) }
     val profileStore = remember(context) { ProfileStore(context) }
     var profiles by remember { mutableStateOf(profileStore.list()) }
     var profile by remember { mutableStateOf(profileStore.current()) }
     // Each profile owns its order, focus and shelf. p1 keeps the original file
     // so the layout written before profiles existed stays where it was.
-    val orderStore = remember(context, profile.id) {
-        HomeOrderStore(context, ProfileStore.homePrefsName(profile.id))
+    // These stores own preferences, not localized labels. Keying them by the
+    // localized context would build a new order store on every language change
+    // and blank the grid while it reloads.
+    val orderStore = remember(context.applicationContext, profile.id) {
+        HomeOrderStore(context.applicationContext, ProfileStore.homePrefsName(profile.id))
     }
     // Every successful launch from anywhere in the launcher (dock, folder,
     // search, shelf deep link) is the only affinity signal the launcher owns.
-    val discoveryStore = remember(context, profile.id) {
+    val discoveryStore = remember(context.applicationContext, profile.id) {
         DiscoveryStore(context.applicationContext, ProfileStore.homePrefsName(profile.id))
     }
     var apps by remember(orderStore) { mutableStateOf<List<HomeItem>?>(null) }
@@ -454,6 +457,13 @@ fun LauncherRoot(resumeTick: Int = 0, foreground: Boolean = true, wakeTick: Int 
         savedOrder = orderStore.savedOrder()
         loadFailed = false
         reload()
+    }
+
+    // The localized context is replaced when the language changes. Reload the
+    // labels without clearing the grid, so the launcher's own tile is renamed
+    // in place instead of the whole Home being recreated.
+    LaunchedEffect(context) {
+        if (apps != null) reload()
     }
 
     // The receiver outlives profile switches, so it must call the current

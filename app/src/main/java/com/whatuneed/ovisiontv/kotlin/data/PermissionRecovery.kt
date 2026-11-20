@@ -1,6 +1,5 @@
 package com.whatuneed.ovisiontv.kotlin.data
 
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
@@ -14,7 +13,7 @@ internal fun permanentDenial(granted: Boolean, asked: Boolean, rationale: Boolea
     asked && !granted && !rationale
 
 internal fun isPermanentDenial(context: Context, permission: String, asked: Boolean): Boolean {
-    val activity = context as? Activity ?: return false
+    val activity = context.findActivity() ?: return false
     val granted = ContextCompat.checkSelfPermission(context, permission) ==
         PackageManager.PERMISSION_GRANTED
     val rationale = ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)

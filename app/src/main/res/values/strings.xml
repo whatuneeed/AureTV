@@ -6,8 +6,8 @@
     <string name="startup_home">Home Screen</string>
     <string name="shelf_context">Application</string>
     <string name="home_empty_title">Welcome to OVisionTV</string>
-    <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings.</string>
-    <string name="shelf_listings_denied">App recommendations are off. Allow Recommendations Access in Settings.</string>
+    <string name="home_empty_body">Your apps are in the dock below. Recommendations can be enabled in Settings → Home.</string>
+    <string name="shelf_listings_denied">App recommendations are off. Allow Recommendations Access in Settings → Home.</string>
     <string name="discovery_section_continue">Continue Watching</string>
     <string name="discovery_section_for_you">For You</string>
     <string name="discovery_section_from_app">From %1$s</string>
@@ -57,7 +57,7 @@
     <string name="home_load_failed">Could not load the app list</string>
     <string name="home_load_retry">Try again</string>
     <string name="settings_load_failed">Could not load the app list</string>
-    <string name="settings_load_retry">Tap to retry</string>
+    <string name="settings_load_retry">Press OK to retry</string>
     <string name="app_unavailable">Unavailable on this TV</string>
     <string name="launch_failed">Could not open the app</string>
     <string name="folder_default">Folder</string>
@@ -243,11 +243,11 @@
     <string name="aerial_dream_label">OVisionTV Ambient</string>
     <string name="saver_system_title">System screen saver</string>
     <string name="saver_system_value">Choose in TV settings</string>
-    <string name="saver_system_hint">Choose OVisionTV Ambient in Settings → Screen saver</string>
+    <string name="saver_system_hint">Choose OVisionTV Ambient under Settings → Screen saver</string>
     <string name="saver_reset">Reset Screen Saver</string>
     <string name="saver_reset_title">Reset screen saver?</string>
     <string name="saver_reset_confirm">Reset</string>
-    <string name="saver_reset_hint">Mode, themes, delay, music and updates reset; hidden clips come back.</string>
+    <string name="saver_reset_hint">Mode, themes, delay, music and the catalogue check reset; hidden clips come back.</string>
     <plurals name="settings_hidden_count">
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
@@ -286,7 +286,7 @@
     <string name="settings_software_update_manual">Manual</string>
 
     <string name="update_title">Software Update</string>
-    <string name="update_subtitle">Updates are published from the project GitHub releases.</string>
+    <string name="update_subtitle">Signed updates from the project release source.</string>
     <string name="update_kids_blocked">Updates are unavailable in Kids Mode.</string>
     <string name="update_current">Current version</string>
     <string name="update_version_value">%1$s (%2$d)</string>
@@ -320,7 +320,7 @@
     <string name="update_retry">Try again</string>
     <string name="update_network">No internet connection</string>
     <string name="update_server">The update server is unavailable</string>
-    <string name="update_rate_limited">The update server asked to wait</string>
+    <string name="update_rate_limited">Too many checks. Try again later.</string>
     <string name="update_metadata">The update information is invalid</string>
     <string name="update_storage">Not enough free space</string>
     <string name="update_integrity">The downloaded file is damaged</string>
@@ -334,7 +334,7 @@
     <string name="update_incompatible_version">This build is not newer than the installed version</string>
     <string name="update_eol">This version is no longer supported</string>
     <string name="update_source_missing">Update source is not configured yet</string>
-    <string name="update_source_missing_hint">GitHub stays unused until a release page is configured.</string>
+    <string name="update_source_missing_hint">The update source will appear after a release page is published.</string>
 
     <string name="settings_connection">Connection</string>
     <string name="settings_network_wifi">Wi-Fi</string>
@@ -385,7 +385,7 @@
     <string name="settings_home_button_on">On</string>
     <string name="settings_home_button_off">Off</string>
     <string name="settings_home_button_allow">Allow…</string>
-    <string name="settings_home_button_stale">Restart the switch</string>
+    <string name="settings_home_button_stale">Turn the switch off and on</string>
     <string name="settings_start_open">Start with the TV</string>
     <string name="settings_start_title">Start with the TV</string>
     <string name="settings_start_hint">What to open when the TV turns on. Home Screen keeps everything as it is.</string>
@@ -451,7 +451,7 @@
     <string name="setup_personal_title">Language &amp; Profile</string>
     <string name="setup_personal_hint">Choose the launcher language, then the name and picture on your Home Screen. You can change both later.</string>
     <string name="setup_home_weather_title">Home &amp; Weather</string>
-    <string name="setup_home_weather_hint">Choose what appears above the tiles. Weather adds a 5-day forecast in the corner.</string>
+    <string name="setup_home_weather_hint">Choose what appears above the tiles. Weather adds a forecast of up to five days in the corner.</string>
     <string name="setup_saver_hint">What plays when the screen is idle. Themes, Photos and Reddit live in Settings → Personalization → Ambient Experience.</string>
     <string name="setup_saver_delay">Start After</string>
     <string name="setup_saver_delay_hint">Press OK to change the interval</string>
@@ -466,7 +466,7 @@
     <string name="setup_accessibility">Home Button and Startup</string>
     <string name="setup_accessibility_detail">OVisionTV instead of the TV\'s own home screen</string>
     <string name="setup_accessibility_on">On</string>
-    <string name="setup_accessibility_stale">Restart the switch</string>
+    <string name="setup_accessibility_stale">Turn the switch off and on</string>
     <string name="setup_access_detail">Lets the shelf read app recommendations</string>
     <string name="setup_access_permanent">Open App Info to allow it manually</string>
     <string name="setup_done_title">All Set</string>
@@ -492,8 +492,8 @@
     <string name="setup_city_nothing">Nothing found</string>
     <string name="setup_city_offline">Could not search. Check the internet connection.</string>
     <string name="home_settings_hint">Open Settings → Home and choose OVisionTV</string>
-    <string name="setup_home_setup">Set Up ›</string>
-    <string name="setup_allow_action">Allow ›</string>
+    <string name="setup_home_setup">Set Up</string>
+    <string name="setup_allow_action">Allow</string>
     <string name="city_moscow">Moscow</string>
     <string name="city_spb">St. Petersburg</string>
     <string name="city_novosibirsk">Novosibirsk</string>
@@ -539,7 +539,7 @@
     <string name="weather_snow">Snow</string>
     <string name="weather_thunderstorm">Thunderstorm</string>
     <string name="weather_hourly">HOURLY FORECAST</string>
-    <string name="weather_daily">5-DAY FORECAST</string>
+    <string name="weather_daily">DAILY FORECAST</string>
     <string name="weather_high">H</string>
     <string name="weather_low">L</string>
     <string name="weather_high_low">%1$s: %2$d°  %3$s: %4$d°</string>
@@ -666,7 +666,6 @@
     <string name="backup_import">Import from a file</string>
     <string name="backup_restore_local">Restore a local backup</string>
     <string name="backup_auto">Automatic local backup</string>
-    <string name="backup_auto_hint">Once a day, locally. The system may delay it</string>
     <string name="backup_last">Last backup: %1$s</string>
     <string name="backup_category_profiles">Profiles and home layout</string>
     <string name="backup_category_home">Home layout and folders</string>
@@ -689,20 +688,20 @@
     <string name="backup_recovery_wait">Recovering your previous data…</string>
     <string name="backup_export_done">Backup exported</string>
     <string name="backup_local_done">Backup saved on this TV</string>
-    <string name="backup_no_files">This TV has no file picker</string>
+    <string name="backup_no_files">This TV has no system file picker</string>
     <string name="backup_no_copies">No local backups</string>
     <string name="backup_encrypted">Password protected</string>
     <string name="backup_plain">Not protected</string>
     <string name="backup_schema">Data version %1$d</string>
     <string name="backup_warning_missing_apps">Some apps are not installed on this TV; their places stay marked unavailable</string>
-    <string name="backup_warning_kids">Kids profiles will need a new PIN</string>
+    <string name="backup_warning_kids">Kids Mode stays off until you set a new PIN.</string>
     <string name="backup_warning_permissions">Permissions and the Home role are not restored</string>
     <string name="backup_warning_discovery">Favorites and history need an encrypted file</string>
     <string name="backup_warning_weather">A saved city needs an encrypted file</string>
     <string name="backup_warning_repaired">Some saved values were repaired</string>
     <string name="backup_warning_empty">Nothing was saved in this group</string>
     <string name="backup_warning_profile_limit">Too many profiles for this launcher</string>
-    <string name="backup_error">Could not complete the backup: %1$s</string>
+    <string name="backup_error">Could not complete the operation: %1$s</string>
     <string name="backup_password_required">Enter the password for this backup</string>
     <string name="backup_password_wrong">Wrong password or damaged file</string>
     <string name="backup_working">Working…</string>
@@ -715,8 +714,18 @@
     <string name="backup_password_mismatch">Passwords do not match</string>
     <string name="backup_category_content">Content sources</string>
     <string name="backup_password_too_short">Use at least 8 characters</string>
-    <string name="menu_rename_app">Rename App</string>
+    <string name="menu_rename_app">Rename App…</string>
     <string name="rename_app_title">Rename App</string>
     <string name="menu_reset_app_name">Reset Name</string>
     <string name="rename_app_note">This name is shown only in OVisionTV.</string>
+    <string name="backup_selection_required">Choose at least one data group.</string>
+    <string name="backup_retention_hint">Older local copies are deleted automatically.</string>
+    <string name="backup_error_format">The backup file is damaged or unsupported.</string>
+    <string name="backup_error_integrity">The backup failed its integrity check.</string>
+    <string name="backup_error_io">The file could not be read or written.</string>
+    <string name="backup_error_restore">The settings could not be restored.</string>
+    <string name="backup_warning_unknown_component">Some data is from an unsupported version and was skipped.</string>
+    <string name="backup_warning_source_unreadable">Some saved data could not be read.</string>
+    <string name="new_folder_action">New Folder…</string>
+    <string name="setup_saver_unsupported_hint">Current mode: %1$s. Photos and Reddit are set up in Settings → Personalization → Ambient Experience.</string>
 </resources>

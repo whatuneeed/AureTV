@@ -1,0 +1,43 @@
+OVisionTV Launcher — test evidence 0.5.75 / vc148
+Date: 2026-11-20
+Device: hume-tv(AVD) API 34 x86 1920x1080
+
+Clean build:
+GRADLE_USER_HOME=C:/gradle-home ./gradlew clean :app:assembleDebug :app:assembleRelease \
+  :app:testDebugUnitTest :app:lintDebug -Pkotlin.incremental=false --console=plain
+BUILD SUCCESSFUL
+
+Unit:
+578 tests, 0 failures, 0 errors, 0 skipped.
+
+Connected full suite:
+GRADLE_USER_HOME=C:/gradle-home ./gradlew :app:connectedDebugAndroidTest \
+  -Pkotlin.incremental=false --console=plain
+Finished 304 tests on hume-tv(AVD) - 14
+BUILD SUCCESSFUL in 11m 16s
+
+Targeted audit run:
+SetupScreenTest + SettingsScreenTest#legal_page_opens_the_terms_document
+28/28 passed.
+AppRepositoryTest + KidsGateTest + SettingsEntryGrantTest
+16/16 passed after making their labels follow LocalePreference.wrap.
+
+Lint:
+0 errors, 12 warnings, 0 information.
+
+APK:
+6 623 683 bytes
+SHA-256 808fb6080963f4867b914d0f7b057f2306549cadc7747bc9fab17a45f87193bc
+
+Notes:
+- The first full run hit one Compose test-harness race in
+  MainActivityResumeTest (CalledFromWrongThreadException inside the test
+  Recomposer). The class passed 2/2 in isolation and the full suite passed on
+  the next run; no app crash was observed.
+- A later full run exposed that KidsGateTest/AppRepositoryTest assumed the
+  device language even when the saved launcher language was Russian. Those
+  tests now resolve strings through LocalePreference.wrap, matching the product
+  contract. The final full suite is green.
+- Raw legal documents must stay LF: SettingsScreen splits paragraphs on
+  "\n\n". A CRLF rewrite made the Terms test see one giant paragraph; files are
+  restored to LF and the focus effect keys on docParagraphs.size.

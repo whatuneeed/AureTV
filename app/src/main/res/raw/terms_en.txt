@@ -12,11 +12,11 @@ Apps you start from the home screen belong to their developers. The launcher is 
 
 3. Aerials screen saver
 
-Aerial clips are streamed from Apple's public server and remain Apple's property. The launcher does not redistribute them or present them as its own content. Without a network connection the saver does not start and the home screen stays visible.
+Aerial clips are streamed from Apple's public server and remain Apple's property. The launcher does not redistribute them or present them as its own content. Aerial playback needs a network connection; when clips cannot load, the saver uses a local fallback instead.
 
 4. Updates
 
-The launcher is updated by installing a new APK. There are no automatic updates and no remote control. The aerial catalogue can be refreshed manually in Updates.
+The launcher is updated by installing a new APK. Update checks are optional and can be set to manual; installation always requires the Android confirmation. The aerial catalogue can be refreshed in Settings → Device → Aerial Catalogue.
 
 5. Warranty
 

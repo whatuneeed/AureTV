@@ -16,7 +16,9 @@ import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
 import com.whatuneed.ovisiontv.kotlin.data.ProfileStore
 import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
 import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoverySplash
+import com.whatuneed.ovisiontv.kotlin.ui.LocaleRuntime
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
+import com.whatuneed.ovisiontv.kotlin.ui.ProvideAppLocale
 import com.whatuneed.ovisiontv.kotlin.ui.SettingsScreen
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 import kotlinx.coroutines.launch
@@ -75,6 +77,7 @@ class SettingsActivity : TvRemoteActivity() {
         refreshEntry()
         setContent {
             OVisionTheme {
+                ProvideAppLocale {
                 TvCanvas {
                     if (kidsReady.value) {
                         SettingsScreen(
@@ -85,6 +88,7 @@ class SettingsActivity : TvRemoteActivity() {
                     } else {
                         BackupRecoverySplash()
                     }
+                }
                 }
             }
         }
@@ -121,11 +125,12 @@ class SettingsActivity : TvRemoteActivity() {
         // The device row shows the live profile: re-derive it after system
         // screens, thermal status may have changed while we were away.
         Adaptive.install(this)
-        // A language change made in the wizard must rebuild this activity's
-        // wrapped context, exactly as Home and Setup do (AQ-25).
-        if (LocalePreference.get(this) != appliedLanguage) {
-            recreate()
-            return
+        // A language change made outside this window must reach the composition
+        // without rebuilding the window (AQ-25).
+        val language = LocalePreference.get(this)
+        if (language != appliedLanguage) {
+            appliedLanguage = language
+            LocaleRuntime.notifyChanged()
         }
         resumeTick.intValue++
     }

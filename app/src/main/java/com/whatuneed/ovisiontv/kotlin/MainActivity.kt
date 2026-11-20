@@ -27,7 +27,9 @@ import com.whatuneed.ovisiontv.kotlin.input.TvRemoteActivity
 import com.whatuneed.ovisiontv.kotlin.ui.BackupRecoverySplash
 import com.whatuneed.ovisiontv.kotlin.ui.LauncherRoot
 import com.whatuneed.ovisiontv.kotlin.ui.MemoryPressure
+import com.whatuneed.ovisiontv.kotlin.ui.LocaleRuntime
 import com.whatuneed.ovisiontv.kotlin.ui.OVisionTheme
+import com.whatuneed.ovisiontv.kotlin.ui.ProvideAppLocale
 import com.whatuneed.ovisiontv.kotlin.ui.TvCanvas
 import kotlinx.coroutines.launch
 
@@ -132,6 +134,7 @@ class MainActivity : TvRemoteActivity() {
 
         setContent {
             OVisionTheme {
+                ProvideAppLocale {
                 TvCanvas {
                     if (bootstrapped) {
                         LauncherRoot(
@@ -142,6 +145,7 @@ class MainActivity : TvRemoteActivity() {
                     } else {
                         BackupRecoverySplash()
                     }
+                }
                 }
             }
         }
@@ -169,7 +173,12 @@ class MainActivity : TvRemoteActivity() {
             if (fresh) wakeTick.intValue++
         }
         // Settings is a separate activity; coming back may carry a new language.
-        if (LocalePreference.get(this) != appliedLanguage) recreate()
+        // Recompose with the new resources instead of recreating the window.
+        val language = LocalePreference.get(this)
+        if (language != appliedLanguage) {
+            appliedLanguage = language
+            LocaleRuntime.notifyChanged()
+        }
         resumeTick.intValue++
     }
 

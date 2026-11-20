@@ -100,6 +100,17 @@ private const val CC_TALL_GLYPH = 92f
 private const val CC_SCRIM_ALPHA = 0.65f
 
 /** The clock follows the interface language, not the device's 12/24-hour setting. */
+/**
+ * The Wi-Fi tile asks for the narrow name grant once. A second press after a
+ * denial opens Wi-Fi settings instead of launching a system dialog that will
+ * no longer appear; otherwise the tile would be a dead control.
+ */
+internal fun shouldAskForWifiName(
+    network: NetworkKind,
+    granted: Boolean,
+    asked: Boolean,
+): Boolean = network == NetworkKind.WIFI && !granted && !asked
+
 private class CcTile(
     val id: String,
     val title: String,
@@ -159,6 +170,7 @@ internal fun ControlCenter(
     val network = rememberNetworkKind()
     val networkStatus = networkStatusLabel(network)
     var wifiGranted by remember { mutableStateOf(DeviceFactsReader.hasWifiNamePermission(context)) }
+    var wifiAsked by remember { mutableStateOf(false) }
     val wifiName = if (network == NetworkKind.WIFI && wifiGranted) {
         DeviceFactsReader.wifiSsid(context)
     } else {
@@ -173,6 +185,7 @@ internal fun ControlCenter(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         wifiGranted = DeviceFactsReader.hasWifiNamePermission(context)
+        wifiAsked = true
     }
     val screen = remember {
         val metrics = context.resources.displayMetrics
@@ -277,7 +290,8 @@ internal fun ControlCenter(
                 // opens Wi-Fi.
                 closes = false,
                 action = {
-                    if (network == NetworkKind.WIFI && !wifiGranted) {
+                    if (shouldAskForWifiName(network, wifiGranted, wifiAsked)) {
+                        wifiAsked = true
                         locationLauncher.launch(DeviceFactsReader.wifiNamePermissions())
                     } else {
                         requestClose(false)

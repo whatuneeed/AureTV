@@ -16,10 +16,10 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version 10"))
-        assertTrue(ru.contains("Версия политики 10"))
-        assertTrue(en.contains("2026-11-17"))
-        assertTrue(ru.contains("17.11.2026"))
+        assertTrue(en.contains("Policy version 11"))
+        assertTrue(ru.contains("Версия политики 11"))
+        assertTrue(en.contains("2026-11-18"))
+        assertTrue(ru.contains("18.11.2026"))
     }
 
     @Test

@@ -1,0 +1,17 @@
+0.5.74 / vc147 — verification
+
+Clean build:
+  :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug  PASS
+
+Unit tests:        569 / 569 passed, 0 failed
+Connected tests:   304 / 304 passed, 0 failed (hume-tv AVD, API 34, 1920x1080)
+Lint:              0 errors, 15 warnings, 0 information
+
+Targeted language/recreate coverage:
+  AppLocaleTest                 1 / 1
+  SetupLanguageSwitchTest       1 / 1
+  LanguageReturnTest            2 / 2
+  SetupScreenTest              27 / 27
+
+Release APK:       6 618 107 bytes
+sha256:            117d148bdf28bc9696c2e6461fabd0a3c6b901f46c1794df98f204ff46d29591

@@ -158,7 +158,13 @@ internal fun setupSaverPage(
 ): SetupPage = SetupPage(
     // One ambient page instead of "when" plus "themes" (see SetupScreen).
     title = stringResource(R.string.setup_saver_title),
-    subtitle = stringResource(R.string.setup_saver_hint),
+    // Photos and Reddit are configured in Settings, but a re-run must still
+    // name the current mode instead of showing three unchecked choices.
+    subtitle = if (ambientMode in SETUP_AMBIENT_MODES) {
+        stringResource(R.string.setup_saver_hint)
+    } else {
+        stringResource(R.string.setup_saver_unsupported_hint, ambientModeLabel(ambientMode))
+    },
     primary = stringResource(R.string.setup_continue),
     onPrimary = onNext,
     rows = SETUP_AMBIENT_MODES.map { mode ->

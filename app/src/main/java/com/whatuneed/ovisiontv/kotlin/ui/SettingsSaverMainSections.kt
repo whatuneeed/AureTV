@@ -128,7 +128,7 @@ internal fun saverRedditRows(
         SettingsRow(
             title = stringResource(R.string.saver_reddit_refresh_now),
             value = if (loading) stringResource(R.string.saver_reddit_loading) else null,
-            chevron = true,
+            // This runs the refresh in place; a chevron would promise another page.
             action = onRefreshNow,
         ),
     )

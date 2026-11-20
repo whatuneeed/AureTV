@@ -935,7 +935,7 @@ class HomeScreenTest {
         rule.waitForIdle()
 
         rule.onNodeWithContentDescription("Моя папка").assertIsDisplayed()
-        rule.onNodeWithContentDescription(context.getString(R.string.new_folder_title))
+        rule.onNodeWithContentDescription(context.getString(R.string.new_folder_action))
             .assertIsDisplayed()
 
         // The first picker row is the existing folder.

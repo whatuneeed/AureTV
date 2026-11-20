@@ -165,8 +165,9 @@ internal fun ShelfContextMenu(
                 onSelect = onToggleFavorite,
             ),
             TvMenuEntry(
+                // Hiding a card is reversible from Settings; it is not a
+                // destructive action and must not be painted like delete.
                 label = stringResource(R.string.menu_hide),
-                destructive = true,
                 onSelect = onHide,
             ),
         ),
@@ -194,7 +195,7 @@ internal fun MoveToFolderMenu(
         folders.forEach { folder ->
             add(TvMenuEntry(folder.name, onSelect = { onMove(folder) }))
         }
-        add(TvMenuEntry(stringResource(R.string.new_folder_title), onSelect = onNewFolder))
+        add(TvMenuEntry(stringResource(R.string.new_folder_action), onSelect = onNewFolder))
     }
     TvMenu(
         title = stringResource(R.string.move_to_folder_title),

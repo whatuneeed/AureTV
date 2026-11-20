@@ -34,7 +34,7 @@ class AppRepositoryTest {
 
         assertEquals(1, own.size)
         assertEquals(SettingsActivity::class.java.name, own[0].activityName)
-        assertEquals(context.getString(R.string.settings_tile_name), own[0].label)
+        assertEquals(LocalePreference.wrap(context).getString(R.string.settings_tile_name), own[0].label)
         // No banner: an application banner would replace the slider gear.
         assertNull(own[0].banner)
         assertTrue("settings tile needs its icon", own[0].icon != null)
@@ -48,14 +48,14 @@ class AppRepositoryTest {
             val own = load().single { it.packageName == context.packageName }
             assertEquals("Мой дом", own.label)
             assertEquals(
-                context.getString(R.string.settings_tile_name),
+                LocalePreference.wrap(context).getString(R.string.settings_tile_name),
                 AppLabelStore.defaultLabel(context, own),
             )
         } finally {
             AppLabelStore.clearLabel(context, context.packageName)
         }
         val reset = load().single { it.packageName == context.packageName }
-        assertEquals(context.getString(R.string.settings_tile_name), reset.label)
+        assertEquals(LocalePreference.wrap(context).getString(R.string.settings_tile_name), reset.label)
     }
 
     @Test
@@ -67,7 +67,7 @@ class AppRepositoryTest {
                 .single { it.packageName == context.packageName }
             val other = AppRepository(context).load(prefsName = profilePrefs)
                 .single { it.packageName == context.packageName }
-            assertEquals(context.getString(R.string.settings_tile_name), main.label)
+            assertEquals(LocalePreference.wrap(context).getString(R.string.settings_tile_name), main.label)
             assertEquals("Второй профиль", other.label)
         } finally {
             AppLabelStore.clear(context, profilePrefs)

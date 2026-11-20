@@ -1,6 +1,5 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -47,6 +46,7 @@ import com.whatuneed.ovisiontv.kotlin.backup.BackupSelection
 import com.whatuneed.ovisiontv.kotlin.backup.BackupStage
 import com.whatuneed.ovisiontv.kotlin.backup.BackupTrigger
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
+import com.whatuneed.ovisiontv.kotlin.data.findActivity
 import kotlinx.coroutines.launch
 
 internal enum class BackupPage { HOME, CREATE, SOURCE, PREVIEW, PROGRESS, SETTINGS, PASSWORD }
@@ -79,6 +79,16 @@ internal data class BackupRow(
     val action: (() -> Unit)? = null,
 )
 
+/** A backup failure is shown in the screen language, never as an English cause. */
+internal fun backupErrorRes(stage: BackupStage): Int = when (stage) {
+    BackupStage.CRYPTO -> R.string.backup_password_wrong
+    BackupStage.INTEGRITY -> R.string.backup_error_integrity
+    BackupStage.IO -> R.string.backup_error_io
+    BackupStage.RESTORE -> R.string.backup_error_restore
+    BackupStage.FORMAT, BackupStage.MANIFEST, BackupStage.SCHEMA,
+    BackupStage.MIGRATION -> R.string.backup_error_format
+}
+
 @Composable
 fun BackupScreen(onClose: () -> Unit) {
     val context = LocalContext.current
@@ -103,12 +113,8 @@ fun BackupScreen(onClose: () -> Unit) {
     }
 
     fun fail(stage: BackupStage, error: Throwable) {
-        val message = when {
-            error is BackupException && error.stage == BackupStage.CRYPTO ->
-                context.getString(R.string.backup_password_wrong)
-            error is BackupException -> error.message.orEmpty()
-            else -> error.message.orEmpty()
-        }
+        val failureStage = (error as? BackupException)?.stage ?: stage
+        val message = context.getString(backupErrorRes(failureStage))
         ui = ui.copy(
             page = BackupPage.HOME,
             working = null,
@@ -233,7 +239,7 @@ fun BackupScreen(onClose: () -> Unit) {
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK,
                     ),
                 )
-                (context as? Activity)?.finish()
+                context.findActivity()?.finish()
             } catch (error: Throwable) {
                 fail(BackupStage.RESTORE, error)
             }
@@ -241,6 +247,10 @@ fun BackupScreen(onClose: () -> Unit) {
     }
 
     fun requestExport() {
+        if (ui.selection.isEmpty()) {
+            Toast.makeText(context, R.string.backup_selection_required, Toast.LENGTH_SHORT).show()
+            return
+        }
         val needsPassword = ui.encrypt || ui.selection.discovery ||
             WeatherPreferences.manual(context)
         ui = ui.copy(
@@ -293,6 +303,7 @@ fun BackupScreen(onClose: () -> Unit) {
         if (ui.page != BackupPage.PROGRESS) back()
     }
 
+    val kbUnit = stringResource(R.string.unit_kb)
     val rows = when (ui.page) {
         BackupPage.HOME -> buildList {
             add(BackupRow(stringResource(R.string.backup_create)) { beginCreate() })
@@ -332,7 +343,9 @@ fun BackupScreen(onClose: () -> Unit) {
             add(
                 BackupRow(
                     title = stringResource(R.string.backup_last, displayLastLabel(ui.last)),
-                    value = ui.last?.let { "${it.info.componentCount} · ${it.info.bytes / 1024} KB" },
+                    value = ui.last?.let {
+                        "${it.info.componentCount} · ${it.info.bytes / 1024} $kbUnit"
+                    },
                 ),
             )
             ui.message?.let { add(BackupRow(it)) }
@@ -345,12 +358,19 @@ fun BackupScreen(onClose: () -> Unit) {
                         title = categoryLabel(category),
                         checked = ui.selection.includes(category),
                         action = {
-                            ui = ui.copy(
-                                selection = ui.selection.with(
-                                    category,
-                                    !ui.selection.includes(category),
-                                ),
+                            val next = ui.selection.with(
+                                category,
+                                !ui.selection.includes(category),
                             )
+                            if (next.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    R.string.backup_selection_required,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } else {
+                                ui = ui.copy(selection = next)
+                            }
                         },
                     ),
                 )
@@ -366,7 +386,13 @@ fun BackupScreen(onClose: () -> Unit) {
             add(
                 BackupRow(stringResource(R.string.backup_save_local)) {
                     val selection = ui.selection
-                    if (!selection.isEmpty()) {
+                    if (selection.isEmpty()) {
+                        Toast.makeText(
+                            context,
+                            R.string.backup_selection_required,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
                         ui = ui.copy(
                             page = BackupPage.PROGRESS,
                             working = context.getString(R.string.backup_stage_export),
@@ -458,7 +484,7 @@ fun BackupScreen(onClose: () -> Unit) {
             add(
                 BackupRow(
                     title = stringResource(R.string.backup_retention, BackupContract.LOCAL_RETENTION),
-                    value = stringResource(R.string.backup_auto_hint),
+                    value = stringResource(R.string.backup_retention_hint),
                 ),
             )
         }
@@ -497,13 +523,20 @@ fun BackupScreen(onClose: () -> Unit) {
 
     LaunchedEffect(ui.page) {
         // On the password page the text field owns the first focus; -1 keeps
-        // the Continue row from stealing it on the first composition.
-        focusIndex = if (ui.page == BackupPage.PASSWORD) -1 else 0
+        // the Continue row from stealing it on the first composition. Other
+        // pages open on their first real action, never on a warning row.
+        focusIndex = if (ui.page == BackupPage.PASSWORD) {
+            -1
+        } else {
+            rows.indexOfFirst { it.action != null }.coerceAtLeast(0)
+        }
         if (ui.page == BackupPage.PASSWORD) passwordRequester.requestBackupFocusWhenAttached()
     }
     LaunchedEffect(ui.page, focusIndex, rows.size) {
-        if (ui.page != BackupPage.PASSWORD && focusIndex !in rows.indices) {
-            focusIndex = rows.lastIndex.coerceAtLeast(0)
+        if (ui.page != BackupPage.PASSWORD &&
+            (focusIndex !in rows.indices || rows[focusIndex].action == null)
+        ) {
+            focusIndex = rows.indexOfFirst { it.action != null }.coerceAtLeast(0)
         }
     }
 

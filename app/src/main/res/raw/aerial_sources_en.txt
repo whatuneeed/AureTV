@@ -4,11 +4,11 @@ The Aerials screen saver uses clips from a built-in Apple catalogue compiled fro
 
 Catalogue
 
-The bundled aerial_catalog.json lists 100 clips with Russian and English names, a theme, and links to the video and a still frame. The catalogue can be refreshed manually in Updates; the refresh downloads data from Apple's public server and stores it only on the device.
+The bundled aerial_catalog.json lists the clips with Russian and English names, a theme, and links to the video and a still frame. The catalogue can be refreshed in Settings → Device → Aerial Catalogue; the refresh downloads data from Apple's public server and stores it only on the device.
 
 Video and stills
 
-Videos and preview stills are not part of the APK. They are fetched over HTTP from sylvan.apple.com and cached on the TV for repeat playback. The HTTP exception is scoped to this public Apple host because some TV trust stores reject Apple's certificate chain; no account, token or personal data is sent. The catalogue refresh stays on HTTPS.
+Videos are not part of the APK. Preview stills are normally fetched over HTTP from sylvan.apple.com and cached on the TV; for a few legacy clips whose public preview is gone, the APK bundles a real frame captured from the same clip. The HTTP exception is scoped to this public Apple host because some TV trust stores reject Apple's certificate chain; no account, token or personal data is sent. The catalogue refresh stays on HTTPS.
 
 Rights
 
