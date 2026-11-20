@@ -1,8 +1,0 @@
-soak start: pss=63917 crash_lines=0
-  3 cycles, elapsed=58s, pss=53458
-  6 cycles, elapsed=131s, pss=58194
-  9 cycles, elapsed=204s, pss=65469
-  12 cycles, elapsed=278s, pss=63996
-soak end: cycles=13 pss=63917->56364
-crash lines: start=0 end=0 new=0
-ok: no new app crash entries

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.whatuneed.ovisiontv.kotlin.data.SaverRefreshScheduleTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:51:27" hostname="DESKTOP-M0B4FRI" time="0.001">
-  <properties/>
-  <testcase name="the_first_check_after_install_is_due" classname="com.whatuneed.ovisiontv.kotlin.data.SaverRefreshScheduleTest" time="0.001"/>
-  <testcase name="every_frequency_waits_for_its_own_interval" classname="com.whatuneed.ovisiontv.kotlin.data.SaverRefreshScheduleTest" time="0.0"/>
-  <testcase name="never_never_refreshes_even_without_an_attempt" classname="com.whatuneed.ovisiontv.kotlin.data.SaverRefreshScheduleTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

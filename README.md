@@ -16,7 +16,7 @@ AURE TV does not invent titles or fake a content library.
 
 | Real recommendations from installed apps | Home apps and dock |
 | --- | --- |
-| ![Home with Flux recommendations](GITHUB_RELEASE/screenshots/01-home-recommendations.jpg) | ![Home apps and dock](GITHUB_RELEASE/screenshots/02-home-apps.jpg) |
+| ![Home with Watch Next recommendations](GITHUB_RELEASE/screenshots/01-home-recommendations.jpg) | ![Home apps and dock](GITHUB_RELEASE/screenshots/02-home-apps.jpg) |
 
 | Control Center | Weather |
 | --- | --- |
@@ -39,18 +39,18 @@ AURE TV does not invent titles or fake a content library.
 
 </details>
 
-The shelf in the first screenshot is showing real Watch Next rows published by
-**Flux** and **YouTube** on the test device. Flux is not bundled; the launcher
-reads the TV provider rows that installed apps expose. If no installed app
-publishes a row, the shelf stays empty instead of showing placeholder cards.
+The shelf in the first screenshot shows real Watch Next rows published by
+installed apps on the test device. Provider apps are not bundled; the launcher
+reads the TV provider rows they expose. If no installed app publishes a row,
+the shelf stays empty instead of showing placeholder cards.
 
 ## Why AURE TV
 
 - **Made for a remote, not a mouse.** The D-pad cursor is the source of truth;
   focus, Back, OK and Menu have explicit destinations on every surface.
 - **Real content only.** The shelf uses Android TV Watch Next. Posters, titles
-  and provider labels come from apps such as Flux, YouTube and other installed
-  providers. No invented catalogue, no fake playback state.
+  and provider labels come from installed apps. No invented catalogue, no fake
+  playback state.
 - **A calm Home.** No feeds fighting for attention, no advertising and no
   account. Hide, rename and group apps; keep the Home screen yours.
 - **Local-first by default.** Backups are local files, optionally protected by a
@@ -71,8 +71,8 @@ publishes a row, the shelf stays empty instead of showing placeholder cards.
 - Optional Weather capsule with current conditions, hourly details and a
   five-day forecast. Weather uses Open-Meteo with fallback providers.
 - A Watch Next shelf built from the system TV provider. Cards can open the
-  installed app, show optional online details/trailer, or jump to Flux when the
-  Flux deep link is available.
+  installed app, show optional online details/trailer, or return to the provider
+  when its deep link is available.
 - Control Center for network status, display information, sound, sleep timer,
   search, Settings, ambient mode and the system TV surface.
 - The stock TV launcher can be replaced by selecting AURE TV as the Home app;
@@ -143,13 +143,8 @@ required for the launcher itself.
 5. For recommendations, allow **Recommendations Access** when setup asks (or
    later in AURE TV Settings → Home). This grants `READ_TV_LISTINGS`; without it
    the shelf cannot read Watch Next rows.
-6. Flux, YouTube and other providers must be installed and publishing rows for
-   their cards to appear.
-
-> **Upgrade note:** `app.aure.tv` is a new application identity. It does not
-> update an older build installed as `com.whatuneed.ovisiontv.kotlin`. Export a
-> backup from the old app and import it into AURE TV, or remove the old app
-> after migrating.
+6. A provider app that publishes Watch Next rows must be installed for its cards
+   to appear.
 
 ## Verification
 
@@ -210,8 +205,7 @@ python tools/release_check.py \
 
 The script checks `versionCode`, `versionName`, `applicationId`, SDK levels, the
 v2 signature, the signing certificate and RU/EN resource-name parity. Release
-notes and known regressions live in [`FIXES.md`](FIXES.md); audit reports are in
-the topic directories (`SECURITY_AUDIT`, `RELEASE_READINESS`, etc.).
+notes and the current release gallery live in [`GITHUB_RELEASE/`](GITHUB_RELEASE/).
 
 ## Project layout
 
@@ -230,5 +224,5 @@ the topic directories (`SECURITY_AUDIT`, `RELEASE_READINESS`, etc.).
 
 AURE TV is licensed under the **Apache License 2.0**. Third-party notices are in
 [`NOTICE`](NOTICE). Aerial clips are streamed from Apple's public CDN; AURE TV
-is not affiliated with Apple. Flux, YouTube and other product names belong to
-their respective owners. No DRM or third-party content is bundled.
+is not affiliated with Apple. Third-party product names belong to their respective
+owners. No DRM or third-party content is bundled.

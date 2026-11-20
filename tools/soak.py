@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Short soak for OVisionTV_Kotlin on a connected emulator/device.
+"""Short soak for AURE TV on a connected emulator/device.
 
 Cycles Home, Settings, Control Center and Search for N minutes, samples the
 process PSS and fails when the crash buffer gains an app entry. It does not
@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-PACKAGE = "com.whatuneed.ovisiontv.kotlin"
+PACKAGE = "app.aure.tv"
 ACTIVITY = f"{PACKAGE}/.MainActivity"
 SETTINGS = f"{PACKAGE}/.SettingsActivity"
 

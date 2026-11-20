@@ -1,2 +1,0 @@
-versionCode=64 minSdk=28 targetSdk=35
-versionName=0.4.44

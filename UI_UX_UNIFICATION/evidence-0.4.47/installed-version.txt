@@ -1,4 +1,0 @@
-    versionCode=67 minSdk=28 targetSdk=35
-    versionName=0.4.47
-    lastUpdateTime=2026-11-12 20:39:29
-apk_sha256=7a26a32c54eadea8d706047bf15ca1de1aad059bc66dddf26d25691a77d830e9

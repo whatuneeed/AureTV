@@ -1,7 +1,0 @@
-      android.service.dreams.DreamService:
-        8c0832e com.whatuneed.ovisiontv.kotlin/.AerialDreamService filter 5840ecf permission android.permission.BIND_DREAM_SERVICE
-          Action: "android.service.dreams.DreamService"
-      android.accessibilityservice.AccessibilityService:
-        3229130 com.whatuneed.ovisiontv.kotlin/.OVisionAccessibilityService filter 914a1a9 permission android.permission.BIND_ACCESSIBILITY_SERVICE
-          Action: "android.accessibilityservice.AccessibilityService"
-

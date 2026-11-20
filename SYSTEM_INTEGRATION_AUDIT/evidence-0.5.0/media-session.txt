@@ -1,6 +1,0 @@
-    OVisionTVSaver com.whatuneed.ovisiontv.kotlin/OVisionTVSaver (userId=0)
-      ownerPid=21258, ownerUid=10228, userId=0
-      package=com.whatuneed.ovisiontv.kotlin
-      launchIntent=PendingIntent{8a22206: PendingIntentRecord{4b45291 com.whatuneed.ovisiontv.kotlin startActivity (allowlist: 46d39c1:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
-      mediaButtonReceiver=null
-      active=true

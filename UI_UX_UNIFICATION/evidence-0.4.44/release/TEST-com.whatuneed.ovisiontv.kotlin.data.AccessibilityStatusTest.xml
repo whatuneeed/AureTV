@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatusTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-11T19:31:07" hostname="DESKTOP-M0B4FRI" time="0.019">
-  <properties/>
-  <testcase name="connectedServiceWinsOverTheStoredSwitch" classname="com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatusTest" time="0.018"/>
-  <testcase name="enabledButStoppedIsItsOwnState" classname="com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatusTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

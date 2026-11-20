@@ -4,15 +4,10 @@ The first public build of **AURE TV**, a remote-first Android TV launcher with a
 tvOS-inspired Home, real Watch Next recommendations, Aerial ambience and
 local-first backup.
 
-> **New app identity:** this release is `app.aure.tv`. It does not update an
-> older build installed as `com.whatuneed.ovisiontv.kotlin`. Export a backup from
-> the old app and import it into AURE TV, or remove the old app after migrating.
-
 ## Highlights
 
 - **Real recommendations, not placeholder cards.** The shelf reads Android TV
-  Watch Next rows published by installed apps. Tested with **Flux** and
-  **YouTube**; other providers work the same way. The launcher itself does not
+  Watch Next rows published by installed apps. The launcher itself does not
   bundle a catalogue.
 - **Home built around the remote.** App grid and dock, folders, hide/rename,
   profiles, Kids Mode, remote-first search, weather and a Control Center.
@@ -32,7 +27,7 @@ The repository README has the full gallery. The
 `GITHUB_RELEASE/screenshots/` folder contains the same images at 1920×1080 for
 the release page:
 
-- `01-home-recommendations.jpg` — Flux/YouTube cards in the Watch Next shelf
+- `01-home-recommendations.jpg` — Watch Next cards in the shelf
 - `02-home-apps.jpg` — Home grid and dock
 - `03-control-center.jpg` — network, display, sound and sleep timer
 - `04-weather.jpg` — current conditions and five-day forecast
@@ -45,7 +40,7 @@ the release page:
 
 ## Gallery
 
-| Real recommendations from Flux | Home apps and dock |
+| Real Watch Next recommendations | Home apps and dock |
 | --- | --- |
 | ![Home with recommendations](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/01-home-recommendations.jpg) | ![Home apps](https://raw.githubusercontent.com/whatuneeed/AureTV/master/GITHUB_RELEASE/screenshots/02-home-apps.jpg) |
 
@@ -68,8 +63,7 @@ adb install AURE-TV-0.6.0.apk
 
 Open **AURE TV**, finish setup, then choose it as the TV's Home app. Allow
 **Recommendations Access** (`READ_TV_LISTINGS`) if you want Watch Next cards; an
-installed provider such as Flux or YouTube must publish rows for cards to
-appear.
+installed provider must publish rows for cards to appear.
 
 ## Verification
 
@@ -104,5 +98,5 @@ df6b96724c3feeef1d6025fc5046a0c890cedacbd89adba04ca5f266639b120a  AURE-TV-0.6.0.
 Size: 6,960,986 bytes.
 
 AURE TV is licensed under Apache-2.0. Aerial clips come from Apple's public CDN;
-AURE TV is not affiliated with Apple. Flux, YouTube and other names belong to
-their owners.
+AURE TV is not affiliated with Apple. Third-party product names belong to their
+owners.
