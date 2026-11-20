@@ -1,4 +1,4 @@
-package com.whatuneed.ovisiontv.kotlin.ui.components
+package com.whatuneed.ovisiontv.kotlin.core.designsystem
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

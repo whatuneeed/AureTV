@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `TvListRowSurface` лежит среди экранов | 0.5.69 (`core.designsystem`) |
 | `SectionGlyph` лежит среди экранов | 0.5.68 (`core.designsystem`) |
 | Разбор `Location` продублирован в 9 клиентах | 0.5.67 (общий `resolveRedirectUrl`) |
 | Отмена не прерывает чтение картинок | 0.5.66 (общий bounded-read + ensureActive) |
@@ -316,6 +317,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.69: Stage 5.2 — TvListRowSurface в core.designsystem
+
+- **Симптом.** Единая focus-поверхность строк жила в `ui.components`, хотя её используют Settings, Backup и Software Update.
+- **Что сделано.**
+  - `TvListRowSurface.kt` перемещён в `core/designsystem`, `package` обновлён.
+  - `TvListRowSurface` и `TV_LIST_ROW_HEIGHT` импортируются из нового пакета в трёх файлах.
+  - Геометрия, анимация и `internal`-видимость не менялись.
+- **Файлы.** `core/designsystem/TvListRowSurface.kt`, `BackupScreenParts.kt`, `SettingsRowCard.kt`, `SoftwareUpdateParts.kt`.
+- **Чего не делать.** Не менять `TV_LIST_ROW_*`: это общая геометрия трёх экранов. Не переносить сюда содержимое строк.
+- **Проверка.** `SettingsScreenTest` + `BackupScreenTest` + `SoftwareUpdateScreenTest` — **65/65**; один teardown-flake (`Activity never becomes DESTROYED`) прошёл при повторе **1/1** после перезапуска AVD. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.69 / vc142; **6 618 107 B**, SHA-256 **`0c956818354f1510e1b0127c8c3977a69e4cbbc91dfd0fc57c98183a634d70ec`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.68: Stage 5.1 — SectionGlyph в core.designsystem
 

@@ -192,6 +192,7 @@ Clean build, unit, connected, lint, release APK, regression checklist, фина�
 | Шаг | Файл | Из | В | Проверка |
 |---|---|---|---|---|
 | 5.1 | `SectionGlyph.kt` | `ui.components` | `core.designsystem` | compile, `ControlCenterTest` + `SetupScreenTest` 36/36 |
+| 5.2 | `TvListRowSurface.kt` | `ui.components` | `core.designsystem` | compile, Settings/Backup/Update 65/65 (1 teardown flake, repeat 1/1) |
 
 Правило: один файл за коммит, только `package` и импорты; поведение, `internal`-видимость и имена не меняются.
 

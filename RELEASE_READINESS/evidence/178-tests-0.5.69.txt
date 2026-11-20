@@ -1,0 +1,21 @@
+0.5.69 / vc142 — Stage 5.2 TvListRowSurface package move
+Date: 18.11.2026 Device: emulator-5554 (hume-tv API 34 x86 1920x1080)
+
+Changed: ui/components/TvListRowSurface.kt -> core/designsystem/TvListRowSurface.kt.
+Only package and imports changed; geometry constants, focus animation and internal
+visibility are untouched. Three referencing files updated.
+
+:app:compileDebugKotlin — BUILD SUCCESSFUL
+:app:compileDebugAndroidTestKotlin — BUILD SUCCESSFUL
+SettingsScreenTest + BackupScreenTest + SoftwareUpdateScreenTest — 65/65.
+One run hit the known teardown flake "Activity never becomes DESTROYED"; after an
+AVD restart the same test passed 1/1. Code was not changed between runs.
+:app:testDebugUnitTest — 569/569 passed
+:app:lintDebug — 0 errors / 15 warnings / 0 information
+:app:assembleRelease — BUILD SUCCESSFUL
+APK 6618107 B, sha256 0c956818354f1510e1b0127c8c3977a69e4cbbc91dfd0fc57c98183a634d70ec
+versionCode 142, versionName 0.5.69, v2, RU/EN 661.
+
+INSTALL CHECK
+ first cold start 904 ms, second 667 ms; pid alive, no FATAL EXCEPTION.
+Full connected suite was not repeated; this is a package-only change.

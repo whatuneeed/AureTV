@@ -37,8 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ui.components.TV_TOOL_LIST_WIDTH
-import com.whatuneed.ovisiontv.kotlin.ui.components.TV_LIST_ROW_HEIGHT
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvListRowSurface
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.TV_LIST_ROW_HEIGHT
+import com.whatuneed.ovisiontv.kotlin.core.designsystem.TvListRowSurface
 import com.whatuneed.ovisiontv.kotlin.update.UpdateError
 import com.whatuneed.ovisiontv.kotlin.update.UpdateRelease
 import com.whatuneed.ovisiontv.kotlin.update.UpdateState
