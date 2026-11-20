@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -14,7 +16,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.whatuneed.ovisiontv.kotlin.core.designsystem.SectionGlyph
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import kotlin.math.abs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,7 +72,6 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.TvResultRow
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvSearchField
 import com.whatuneed.ovisiontv.kotlin.ui.components.keysHeight
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberKeyLabels
-import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

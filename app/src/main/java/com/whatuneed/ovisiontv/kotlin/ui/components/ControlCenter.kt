@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui.components
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent

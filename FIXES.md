@@ -13,6 +13,7 @@
 
 | Симптом | Запись |
 |---|---|
+| `TvKeyRepeat` лежит среди экранов | 0.5.71 (`core.input`) |
 | Focus-light слой лежит среди экранов | 0.5.70 (`core.designsystem`) |
 | `TvListRowSurface` лежит среди экранов | 0.5.69 (`core.designsystem`) |
 | `SectionGlyph` лежит среди экранов | 0.5.68 (`core.designsystem`) |
@@ -318,6 +319,18 @@
 | После выдачи разрешения на установку нет кнопки «Install update» | 0.5.8 |
 
 ## Записи
+
+### 18.11.2026 — 0.5.71: Stage 5.4 — TvKeyRepeat в core.input
+
+- **Симптом.** Логика повтора D-pad клавиш жила в `ui.components` вместе с экранными компонентами.
+- **Что сделано.**
+  - `TvKeyRepeat.kt` перемещён в `core/input`, `package` обновлён.
+  - Импорты обновлены в Home, Settings, Setup, Folder, ControlCenter, PinPad, ProfilePicker, Search, TvKeyboard, TvMenu, WeatherCitySearch и тесте.
+  - Тайминги `REPEAT_DELAY_MS`/`REPEAT_INTERVAL_MS`/`STALE_MS` не менялись.
+- **Файлы.** `core/input/TvKeyRepeat.kt` + 12 файлов импортов.
+- **Чего не делать.** Не менять `isOneShot` и тайминги при переносе: от них зависят long-OK и повтор стрелок.
+- **Проверка.** `TvKeyRepeatTest` + `MainActivityInputTest` — **9/9**. Unit — **569/569**. Lint — **0 errors / 15 warnings / 0 information**.
+- **Артефакт.** 0.5.71 / vc144; **6 618 107 B**, SHA-256 **`0fde9cc40a43c429f85cd7a2f644dfd18462b0e486255a1150a9f727c6521cb1`**; v2, прежний сертификат; `release_check.py` PASS, RU/EN 661.
 
 ### 18.11.2026 — 0.5.70: Stage 5.3 — IconFocusLight в core.designsystem
 

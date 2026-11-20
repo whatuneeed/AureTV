@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -58,10 +60,8 @@ import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.ui.components.AppCard
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenu
 import com.whatuneed.ovisiontv.kotlin.ui.components.TvMenuEntry
-import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

@@ -1,4 +1,4 @@
-package com.whatuneed.ovisiontv.kotlin.ui.components
+package com.whatuneed.ovisiontv.kotlin.core.input
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect

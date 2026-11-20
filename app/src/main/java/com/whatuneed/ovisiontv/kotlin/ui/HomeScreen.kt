@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -49,7 +50,6 @@ import com.whatuneed.ovisiontv.kotlin.data.isSettingsTile
 import com.whatuneed.ovisiontv.kotlin.ui.components.shelfCardAnchor
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberClockText
 import com.whatuneed.ovisiontv.kotlin.ui.components.rememberNetworkKind
-import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryEngine
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoverySource

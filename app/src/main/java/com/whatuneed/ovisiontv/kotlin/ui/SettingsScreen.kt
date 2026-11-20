@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
@@ -194,12 +196,10 @@ import com.whatuneed.ovisiontv.kotlin.ui.components.PinPadOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverPreview
 import com.whatuneed.ovisiontv.kotlin.ui.components.SaverScreen
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientClockFormatLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientDimLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientModeLabel
 import com.whatuneed.ovisiontv.kotlin.ui.components.ambientSessionLabel
-import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import com.whatuneed.ovisiontv.kotlin.ui.components.saverThemeLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

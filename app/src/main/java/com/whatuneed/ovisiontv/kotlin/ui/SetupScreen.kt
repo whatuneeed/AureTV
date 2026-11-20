@@ -1,5 +1,7 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
+import com.whatuneed.ovisiontv.kotlin.core.input.rememberTvKeyRepeat
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -88,8 +90,6 @@ import com.whatuneed.ovisiontv.kotlin.data.Wallpaper
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
 import com.whatuneed.ovisiontv.kotlin.ui.components.ProfileAvatarPicker
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
-import com.whatuneed.ovisiontv.kotlin.ui.components.rememberTvKeyRepeat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

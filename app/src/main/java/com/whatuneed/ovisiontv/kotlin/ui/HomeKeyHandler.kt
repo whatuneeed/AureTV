@@ -1,5 +1,6 @@
 package com.whatuneed.ovisiontv.kotlin.ui
 
+import com.whatuneed.ovisiontv.kotlin.core.input.TvKeyRepeat
 import android.content.Context
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
@@ -12,7 +13,6 @@ import com.whatuneed.ovisiontv.kotlin.data.TvApp
 import com.whatuneed.ovisiontv.kotlin.data.isHiddenFolder
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryItem
 import com.whatuneed.ovisiontv.kotlin.discovery.DiscoveryRail
-import com.whatuneed.ovisiontv.kotlin.ui.components.TvKeyRepeat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
