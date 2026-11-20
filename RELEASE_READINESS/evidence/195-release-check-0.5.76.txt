@@ -1,0 +1,22 @@
+OVisionTV Launcher — release check 0.5.76 / vc149
+Date: 2026-11-20
+APK: C:\OpenCode Project\OVisionTV\OVisionTV_Kotlin\app\build\outputs\apk\release\app-release.apk
+Size: 6 640 067 bytes
+SHA-256: b1e4e92ef1aec316a81d26f6ac63ec005248f2eac5e6cd52be4a7ae9a8a86ef1
+
+Command:
+python tools/release_check.py --apksigner 'C:/Users/5518~1/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat'
+
+Result:
+ok    versionCode 149
+ok    versionName 0.5.76
+ok    applicationId com.whatuneed.ovisiontv.kotlin
+ok    minSdk 28
+ok    targetSdk 35
+ok    apksigner verify
+ok    APK Signature Scheme v2
+ok    signing certificate
+ok    RU/EN resource names (670 entries)
+
+Signing certificate:
+327a50453093b783e84b1f2645b03319477d89966ea6a653dab53d5a567d7b10

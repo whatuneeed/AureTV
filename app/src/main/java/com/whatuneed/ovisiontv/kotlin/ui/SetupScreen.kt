@@ -11,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -78,6 +79,7 @@ import com.whatuneed.ovisiontv.kotlin.R
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientMode
 import com.whatuneed.ovisiontv.kotlin.ambient.AmbientSettingsStore
 import com.whatuneed.ovisiontv.kotlin.data.AccessibilityStatus
+import com.whatuneed.ovisiontv.kotlin.data.AerialCatalog
 import com.whatuneed.ovisiontv.kotlin.data.ContentPreferences
 import com.whatuneed.ovisiontv.kotlin.data.DeviceFactsReader
 import com.whatuneed.ovisiontv.kotlin.data.LocalePreference
@@ -88,6 +90,7 @@ import com.whatuneed.ovisiontv.kotlin.data.SaverPreferences
 import com.whatuneed.ovisiontv.kotlin.data.SetupProgress
 import com.whatuneed.ovisiontv.kotlin.data.Wallpaper
 import com.whatuneed.ovisiontv.kotlin.data.WeatherPreferences
+import com.whatuneed.ovisiontv.kotlin.ui.components.AerialPreviewStore
 import com.whatuneed.ovisiontv.kotlin.ui.components.ProfileAvatarPicker
 import com.whatuneed.ovisiontv.kotlin.ui.components.RenameKeyboardOverlay
 import kotlinx.coroutines.Dispatchers
@@ -252,6 +255,19 @@ fun SetupScreen(
     var backdrop by remember { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(Unit) {
         backdrop = withContext(Dispatchers.IO) { Wallpaper.render(context, Wallpaper.DEFAULT) }
+    }
+
+    // The welcome page gets the tvOS-style moving wallpaper: real bundled
+    // Aerial frames, loaded locally, never a network request before the user
+    // has even chosen a language. Other pages keep the aurora field.
+    var aerialFrames by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        aerialFrames = withContext(Dispatchers.IO) {
+            runCatching {
+                setupWelcomeClips(AerialCatalog.load(context))
+                    .mapNotNull { clip -> AerialPreviewStore.load(context, clip.previewUrl) }
+            }.getOrDefault(emptyList())
+        }
     }
 
     // Which way the page slides in. Java pushed forward pages in from the right
@@ -610,15 +626,28 @@ fun SetupScreen(
         // a top-to-bottom 0x99 → 0x66 → 0xB3 (its `dim` view). The 0.5 alpha is
         // the page dim; both together are what keep white body text readable
         // over the brightest part of the field.
-        backdrop?.let { image ->
-            Image(
-                bitmap = image.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = BACKDROP_DIM },
-            )
+        Crossfade(
+            targetState = page == PAGE_WELCOME && aerialFrames.isNotEmpty(),
+            animationSpec = tween(if (reduceMotion) 0 else 900),
+            label = "setupBackdrop",
+        ) { aerial ->
+            if (aerial) {
+                // The aerial frame is photographic, so it carries its own
+                // contrast; the veils below already keep the copy readable.
+                // Dimming it again made the welcome screen look grey.
+                SetupAerialBackdrop(frames = aerialFrames, reduceMotion = reduceMotion)
+            } else {
+                backdrop?.let { image ->
+                    Image(
+                        bitmap = image.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = BACKDROP_DIM },
+                    )
+                }
+            }
         }
         Box(
             Modifier

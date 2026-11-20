@@ -1,0 +1,17 @@
+OVisionTV Launcher — test evidence 0.5.76 / vc149
+Date: 2026-11-20
+Device: hume-tv(AVD) API 34 x86 1920x1080
+
+Live welcome backdrop:
+- New SetupBackdropTest: 3/3.
+- SetupScreenTest: 27/27 (a first invocation found 0 tests because the debug
+  APK could not replace the release-signed install; the rerun after the normal
+  connected install path finished 27/27).
+- Full connected suite: 304/304, BUILD SUCCESSFUL in 7m 12s.
+- Unit: 581/581.
+- Lint: 0 errors, 15 warnings.
+
+Release APK:
+6 640 067 bytes
+SHA-256 b1e4e92ef1aec316a81d26f6ac63ec005248f2eac5e6cd52be4a7ae9a8a86ef1
+versionCode 149, versionName 0.5.76
