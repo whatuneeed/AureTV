@@ -2,7 +2,7 @@
 
 **A remote-first Android TV launcher with a tvOS-inspired Home, real Watch Next recommendations, Aerial ambience and local-first backup.**
 
-[Русская версия](README.ru.md) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[Русская версия](README.ru.md) · [Download AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 

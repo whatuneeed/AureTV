@@ -2,7 +2,7 @@
 
 **Лаунчер для Android TV, заточенный под пульт: Главная в духе tvOS, реальные рекомендации Watch Next, Aerial-заставка и локальные резервные копии.**
 
-[English version](README.md) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[English version](README.md) · [Скачать AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
