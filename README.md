@@ -2,7 +2,7 @@
 
 **A remote-first Android TV launcher with a tvOS-inspired Home, real Watch Next recommendations, Aerial ambience and local-first backup.**
 
-[Русская версия](README.ru.md) · [Download AURE TV 0.6.2](https://github.com/whatuneeed/AureTV/releases/latest) · [Interactive preview](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[Русская версия](README.ru.md) · [Download AURE TV 0.6.3](https://github.com/whatuneeed/AureTV/releases/latest) · [Interactive preview](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -144,11 +144,11 @@ The 0.6.1 artifact introduced this channel. Users still on 0.6.0 must install
 **Requirements:** Android TV 9 or newer (API 28+). A Google account is not
 required for the launcher itself.
 
-1. Download `AURE-TV-0.6.2.apk` from the GitHub release.
+1. Download `AURE-TV-0.6.3.apk` from the GitHub release.
 2. Install it over ADB:
 
    ```bash
-   adb install AURE-TV-0.6.2.apk
+   adb install AURE-TV-0.6.3.apk
    ```
 
    Or open the APK with a file manager on the TV and confirm the system
@@ -164,16 +164,16 @@ required for the launcher itself.
 
 ## Verification
 
-The 0.6.2 release was checked on the `hume-tv` Android TV emulator
+The 0.6.3 release was checked on the `hume-tv` Android TV emulator
 (API 34, x86, 1920×1080):
 
 | Check | Result |
 | --- | --- |
 | JVM unit tests | 588 / 588 |
-| Connected instrumentation tests | 305 / 305 on 0.6.2 |
-| Android lint | 0 errors, 17 warnings on 0.6.2 |
+| Connected instrumentation tests | 305 / 305 on 0.6.3 |
+| Android lint | 0 errors, 16 warnings on 0.6.3 |
 | Release APK | signed, APK Signature Scheme v2 |
-| Package / version | `app.aure.tv`, 0.6.2 (versionCode 156) |
+| Package / version | `app.aure.tv`, 0.6.3 (versionCode 157) |
 
 **Not yet verified on physical hardware:** real IR/BT remotes, HDMI-CEC,
 4K/HDR decoding on a real panel, TalkBack voice output, OEM file pickers and

@@ -1,40 +1,41 @@
-# GitHub release kit — AURE TV 0.6.2
+# GitHub release kit — AURE TV 0.6.3
 
-Материалы для страницы GitHub Release. Релиз **опубликован**, APK и checksums
-загружены, канал обновлений переключён на 0.6.2.
+Материалы для страницы GitHub Release. Версия подготовлена к публикации:
+APK собран, тесты пройдены, release gate пройден.
 
 ## Статус
 
-- Версия: **0.6.2**, `versionCode 156`.
-- APK: `AURE-TV-0.6.2.apk`, 6 961 038 байт.
-- SHA-256: `fb27b0902ed3bc8a04740d50916074b43e10785508e991a655e7bce031cde4e7`.
-- Подпись: APK Signature Scheme v2, тот же сертификат, что у 0.6.1.
-- Релиз: https://github.com/whatuneeed/AureTV/releases/tag/v0.6.2
-- Metadata: `docs/update.json` обновлён workflow до `versionCode 156`.
+- Версия: **0.6.3**, `versionCode 157`.
+- APK: `AURE-TV-0.6.3.apk`, 6 961 042 байта.
+- SHA-256: `762fec93a9313c3f76abcbeb2ae57cd7e2f5171cf645d92d5ecdaa3ca43d57d6`.
+- Подпись: APK Signature Scheme v2, тот же сертификат, что у 0.6.2.
+- Metadata: `docs/update.json` остаётся на 0.6.2 до создания релиза; workflow
+  `publish-update.yml` переключит его на 0.6.3 после публикации.
 
 ## Состав
 
 | Файл | Назначение |
 | --- | --- |
-| `RELEASE_NOTES_0.6.2.md` | текст релиза на английском |
-| `RELEASE_NOTES_0.6.2.ru.md` | текст релиза на русском |
+| `RELEASE_NOTES_0.6.3.md` | текст релиза на английском |
+| `RELEASE_NOTES_0.6.3.ru.md` | текст релиза на русском |
 | `screenshots/00-cover.png` | обложка AURE TV |
 | `screenshots/01…10*.jpg` | полноразмерные скриншоты 1920×1080 |
-| `AURE-TV-0.6.2.apk` | подготовленный подписанный APK (не в git) |
+| `AURE-TV-0.6.3.apk` | подготовленный подписанный APK (не в git) |
 | `CHECKSUMS.txt` | SHA-256 и имя актуального APK |
-| `CHECKSUMS-0.6.2.txt` | отдельная сумма для 0.6.2 |
-| `AURE-TV-0.6.2.apk.sha256` | та же сумма в формате `sha256sum` |
+| `CHECKSUMS-0.6.3.txt` | отдельная сумма для 0.6.3 |
+| `AURE-TV-0.6.3.apk.sha256` | та же сумма в формате `sha256sum` |
 
-`AURE-TV-0.6.1.apk`, `CHECKSUMS-0.6.1.txt` и release notes 0.6.1 остаются как
-история предыдущего релиза.
+`AURE-TV-0.6.0…0.6.2.apk` и их release notes остаются как история предыдущих
+релизов.
 
 ## Проверка перед публикацией
 
-1. Убедиться, что release gate прошёл для текущего APK.
-2. Тег `v0.6.2` и GitHub Release созданы, APK и `CHECKSUMS.txt` прикреплены.
-3. Workflow `publish-update.yml` обновил `docs/update.json` на 0.6.2
-   (`versionCode 156`).
+1. Release gate прошёл для текущего APK.
+2. Тег `v0.6.3` и GitHub Release созданы, APK и `CHECKSUMS.txt` прикреплены.
+3. Workflow `publish-update.yml` обновил `docs/update.json` на 0.6.3
+   (`versionCode 157`).
 4. Проверены HTTPS-скачивание APK, совпадение SHA-256 и metadata.
+5. Проверено обновление 0.6.2 → 0.6.3 через штатный экран обновления.
 
 ## Важно
 

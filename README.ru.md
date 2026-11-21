@@ -2,7 +2,7 @@
 
 **Лаунчер для Android TV, заточенный под пульт: Главная в духе tvOS, реальные рекомендации Watch Next, Aerial-заставка и локальные резервные копии.**
 
-[English version](README.md) · [Скачать AURE TV 0.6.2](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[English version](README.md) · [Скачать AURE TV 0.6.3](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -148,11 +148,11 @@ PackageInstaller — тихих обновлений нет.
 **Требования:** Android TV 9 или новее (API 28+). Для самого лаунчера аккаунт
 Google не нужен.
 
-1. Скачайте `AURE-TV-0.6.2.apk` из GitHub Release.
+1. Скачайте `AURE-TV-0.6.3.apk` из GitHub Release.
 2. Установите через ADB:
 
    ```bash
-   adb install AURE-TV-0.6.2.apk
+   adb install AURE-TV-0.6.3.apk
    ```
 
    Либо откройте APK файловым менеджером на телевизоре и подтвердите установку
@@ -168,16 +168,16 @@ Google не нужен.
 
 ## Проверка
 
-Релиз 0.6.2 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
+Релиз 0.6.3 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
 1920×1080):
 
 | Проверка | Результат |
 | --- | --- |
 | JVM unit-тесты | 588 / 588 |
-| Connected instrumentation | 305 / 305 на 0.6.2 |
-| Android lint | 0 ошибок, 17 предупреждений на 0.6.2 |
+| Connected instrumentation | 305 / 305 на 0.6.3 |
+| Android lint | 0 ошибок, 16 предупреждений на 0.6.3 |
 | Release APK | подписан, APK Signature Scheme v2 |
-| Пакет / версия | `app.aure.tv`, 0.6.2 (versionCode 156) |
+| Пакет / версия | `app.aure.tv`, 0.6.3 (versionCode 157) |
 
 **Не проверено на физическом железе:** реальные ИК/BT-пульты, HDMI-CEC,
 декодирование 4K/HDR на реальной панели, голос TalkBack, файловые пикеры

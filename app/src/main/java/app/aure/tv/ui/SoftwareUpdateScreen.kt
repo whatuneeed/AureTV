@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.aure.tv.core.designsystem.SectionGlyph
 import app.aure.tv.BuildConfig
 import app.aure.tv.R
@@ -65,6 +68,22 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     var notesOpen by rememberSaveable { mutableStateOf(false) }
     var downloadJob by remember { mutableStateOf<Job?>(null) }
     val kidsActive = remember(context) { KidsMode.isKids(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var permissionTick by remember { mutableIntStateOf(0) }
+
+    // The unknown-sources screen is a separate activity. When the user returns,
+    // PackageManager.canRequestPackageInstalls() has changed, but no update
+    // state did, so Compose would otherwise keep the old permission row.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) permissionTick++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val installPermissionGranted = remember(permissionTick, state.phase, state.error) {
+        manager.canInstall()
+    }
 
     LaunchedEffect(Unit) {
         if (!kidsActive) {
@@ -97,6 +116,10 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     }
 
     val release = state.available
+    val permissionReady = state.phase == UpdatePhase.FAILED &&
+        state.error == UpdateError.PERMISSION &&
+        installPermissionGranted
+    var installRowIndex = -1
     val rows = buildList {
         val currentRow = UpdateRow(
             title = stringResource(R.string.update_current),
@@ -282,16 +305,24 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
 
             UpdatePhase.FAILED -> {
                 val error = state.error
-                add(UpdateRow(errorTitle(error, state), destructive = error == UpdateError.SIGNATURE))
+                add(
+                    if (permissionReady) {
+                        UpdateRow(stringResource(R.string.update_ready))
+                    } else {
+                        UpdateRow(errorTitle(error, state), destructive = error == UpdateError.SIGNATURE)
+                    },
+                )
                 if (error == UpdateError.PERMISSION) {
-                    add(UpdateRow(stringResource(R.string.update_permission_hint)))
-                    add(
-                        UpdateRow(
-                            title = stringResource(R.string.update_permission_open),
-                            action = { manager.openInstallPermission() },
-                        ),
-                    )
-                    if (manager.apkFile()?.isFile == true && manager.canInstall()) {
+                    if (!permissionReady) {
+                        add(UpdateRow(stringResource(R.string.update_permission_hint)))
+                        add(
+                            UpdateRow(
+                                title = stringResource(R.string.update_permission_open),
+                                action = { manager.openInstallPermission() },
+                            ),
+                        )
+                    } else if (manager.apkFile()?.isFile == true) {
+                        installRowIndex = size
                         add(
                             UpdateRow(
                                 title = stringResource(R.string.update_install),
@@ -339,6 +370,11 @@ fun SoftwareUpdateScreen(onClose: () -> Unit) {
     LaunchedEffect(rows.size, state.phase) {
         if (focusIndex !in rows.indices || !rows[focusIndex].focusable) {
             focusIndex = rows.indexOfFirst { it.focusable }.coerceAtLeast(0)
+        }
+    }
+    LaunchedEffect(permissionReady, installRowIndex) {
+        if (permissionReady && installRowIndex in rows.indices) {
+            focusIndex = installRowIndex
         }
     }
 
