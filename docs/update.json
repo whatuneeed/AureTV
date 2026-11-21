@@ -1,30 +1,30 @@
 {
   "schema": 1,
   "channel": "stable",
-  "generatedAt": "2026-11-21T09:06:21Z",
-  "expiresAt": "2036-11-18T09:06:21Z",
+  "generatedAt": "2026-11-21T18:26:25Z",
+  "expiresAt": "2036-11-18T18:26:25Z",
   "releases": [
     {
-      "versionCode": 155,
-      "versionName": "0.6.1",
+      "versionCode": 156,
+      "versionName": "0.6.2",
       "channel": "stable",
-      "releaseDate": "2026-11-21T09:06:21Z",
+      "releaseDate": "2026-11-21T18:25:58Z",
       "minimumAndroidApi": 28,
       "minimumSupportedVersionCode": 0,
       "mandatory": false,
       "notes": {
         "ru": [
-          "Версия 0.6.1. Подробности — на странице релиза GitHub."
+          "Версия 0.6.2. Подробности — на странице релиза GitHub."
         ],
         "en": [
-          "Version 0.6.1. See the GitHub release page for details."
+          "Version 0.6.2. See the GitHub release page for details."
         ]
       },
       "assets": [
         {
           "abi": "universal",
-          "url": "https://github.com/whatuneeed/AureTV/releases/download/v0.6.1/AURE-TV-0.6.1.apk",
-          "sha256": "5f7ae0cc1d3aebb3942b0dfe8946612cf80320965f0806192c6a9d46948f74df",
+          "url": "https://github.com/whatuneeed/AureTV/releases/download/v0.6.2/AURE-TV-0.6.2.apk",
+          "sha256": "fb27b0902ed3bc8a04740d50916074b43e10785508e991a655e7bce031cde4e7",
           "sizeBytes": 6961038
         }
       ]
