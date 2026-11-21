@@ -4,118 +4,167 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>AURE TV — интерактивное превью</title>
-  <meta name="description" content="Интерактивное веб-превью лаунчера AURE TV для Android TV: Главная, полка рекомендаций, погода, поиск, настройки и Aerial-заставка.">
-  <meta name="theme-color" content="#070b14">
+  <meta name="description" content="Интерактивное браузерное демо лаунчера AURE TV для Android TV — не APK: Главная, полка Watch Next, погода, поиск, Control Center, настройки и Aerial.">
+  <meta name="theme-color" content="#000000">
   <meta property="og:title" content="AURE TV — интерактивное превью">
-  <meta property="og:description" content="Потыкайте в лаунчер AURE TV прямо в браузере: D-pad, полка, погода, настройки и Aerial.">
+  <meta property="og:description" content="Пульт, полка, погода, поиск, Control Center и Aerial прямо в браузере.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="assets/cover.jpg">
   <link rel="icon" href="assets/favicon.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
-    <div class="tv-frame">
-      <div id="homeView" class="home-view">
-        <section id="hero" class="hero" aria-label="Главная AURE TV">
-          <div class="hero-photo" aria-hidden="true"></div>
-          <div class="hero-tint" aria-hidden="true"></div>
-          <div class="hero-shade" aria-hidden="true"></div>
+  <div class="viewport">
+    <div class="stage" id="stage">
 
-          <header class="topbar">
-            <button class="weather-pill focusable" data-focusable data-action="weather" aria-label="Погода">
-              <span class="weather-glyph" aria-hidden="true">☁</span>
-              <span class="weather-copy">
-                <strong id="weatherTemp">4°</strong>
-                <small id="weatherCity">Москва</small>
-              </span>
-              <span class="weather-state" id="weatherState">Облачно</span>
-            </button>
-
-            <div class="top-actions">
-              <span class="preview-label" id="previewLabel">Интерактивное превью</span>
-              <button class="icon-button focusable" data-focusable data-action="search" aria-label="Поиск" title="Поиск (S)">
-                <span class="icon" aria-hidden="true">⌕</span>
-              </button>
-              <button class="status-pill focusable" data-focusable data-action="control" aria-label="Control Center" title="Control Center (C)">
-                <time id="clock">23:10</time>
-                <span class="status-net" aria-hidden="true">◔</span>
-                <span class="avatar" aria-hidden="true">☺</span>
-              </button>
-            </div>
-          </header>
-
-          <div class="hero-content">
-            <p class="hero-kicker" id="heroKicker">AURE ORIGINAL · ДЕМО</p>
-            <h1 id="heroTitle">Полночный горизонт</h1>
-            <p class="hero-meta" id="heroMeta">2026 · Сериал · 8 эпизодов</p>
-            <p class="hero-description" id="heroDescription">Тихий город на краю света просыпается после странного заката. Всё, что казалось знакомым, начинает меняться.</p>
-            <div class="hero-actions">
-              <button class="button primary focusable" data-focusable data-action="details" id="watchButton">Смотреть</button>
-              <button class="button ghost focusable" data-focusable data-action="details" id="infoButton">Подробнее</button>
-            </div>
-          </div>
-
-          <span class="hero-corner" id="heroCorner">01 / 06</span>
-        </section>
-
-        <section class="shelf" aria-labelledby="shelfHeading">
-          <div class="shelf-heading">
-            <div>
-              <p class="eyebrow" id="shelfKicker">Новое в приложении</p>
-              <h2 id="shelfHeading">Для вас</h2>
-            </div>
-            <span class="shelf-count" id="shelfCount">6</span>
-          </div>
-          <div id="rail" class="rail" role="list"></div>
-        </section>
-
-        <nav id="dock" class="dock" aria-label="Приложения"></nav>
-
-        <div class="home-foot">
-          <span class="foot-brand"><span class="brand-dot"></span>AURE TV</span>
-          <span class="foot-hint" id="homeHint">Стрелки — выбор · Enter — открыть · Esc — назад</span>
-          <span class="foot-version">0.6.0 · web preview</span>
+      <!-- HOME -->
+      <main class="home" id="home" aria-label="AURE TV">
+        <div class="hero" id="hero">
+          <div class="hero-art" id="heroArt" aria-hidden="true"></div>
+          <div class="hero-scrim" aria-hidden="true"></div>
         </div>
-      </div>
 
-      <section id="settingsView" class="settings-view" hidden aria-label="Настройки">
-        <header class="settings-head">
-          <button id="settingsBack" class="back-button focusable" data-focusable data-action="settings-back" aria-label="Назад">←</button>
-          <div>
-            <p class="eyebrow" id="settingsEyebrow">AURE TV</p>
-            <h1 id="settingsTitle">Настройки</h1>
+        <div class="top-chrome">
+          <button class="weather-capsule focusable" id="weatherCapsule" data-action="weather" aria-label="Погода">
+            <span class="weather-icon" aria-hidden="true">
+              <svg viewBox="0 0 44 44" fill="none">
+                <path d="M13 32.5h18.5a7.5 7.5 0 0 0 .2-15 11 11 0 0 0-20.8 2.3A6.4 6.4 0 0 0 13 32.5Z" fill="#E8EDF5"/>
+                <path d="M13.8 18.2a11 11 0 0 1 18.5-2.2 7.5 7.5 0 0 1 4.7 6.2H27.2a6.4 6.4 0 0 0-5.1-8.4 8.8 8.8 0 0 0-8.3 4.4Z" fill="#AAB4C4" opacity=".9"/>
+              </svg>
+            </span>
+            <span class="weather-temp" id="weatherTemp">4°</span>
+            <span class="weather-copy">
+              <span class="weather-place" id="weatherPlace">Москва</span>
+              <span class="weather-condition" id="weatherCondition">Облачно</span>
+            </span>
+          </button>
+
+          <button class="status-capsule focusable" id="statusCapsule" data-action="control" aria-label="Control Center">
+            <time class="status-clock" id="clock">23:10</time>
+            <span class="status-divider" aria-hidden="true"></span>
+            <span class="status-network" aria-hidden="true">
+              <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <path d="M4 13.5a22 22 0 0 1 28 0M9.5 20a14 14 0 0 1 17 0M14.2 26a7 7 0 0 1 7.6 0"/>
+                <circle cx="18" cy="31" r="1.1" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="status-avatar" aria-hidden="true">☺</span>
+          </button>
+        </div>
+
+        <h1 class="hero-title" id="heroTitle">Второй брак императрицы</h1>
+
+        <div class="shelf-layer" id="shelfLayer" hidden>
+          <p class="shelf-reason" id="shelfReason">Новое в приложении</p>
+          <h2 class="shelf-heading" id="shelfHeading">Для вас</h2>
+          <div class="shelf-rail" id="shelfRail"></div>
+        </div>
+
+        <div class="dock-layer" id="dockLayer">
+          <div class="dock-band" id="dockBand" aria-hidden="true"></div>
+          <div class="dock-tiles" id="dockTiles"></div>
+        </div>
+      </main>
+
+      <!-- CONTROL CENTER -->
+      <section class="control-screen" id="controlScreen" hidden aria-label="Control Center">
+        <div class="dim-layer"></div>
+        <button class="status-capsule promoted focusable" id="ccStatus" data-action="control" aria-label="Control Center">
+          <time class="status-clock" id="ccClock">23:10</time>
+          <span class="status-divider" aria-hidden="true"></span>
+          <span class="status-network" aria-hidden="true">
+            <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M4 13.5a22 22 0 0 1 28 0M9.5 20a14 14 0 0 1 17 0M14.2 26a7 7 0 0 1 7.6 0"/>
+              <circle cx="18" cy="31" r="1.1" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+        </button>
+        <div class="cc-panel">
+          <div class="cc-grid">
+            <div class="cc-left">
+              <button class="cc-power focusable" id="ccPower" data-cc="sleep">
+                <span class="cc-power-icon" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                    <path d="M24 7v17"/><path d="M13.2 13.2a17 17 0 1 0 21.6 0"/>
+                  </svg>
+                </span>
+                <span class="cc-power-label" id="ccSleepLabel">Сон</span>
+              </button>
+              <button class="cc-tile focusable" id="ccSound" data-cc="sound"></button>
+            </div>
+            <div class="cc-right" id="ccRight"></div>
           </div>
-          <span class="settings-version">0.6.0 · web preview</span>
-        </header>
-        <div class="settings-body">
-          <aside id="settingsNav" class="settings-nav" aria-label="Разделы настроек"></aside>
-          <div id="settingsPanel" class="settings-panel"></div>
+          <div class="cc-circles" id="ccCircles"></div>
         </div>
       </section>
 
-      <div id="overlayRoot" class="overlay" hidden>
-        <div class="overlay-backdrop" data-close="overlay"></div>
-        <div id="overlayCard" class="overlay-card" role="dialog" aria-modal="true"></div>
-      </div>
-
-      <section id="ambient" class="ambient" hidden aria-label="Aerial-заставка">
-        <div class="ambient-photo"></div>
-        <div class="ambient-shade"></div>
-        <div class="ambient-content">
-          <p class="ambient-kicker">AERIAL · AURE TV</p>
-          <time id="ambientClock" class="ambient-clock">23:10</time>
-          <div class="ambient-caption">
-            <h2 id="ambientTitle">Закат над городом</h2>
-            <p id="ambientHint">Нажмите любую клавишу, чтобы выйти</p>
-          </div>
-        </div>
-        <button id="ambientExit" class="ambient-exit focusable" data-focusable data-action="ambient-exit">Выйти</button>
+      <!-- WEATHER -->
+      <section class="weather-screen" id="weatherScreen" hidden aria-label="Погода">
+        <div class="dim-layer"></div>
+        <div class="weather-panel" id="weatherPanel"></div>
       </section>
 
-      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <!-- SEARCH -->
+      <section class="search-screen" id="searchScreen" hidden aria-label="Поиск">
+        <h1 class="screen-title search-title" id="searchTitle">Поиск</h1>
+        <div class="search-field" id="searchField">
+          <span class="search-query" id="searchQuery"></span><span class="search-caret" aria-hidden="true"></span>
+        </div>
+        <div class="keyboard-panel">
+          <div class="keyboard" id="keyboard"></div>
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="settings-screen" id="settingsScreen" hidden aria-label="Настройки">
+        <h1 class="screen-title settings-title" id="settingsTitle">Настройки</h1>
+        <button class="settings-icon focusable" id="settingsIcon" data-settings-back aria-label="Назад">
+          <img src="assets/settings-icon.jpg" alt="" draggable="false">
+        </button>
+        <div class="settings-list" id="settingsList"></div>
+        <div class="settings-page" id="settingsPage" hidden>
+          <h2 class="settings-page-title" id="settingsPageTitle"></h2>
+          <div class="settings-page-list" id="settingsPageList"></div>
+        </div>
+      </section>
+
+      <!-- AMBIENT -->
+      <section class="ambient-screen" id="ambientScreen" hidden aria-label="Aerial">
+        <img class="ambient-photo" src="assets/ambient.jpg" alt="">
+        <div class="ambient-shade" aria-hidden="true"></div>
+        <div class="ambient-caption">
+          <strong id="ambientTitle">Вид сверху на фьорд в Исландии</strong>
+          <span id="ambientSubtitle">Пейзажи</span>
+        </div>
+      </section>
+
+      <!-- ONLINE INFO -->
+      <section class="detail-screen" id="detailScreen" hidden aria-label="Информация">
+        <div class="detail-art" id="detailArt" aria-hidden="true"></div>
+        <div class="detail-shade" aria-hidden="true"></div>
+        <div class="detail-copy">
+          <p class="detail-about" id="detailAbout">О фильме</p>
+          <h1 class="detail-title" id="detailTitle"></h1>
+          <p class="detail-meta" id="detailMeta"></p>
+          <p class="detail-synopsis" id="detailSynopsis"></p>
+          <p class="detail-source" id="detailSource">Информация</p>
+        </div>
+      </section>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
   </div>
+
+  <div class="preview-help" id="previewHelp" aria-hidden="true">
+    <span>↑ ↓ ← → · Enter · Esc</span>
+    <span><b>S</b> поиск</span>
+    <span><b>C</b> Control Center</span>
+    <span><b>A</b> Aerial</span>
+    <span class="preview-note">Браузерное демо · не APK</span>
+    <button id="langToggle" type="button">EN</button>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
