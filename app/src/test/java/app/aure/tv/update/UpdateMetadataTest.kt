@@ -3,6 +3,7 @@ package app.aure.tv.update
 import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -141,6 +142,16 @@ class UpdateMetadataTest {
         releases.put(releases.getJSONObject(0))
         assertTrue(UpdateMetadataParser.parse(root.toString(), UpdateChannel.STABLE, hosts, now)
             is UpdateMetadataResult.Failure)
+    }
+
+    @Test
+    fun theDefaultReleaseChannelIsHttpsGithubPages() {
+        val metadataUrl = app.aure.tv.BuildConfig.UPDATE_METADATA_URL
+        val uri = UpdateUrlPolicy.parse(metadataUrl)
+        assertNotNull(uri)
+        assertEquals("whatuneeed.github.io", uri!!.host)
+        assertTrue(UpdateUrlPolicy.isAllowedMetadata(metadataUrl, setOf(uri.host)))
+        assertTrue("github.com" in UpdateUrlPolicy.allowedAssetHosts(metadataUrl))
     }
 
     @Test

@@ -16,10 +16,10 @@ class PrivacyPolicyTextTest {
 
     @Test
     fun thePolicyCarriesAVersionAndDate() {
-        assertTrue(en.contains("Policy version 11"))
-        assertTrue(ru.contains("Версия политики 11"))
-        assertTrue(en.contains("2026-11-18"))
-        assertTrue(ru.contains("18.11.2026"))
+        assertTrue(en.contains("Policy version 12"))
+        assertTrue(ru.contains("Версия политики 12"))
+        assertTrue(en.contains("2026-11-21"))
+        assertTrue(ru.contains("21.11.2026"))
     }
 
     @Test
@@ -42,6 +42,8 @@ class PrivacyPolicyTextTest {
             "github.com",
             "objects.githubusercontent.com",
             "release-assets.githubusercontent.com",
+            "github-releases.githubusercontent.com",
+            "whatuneeed.github.io",
         )
         hosts.forEach { host ->
             assertTrue("EN policy omits $host", en.contains(host))

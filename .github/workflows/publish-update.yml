@@ -1,0 +1,92 @@
+name: Publish update metadata
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (empty = latest published release)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-metadata
+  cancel-in-progress: true
+
+jobs:
+  metadata:
+    name: Generate docs/update.json from the release APK
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && !github.event.release.prerelease)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install build tools
+        run: sdkmanager 'build-tools;35.0.0'
+
+      - name: Download the latest APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG:-${INPUT_TAG:-}}"
+          if [ -z "$tag" ]; then
+            tag="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)"
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          mkdir -p dist
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir dist --clobber
+          apk="$(find dist -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          if [ -z "$apk" ]; then
+            echo "No APK asset on release $tag" >&2
+            exit 1
+          fi
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          echo "APK_NAME=$(basename "$apk")" >> "$GITHUB_ENV"
+          echo "ASSET_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/$(basename "$apk")" >> "$GITHUB_ENV"
+
+      - name: Write update metadata
+        env:
+          RELEASE_DATE: ${{ github.event.release.published_at }}
+        run: |
+          set -euo pipefail
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort | tail -n 1)"
+          version="${TAG#v}"
+          python tools/update_metadata.py \
+            --apk "$APK" \
+            --url "$ASSET_URL" \
+            --output docs/update.json \
+            --aapt "$aapt" \
+            --release-date "${RELEASE_DATE:-}" \
+            --notes-ru "Версия ${version}. Подробности — на странице релиза GitHub." \
+            --notes-en "Version ${version}. See the GitHub release page for details."
+
+      - name: Commit the new metadata
+        run: |
+          set -euo pipefail
+          git config user.name "AURE TV Release"
+          git config user.email "release@aure.tv"
+          git add docs/update.json
+          if git diff --cached --quiet; then
+            echo "Metadata is unchanged"
+            exit 0
+          fi
+          git commit -m "docs: update release channel for ${TAG}"
+          git push origin HEAD:master

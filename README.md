@@ -125,10 +125,16 @@ the shelf stays empty instead of showing placeholder cards.
 
 ### Updates
 
-The updater is optional. It reads a release-metadata URL supplied at build time
-and uses Android's PackageInstaller for the final confirmation. The current
-0.6.0 artifact has no update channel configured, so update checks report that
-no source is available. Installing a newer APK from GitHub Releases remains
+Builds from 0.6.1 onward check the signed release metadata at
+`https://whatuneeed.github.io/AureTV/update.json`. The
+`.github/workflows/publish-update.yml` workflow regenerates that file from the
+APK attached to a published GitHub release, and GitHub Pages serves it. The
+launcher downloads only over HTTPS from the allowed GitHub hosts, verifies
+SHA-256, and delegates the final step to Android's PackageInstaller; updates are
+never silent.
+
+The published 0.6.0 artifact predates this channel, so it reports that no source
+is configured. Installing a newer APK from GitHub Releases manually remains
 possible.
 
 ## Install

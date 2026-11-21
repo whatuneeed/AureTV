@@ -18,10 +18,11 @@ val signingProperties = Properties().apply {
     if (signingPropertiesFile.isFile) signingPropertiesFile.inputStream().use { load(it) }
 }
 
-// Empty means the in-app updater is honestly disabled until the owner
-// publishes the GitHub metadata page. The value must be HTTPS; the code
-// revalidates it before every request.
-val updateMetadataUrl = System.getenv("OVISIONTV_UPDATE_URL")?.trim().orEmpty()
+// GitHub Pages is the public release channel. The release workflow rewrites
+// docs/update.json for every published APK; this build-time override exists
+// only so a fork or a local test can point at another HTTPS metadata endpoint.
+val updateMetadataUrl = System.getenv("OVISIONTV_UPDATE_URL")?.trim()
+    ?: "https://whatuneeed.github.io/AureTV/update.json"
 
 composeCompiler {
     // Compose 2.0 can write per-composable metrics; keep them out of the APK
@@ -40,8 +41,8 @@ android {
         targetSdk = 35
         // versionCode grows with every build shared outside this machine;
         // versionName names the batch of changes the build contains.
-        versionCode = 154
-        versionName = "0.6.0"
+        versionCode = 155
+        versionName = "0.6.1"
         buildConfigField(
             "String",
             "UPDATE_METADATA_URL",
