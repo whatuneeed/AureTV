@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "channel": "stable",
+  "generatedAt": "2026-11-21T02:19:06Z",
+  "expiresAt": "2036-11-18T02:19:06Z",
+  "releases": [
+    {
+      "versionCode": 154,
+      "versionName": "0.6.0",
+      "channel": "stable",
+      "releaseDate": "2026-11-20T23:26:22Z",
+      "minimumAndroidApi": 28,
+      "minimumSupportedVersionCode": 0,
+      "mandatory": false,
+      "notes": {
+        "ru": [
+          "Первый публичный выпуск AURE TV."
+        ],
+        "en": [
+          "First public AURE TV release."
+        ]
+      },
+      "assets": [
+        {
+          "abi": "universal",
+          "url": "https://github.com/whatuneeed/AureTV/releases/download/v0.6.0/AURE-TV-0.6.0.apk",
+          "sha256": "df6b96724c3feeef1d6025fc5046a0c890cedacbd89adba04ca5f266639b120a",
+          "sizeBytes": 6960986
+        }
+      ]
+    }
+  ]
+}

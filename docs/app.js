@@ -6,9 +6,13 @@
   function syncDocumentLanguage() {
     document.documentElement.lang = state.lang;
     document.title = state.lang === "ru" ? "AURE TV — интерактивное превью" : "AURE TV — interactive preview";
+    document.querySelectorAll("[data-ru][data-en]").forEach((node) => {
+      node.textContent = node.dataset[state.lang] || node.dataset.ru;
+    });
   }
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const stage = $("#stage");
+  const tvFrame = $("#tvFrame");
 
   const STR = {
     ru: {
@@ -197,7 +201,10 @@
   }
 
   function applyScale() {
-    const scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+    const frame = tvFrame || stage.parentElement;
+    const width = frame.clientWidth || innerWidth;
+    const height = frame.clientHeight || innerHeight;
+    const scale = Math.max(0.1, Math.min(width / 1920, height / 1080));
     stage.style.setProperty("--scale", String(scale));
     stage.dataset.scale = String(scale);
   }
@@ -1027,8 +1034,57 @@
     }
   }
 
+  function remoteHome() {
+    if (state.mode === "detail") {
+      closeDetails();
+      closeShelf();
+    } else if (state.mode === "shelf") {
+      closeShelf();
+    } else if (state.mode === "control") {
+      closeControl();
+    } else if (state.mode === "weather") {
+      closeWeather();
+    } else if (state.mode === "search") {
+      closeSearch();
+    } else if (state.mode === "settings") {
+      closeSettings();
+    } else if (state.mode === "ambient") {
+      closeAmbient();
+    } else {
+      focusDock(state.dockIndex);
+    }
+  }
+
+  function remoteAction(action) {
+    if (action === "home") {
+      remoteHome();
+    } else if (action === "power") {
+      showToast(state.lang === "ru" ? "Питание — только в демо" : "Power is demo-only");
+    } else if (action === "volume-up" || action === "volume-down") {
+      showToast(t("volume"));
+    }
+  }
+
+  function bindRemote() {
+    $$("[data-remote-key]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const key = button.dataset.remoteKey;
+        button.blur();
+        document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      });
+    });
+    $$("[data-remote-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.remoteAction;
+        button.blur();
+        remoteAction(action);
+      });
+    });
+  }
+
   function bind() {
     document.addEventListener("keydown", handleKeyDown);
+    bindRemote();
     $("#previewHelp").querySelector("#langToggle").addEventListener("click", () => {
       state.lang = state.lang === "ru" ? "en" : "ru";
       saveState(); renderHome(); updateClock();

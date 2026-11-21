@@ -15,7 +15,8 @@
 </head>
 <body>
   <div class="viewport">
-    <div class="stage" id="stage">
+    <div class="tv-frame" id="tvFrame">
+      <div class="stage" id="stage">
 
       <!-- HOME -->
       <main class="home" id="home" aria-label="AURE TV">
@@ -153,7 +154,68 @@
       </section>
 
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
     </div>
+
+    <aside class="remote-rail" aria-label="Пульт и управление">
+      <div class="remote" role="group" aria-label="Пульт AURE TV">
+        <div class="remote-head">
+          <span class="remote-brand">AURE TV</span>
+          <button class="remote-btn remote-power" type="button" data-remote-action="power" aria-label="Питание">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>
+          </button>
+        </div>
+
+        <div class="remote-dpad" role="group" aria-label="Навигация">
+          <button class="dpad up" type="button" data-remote-key="ArrowUp" aria-label="Вверх"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg></button>
+          <button class="dpad left" type="button" data-remote-key="ArrowLeft" aria-label="Влево"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+          <button class="dpad ok" type="button" data-remote-key="Enter" aria-label="OK">OK</button>
+          <button class="dpad right" type="button" data-remote-key="ArrowRight" aria-label="Вправо"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+          <button class="dpad down" type="button" data-remote-key="ArrowDown" aria-label="Вниз"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        </div>
+
+        <div class="remote-row">
+          <button type="button" data-remote-key="Escape" aria-label="Назад">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/></svg>
+            <span data-ru="Назад" data-en="Back">Назад</span>
+          </button>
+          <button type="button" data-remote-action="home" aria-label="Главная">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+            <span data-ru="Дом" data-en="Home">Дом</span>
+          </button>
+        </div>
+
+        <div class="remote-rocker" role="group" aria-label="Громкость">
+          <button type="button" data-remote-action="volume-down" aria-label="Тише">−</button>
+          <span data-ru="Громкость" data-en="Volume">Громкость</span>
+          <button type="button" data-remote-action="volume-up" aria-label="Громче">+</button>
+        </div>
+
+        <div class="remote-shortcuts" role="group" aria-label="Быстрые действия">
+          <button type="button" data-remote-key="c" aria-label="Control Center" title="Control Center"><span>CC</span></button>
+          <button type="button" data-remote-key="s" aria-label="Поиск" title="Поиск"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
+          <button type="button" data-remote-key="a" aria-label="Aerial" title="Aerial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m4 18 6-6 4 4 2-2 4 4"/></svg></button>
+          <button type="button" data-remote-key="l" aria-label="Русский / English" title="Русский / English"><span>RU</span></button>
+        </div>
+      </div>
+
+      <div class="remote-legend" aria-labelledby="remoteTitle">
+        <span class="remote-eyebrow">AURE TV · PREVIEW</span>
+        <h2 id="remoteTitle" data-ru="Управление" data-en="Controls">Управление</h2>
+        <p class="remote-intro" data-ru="Пульт кликабельный: кнопки делают то же, что клавиатура." data-en="The remote is clickable: its buttons do the same as the keyboard.">Пульт кликабельный: кнопки делают то же, что клавиатура.</p>
+        <ul class="remote-list">
+          <li><kbd>← ↑ ↓ →</kbd><span data-ru="Двигаться по экрану" data-en="Move through the screen">Двигаться по экрану</span></li>
+          <li><kbd>Enter</kbd><span data-ru="Открыть / выбрать" data-en="Open / select">Открыть / выбрать</span></li>
+          <li><kbd>Esc</kbd><span data-ru="Назад" data-en="Back">Назад</span></li>
+          <li><kbd>S</kbd><span data-ru="Поиск" data-en="Search">Поиск</span></li>
+          <li><kbd>C</kbd><span data-ru="Control Center" data-en="Control Center">Control Center</span></li>
+          <li><kbd>A</kbd><span data-ru="Aerial" data-en="Aerial">Aerial</span></li>
+          <li><kbd>L</kbd><span data-ru="Русский / English" data-en="Russian / English">Русский / English</span></li>
+          <li><kbd>H</kbd><span data-ru="Помощь" data-en="Help">Помощь</span></li>
+        </ul>
+        <p class="remote-note" data-ru="Состояние хранится только в браузере. Это демо, не установочный APK." data-en="State stays in the browser only. This is a demo, not the installable APK.">Состояние хранится только в браузере. Это демо, не установочный APK.</p>
+      </div>
+    </aside>
   </div>
 
   <div class="preview-help" id="previewHelp" aria-hidden="true">

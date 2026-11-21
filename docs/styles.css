@@ -61,10 +61,20 @@ img { display: block; }
 .viewport {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 2vw, 34px);
+  padding: clamp(14px, 2.2vh, 28px) clamp(14px, 2vw, 30px);
   overflow: hidden;
   background: #000;
+}
+.tv-frame {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 .stage {
   position: absolute;
@@ -302,18 +312,11 @@ img { display: block; }
 }
 .dock-tile.is-focused {
   transform: scale(1.224);
-  box-shadow: 0 0 0 4px #fff, 0 20px 34px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.28);
   z-index: 3;
 }
 .dock-tile.is-focused::before { opacity: 1; background: rgba(255, 255, 255, 0.24); }
-.dock-tile.is-focused::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 0 4px #fff;
-  z-index: 4;
-}
+.dock-tile.is-focused::after { content: none; }
 .dock-label {
   position: absolute;
   top: 996px;
@@ -875,4 +878,321 @@ img { display: block; }
 .detail-source {
   margin: 14px 0 0; color: rgba(255,255,255,.55);
   font-size: 20px; line-height: 26px;
+}
+
+/* ---------- REMOTE + CONTROLS ---------- */
+.remote-rail {
+  flex: 0 0 clamp(232px, 18vw, 304px);
+  width: clamp(232px, 18vw, 304px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 2px;
+}
+.remote-rail::-webkit-scrollbar { display: none; }
+.remote {
+  position: relative;
+  width: 100%;
+  max-width: 278px;
+  margin: 0 auto;
+  padding: 16px 16px 15px;
+  border-radius: 36px;
+  background: linear-gradient(155deg, #29292f 0%, #17171b 48%, #0d0d10 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.remote::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 29px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  pointer-events: none;
+}
+.remote-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px 12px;
+}
+.remote-brand {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+.remote-btn {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(180deg, #25252b, #18181c);
+  color: #fff;
+  box-shadow: 0 3px 0 #08080a, 0 6px 12px rgba(0, 0, 0, 0.28);
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.remote-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #08080a; }
+.remote-power {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--accent);
+}
+.remote-power svg { width: 17px; height: 17px; }
+.remote-power:hover { background: var(--accent); color: #180b08; }
+.remote-dpad {
+  position: relative;
+  width: min(174px, 78%);
+  aspect-ratio: 1;
+  margin: 0 auto 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #202026 0%, #111114 72%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 8px 18px rgba(0, 0, 0, 0.62), 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.remote-dpad::after {
+  content: "";
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+.dpad {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.86);
+  transition: background 120ms ease, color 120ms ease;
+}
+.dpad:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.dpad:active { background: rgba(255, 255, 255, 0.14); }
+.dpad svg { width: 22px; height: 22px; }
+.dpad.up { grid-area: 1 / 2; }
+.dpad.left { grid-area: 2 / 1; }
+.dpad.ok {
+  grid-area: 2 / 2;
+  width: 56px;
+  height: 56px;
+  place-self: center;
+  background: #f5f5f7;
+  color: #111114;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  box-shadow: 0 3px 0 #aaaab1, 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.dpad.ok:hover { background: #fff; color: #111114; }
+.dpad.ok:active { transform: translateY(2px); box-shadow: 0 1px 0 #aaaab1; }
+.dpad.right { grid-area: 2 / 3; }
+.dpad.down { grid-area: 3 / 2; }
+.remote-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.remote-row button {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, #24242a, #17171b);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 500;
+  box-shadow: 0 3px 0 #08080a;
+}
+.remote-row button:hover { background: #2b2b32; color: #fff; }
+.remote-row button:active { transform: translateY(2px); box-shadow: 0 1px 0 #08080a; }
+.remote-row svg { width: 16px; height: 16px; }
+.remote-rocker {
+  display: grid;
+  grid-template-columns: 38px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.remote-rocker button {
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: linear-gradient(180deg, #24242a, #17171b);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: 0 3px 0 #08080a;
+}
+.remote-rocker button:hover { background: #2b2b32; color: #fff; }
+.remote-rocker button:active { transform: translateY(2px); box-shadow: 0 1px 0 #08080a; }
+.remote-rocker span {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.remote-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.remote-shortcuts button {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(180deg, #24242a, #17171b);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: 0 3px 0 #08080a;
+}
+.remote-shortcuts button:hover { background: #2d2d35; color: #fff; }
+.remote-shortcuts button:active { transform: translateY(2px); box-shadow: 0 1px 0 #08080a; }
+.remote-shortcuts svg { width: 18px; height: 18px; }
+.remote-legend {
+  width: 100%;
+  max-width: 304px;
+  margin: 0 auto;
+  padding: 0 4px;
+}
+.remote-eyebrow {
+  display: block;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+.remote-legend h2 {
+  margin: 3px 0 7px;
+  color: #fff;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.remote-intro {
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  line-height: 17px;
+}
+.remote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.remote-list li {
+  display: grid;
+  grid-template-columns: 94px 1fr;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 15px;
+}
+.remote-list kbd {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: #1b1b20;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.remote-note {
+  margin: 14px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+@media (max-height: 860px) and (min-width: 981px) {
+  .remote-rail { gap: 10px; }
+  .remote { max-width: 242px; padding: 12px 13px 12px; border-radius: 30px; }
+  .remote::before { inset: 5px; border-radius: 25px; }
+  .remote-head { padding-bottom: 8px; }
+  .remote-power { width: 32px; height: 32px; }
+  .remote-dpad { width: 136px; margin-bottom: 9px; }
+  .dpad svg { width: 18px; height: 18px; }
+  .dpad.ok { width: 44px; height: 44px; font-size: 11px; }
+  .remote-row { margin-bottom: 7px; }
+  .remote-row button { height: 32px; font-size: 11px; }
+  .remote-rocker { display: none; }
+  .remote-shortcuts button { font-size: 9px; }
+  .remote-shortcuts svg { width: 16px; height: 16px; }
+  .remote-legend h2 { font-size: 20px; line-height: 24px; }
+  .remote-intro { font-size: 11px; line-height: 15px; margin-bottom: 9px; }
+  .remote-list { gap: 5px; }
+  .remote-list li { grid-template-columns: 84px 1fr; font-size: 11px; line-height: 14px; }
+  .remote-list kbd { min-height: 21px; font-size: 9px; }
+  .remote-note { margin-top: 9px; padding-top: 8px; font-size: 9px; line-height: 13px; }
+}
+
+@media (max-width: 980px) {
+  .viewport {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    gap: 14px;
+    padding: 12px;
+  }
+  .tv-frame {
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .remote-rail {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: none;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 18px;
+    overflow: visible;
+    padding-bottom: 18px;
+  }
+  .remote { flex: 0 0 232px; margin: 0; }
+  .remote-legend { flex: 1 1 260px; max-width: 360px; margin: 0; }
+}
+
+@media (max-width: 620px) {
+  .remote-rail { flex-direction: column; align-items: center; }
+  .remote { flex: 0 0 auto; max-width: 250px; }
+  .remote-legend { flex: 0 0 auto; width: 100%; max-width: 300px; }
 }
