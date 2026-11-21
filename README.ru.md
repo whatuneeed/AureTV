@@ -2,7 +2,7 @@
 
 **Лаунчер для Android TV, заточенный под пульт: Главная в духе tvOS, реальные рекомендации Watch Next, Aerial-заставка и локальные резервные копии.**
 
-[English version](README.md) · [Скачать AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[English version](README.md) · [Скачать AURE TV 0.6.1](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -137,20 +137,20 @@ AURE TV — это Главная, а не ещё один каталог стр
 SHA-256 и передаёт финальную установку системному PackageInstaller — тихих
 обновлений нет.
 
-Опубликованный артефакт 0.6.0 выпущен до появления этого канала, поэтому он
-сообщает об отсутствии источника. Установить новый APK из GitHub Releases
-вручную по-прежнему можно.
+Артефакт 0.6.1 — первая сборка с этим каналом. Её нужно один раз установить
+вручную; после этого новые версии ставятся из
+**«Настройки → Устройство → Обновление ПО»** не выходя из лаунчера.
 
 ## Установка
 
 **Требования:** Android TV 9 или новее (API 28+). Для самого лаунчера аккаунт
 Google не нужен.
 
-1. Скачайте `AURE-TV-0.6.0.apk` из GitHub Release.
+1. Скачайте `AURE-TV-0.6.1.apk` из GitHub Release.
 2. Установите через ADB:
 
    ```bash
-   adb install AURE-TV-0.6.0.apk
+   adb install AURE-TV-0.6.1.apk
    ```
 
    Либо откройте APK файловым менеджером на телевизоре и подтвердите установку
@@ -166,16 +166,16 @@ Google не нужен.
 
 ## Проверка
 
-Релиз-кандидат 0.6.0 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
+Релиз 0.6.1 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
 1920×1080):
 
 | Проверка | Результат |
 | --- | --- |
-| JVM unit-тесты | 582 / 582 |
-| Connected instrumentation | 305 / 305 |
-| Android lint | 0 ошибок, 17 предупреждений |
+| JVM unit-тесты | 583 / 583 |
+| Connected instrumentation | 305 / 305 на 0.6.0; для 0.6.1 не перезапускались |
+| Android lint | 0 ошибок, 17 предупреждений на 0.6.0 |
 | Release APK | подписан, APK Signature Scheme v2 |
-| Пакет / версия | `app.aure.tv`, 0.6.0 (versionCode 154) |
+| Пакет / версия | `app.aure.tv`, 0.6.1 (versionCode 155) |
 
 **Не проверено на физическом железе:** реальные ИК/BT-пульты, HDMI-CEC,
 декодирование 4K/HDR на реальной панели, голос TalkBack, файловые пикеры

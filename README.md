@@ -2,7 +2,7 @@
 
 **A remote-first Android TV launcher with a tvOS-inspired Home, real Watch Next recommendations, Aerial ambience and local-first backup.**
 
-[Русская версия](README.ru.md) · [Download AURE TV 0.6.0](https://github.com/whatuneeed/AureTV/releases/latest) · [Interactive preview](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[Русская версия](README.ru.md) · [Download AURE TV 0.6.1](https://github.com/whatuneeed/AureTV/releases/latest) · [Interactive preview](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -133,20 +133,20 @@ launcher downloads only over HTTPS from the allowed GitHub hosts, verifies
 SHA-256, and delegates the final step to Android's PackageInstaller; updates are
 never silent.
 
-The published 0.6.0 artifact predates this channel, so it reports that no source
-is configured. Installing a newer APK from GitHub Releases manually remains
-possible.
+The 0.6.1 artifact is the first build with this channel. It must be installed
+manually once; after that, newer releases can be installed from
+**Settings → Device → Software Update** without leaving the launcher.
 
 ## Install
 
 **Requirements:** Android TV 9 or newer (API 28+). A Google account is not
 required for the launcher itself.
 
-1. Download `AURE-TV-0.6.0.apk` from the GitHub release.
+1. Download `AURE-TV-0.6.1.apk` from the GitHub release.
 2. Install it over ADB:
 
    ```bash
-   adb install AURE-TV-0.6.0.apk
+   adb install AURE-TV-0.6.1.apk
    ```
 
    Or open the APK with a file manager on the TV and confirm the system
@@ -162,16 +162,16 @@ required for the launcher itself.
 
 ## Verification
 
-The 0.6.0 release candidate was checked on the `hume-tv` Android TV emulator
+The 0.6.1 release was checked on the `hume-tv` Android TV emulator
 (API 34, x86, 1920×1080):
 
 | Check | Result |
 | --- | --- |
-| JVM unit tests | 582 / 582 |
-| Connected instrumentation tests | 305 / 305 |
-| Android lint | 0 errors, 17 warnings |
+| JVM unit tests | 583 / 583 |
+| Connected instrumentation tests | 305 / 305 on 0.6.0; not re-run for 0.6.1 |
+| Android lint | 0 errors, 17 warnings on 0.6.0 |
 | Release APK | signed, APK Signature Scheme v2 |
-| Package / version | `app.aure.tv`, 0.6.0 (versionCode 154) |
+| Package / version | `app.aure.tv`, 0.6.1 (versionCode 155) |
 
 **Not yet verified on physical hardware:** real IR/BT remotes, HDMI-CEC,
 4K/HDR decoding on a real panel, TalkBack voice output, OEM file pickers and
