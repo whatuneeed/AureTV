@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import app.aure.tv.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -156,6 +157,7 @@ internal class BackupManager(private val context: Context) {
                 journal.clear()
                 outcome
             } catch (error: Throwable) {
+                val cancelled = error is kotlinx.coroutines.CancellationException
                 journal.write(
                     RestoreJournalState(
                         state = "failed",
@@ -164,10 +166,17 @@ internal class BackupManager(private val context: Context) {
                         startedAt = startedAt,
                     ),
                 )
-                val rolledBack = runCatching {
-                    rollbackTo(preRestore.info.backupId)
+                // A cancelled restore may have written part of the selection.
+                // Roll back under NonCancellable so the cancellation cannot
+                // abort the rollback itself, then preserve the cancellation.
+                val rolledBack = withContext(NonCancellable) {
+                    runCatching { rollbackTo(preRestore.info.backupId) }
                 }
                 if (rolledBack.isFailure) {
+                    if (cancelled) {
+                        rolledBack.exceptionOrNull()?.let(error::addSuppressed)
+                        throw error
+                    }
                     throw BackupException(
                         BackupStage.RESTORE,
                         "restore failed and rollback also failed; the pre-restore copy is kept",
@@ -183,6 +192,7 @@ internal class BackupManager(private val context: Context) {
                     ),
                 )
                 journal.clear()
+                if (cancelled) throw error
                 throw BackupException(
                     BackupStage.RESTORE,
                     "restore failed; the previous data was restored",

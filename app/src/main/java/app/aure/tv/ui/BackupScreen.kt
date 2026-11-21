@@ -45,6 +45,7 @@ import app.aure.tv.backup.BackupScheduler
 import app.aure.tv.backup.BackupSelection
 import app.aure.tv.backup.BackupStage
 import app.aure.tv.backup.BackupTrigger
+import app.aure.tv.backup.rethrowIfCancellation
 import app.aure.tv.data.WeatherPreferences
 import app.aure.tv.data.findActivity
 import kotlinx.coroutines.launch
@@ -149,6 +150,7 @@ fun BackupScreen(onClose: () -> Unit) {
                 )
                 refresh()
             } catch (error: Throwable) {
+                error.rethrowIfCancellation()
                 fail(BackupStage.IO, error)
             }
         }
@@ -186,6 +188,7 @@ fun BackupScreen(onClose: () -> Unit) {
                     pendingPassword = password.orEmpty(),
                 )
             } catch (error: Throwable) {
+                error.rethrowIfCancellation()
                 if (error is BackupException && error.stage == BackupStage.CRYPTO && password == null) {
                     ui = ui.copy(
                         page = BackupPage.PASSWORD,
@@ -219,6 +222,7 @@ fun BackupScreen(onClose: () -> Unit) {
                 val preview = manager.previewLocal(entry, null)
                 ui = ui.copy(page = BackupPage.PREVIEW, preview = preview, working = null)
             } catch (error: Throwable) {
+                error.rethrowIfCancellation()
                 fail(BackupStage.FORMAT, error)
             }
         }
@@ -241,6 +245,7 @@ fun BackupScreen(onClose: () -> Unit) {
                 )
                 context.findActivity()?.finish()
             } catch (error: Throwable) {
+                error.rethrowIfCancellation()
                 fail(BackupStage.RESTORE, error)
             }
         }
@@ -404,6 +409,7 @@ fun BackupScreen(onClose: () -> Unit) {
                                 ui = ui.copy(page = BackupPage.HOME, working = null)
                                 refresh()
                             } catch (error: Throwable) {
+                                error.rethrowIfCancellation()
                                 fail(BackupStage.IO, error)
                             }
                         }

@@ -55,11 +55,12 @@ jobs:
           echo "TAG=$tag" >> "$GITHUB_ENV"
           mkdir -p dist
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir dist --clobber
-          apk="$(find dist -maxdepth 1 -name '*.apk' -type f | head -n 1)"
-          if [ -z "$apk" ]; then
-            echo "No APK asset on release $tag" >&2
+          mapfile -t apks < <(find dist -maxdepth 1 -name '*.apk' -type f | sort)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "Expected exactly one APK on release $tag, found ${#apks[@]}" >&2
             exit 1
           fi
+          apk="${apks[0]}"
           echo "APK=$apk" >> "$GITHUB_ENV"
           echo "APK_NAME=$(basename "$apk")" >> "$GITHUB_ENV"
           echo "ASSET_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/$(basename "$apk")" >> "$GITHUB_ENV"
@@ -76,6 +77,7 @@ jobs:
             --url "$ASSET_URL" \
             --output docs/update.json \
             --aapt "$aapt" \
+            --previous-metadata docs/update.json \
             --release-date "${RELEASE_DATE:-}" \
             --notes-ru "Версия ${version}. Подробности — на странице релиза GitHub." \
             --notes-en "Version ${version}. See the GitHub release page for details."

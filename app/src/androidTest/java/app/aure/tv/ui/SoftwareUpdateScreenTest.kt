@@ -25,7 +25,7 @@ class SoftwareUpdateScreenTest {
     val compose = createAndroidComposeRule<SoftwareUpdateActivity>()
 
     @Test
-    fun thePageShowsTheInstalledVersionAndDoesNotPretendAConfiguredSourceExists() {
+    fun thePageShowsTheInstalledVersionAndConfiguredChannel() {
         UpdateStateStore(compose.activity).clearAll()
         compose.activityRule.scenario.recreate()
         compose.waitForIdle()
@@ -34,10 +34,12 @@ class SoftwareUpdateScreenTest {
             .assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.update_current))
             .assertIsFocused()
+        compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
+            .assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.update_auto))
+            .assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.update_source_missing))
-            .assertIsDisplayed()
-        compose.onNodeWithText(compose.activity.getString(R.string.update_source_missing_hint))
-            .assertIsDisplayed()
+            .assertDoesNotExist()
     }
 
     @Test
@@ -63,21 +65,19 @@ class SoftwareUpdateScreenTest {
     }
 
     @Test
-    fun anUnconfiguredSourceDoesNotOfferDeadChannelOrAutomaticCheckActions() {
+    fun aConfiguredPageOffersChannelAndAutomaticCheckActions() {
         UpdateStateStore(compose.activity).clearAll()
         compose.activityRule.scenario.recreate()
         compose.waitForIdle()
 
         val current = compose.onNodeWithText(compose.activity.getString(R.string.update_current))
         current.assertIsFocused()
-        compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
-            .assertDoesNotExist()
+        val channel = compose.onNodeWithText(compose.activity.getString(R.string.update_channel))
+        channel.assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.update_auto))
-            .assertDoesNotExist()
+            .assertIsDisplayed()
 
-        // The only focus owner on this page is the read-only version row; a
-        // stray Down must not move focus onto an invisible/disabled action.
         current.performKeyInput { pressKey(Key.DirectionDown) }
-        current.assertIsFocused()
+        channel.assertIsFocused()
     }
 }

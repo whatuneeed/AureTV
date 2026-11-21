@@ -4,8 +4,9 @@ A maintenance release that turns on the in-app update channel.
 
 ## What changed
 
-- **In-app updates are now configured.** Builds from 0.6.1 check the signed
-  release metadata at `https://whatuneeed.github.io/AureTV/update.json`.
+- **In-app updates are now configured.** Builds from 0.6.1 check the HTTPS
+  release metadata at `https://whatuneeed.github.io/AureTV/update.json`. The
+  JSON is not itself signed; the APK's size, SHA-256 and signer are checked.
 - The metadata is generated from the APK attached to a published GitHub release.
   No release asset is trusted without a matching size and SHA-256.
 - The downloader uses HTTPS only, stays on the documented GitHub hosts, and

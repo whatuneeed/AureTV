@@ -87,6 +87,11 @@ def main() -> int:
     parser.add_argument("--minimum-android-api", type=int, default=28)
     parser.add_argument("--minimum-supported-version-code", type=int, default=0)
     parser.add_argument("--release-date", default="")
+    parser.add_argument(
+        "--previous-metadata",
+        default=None,
+        help="existing channel JSON; refuse to publish a non-increasing versionCode",
+    )
     parser.add_argument("--expires-days", type=int, default=3650)
     parser.add_argument("--notes-ru", action="append", default=[])
     parser.add_argument("--notes-en", action="append", default=[])
@@ -105,6 +110,40 @@ def main() -> int:
     if not version_name:
         fail("APK has no versionName")
 
+    digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+    size = apk.stat().st_size
+
+    if args.previous_metadata:
+        previous_path = Path(args.previous_metadata)
+        if previous_path.is_file():
+            try:
+                previous = json.loads(previous_path.read_text(encoding="utf-8"))
+                previous_release = max(
+                    previous["releases"],
+                    key=lambda release: int(release["versionCode"]),
+                )
+                previous_code = int(previous_release["versionCode"])
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+                fail(f"cannot read previous metadata {previous_path}: {error}")
+            if version_code < previous_code:
+                fail(
+                    f"versionCode {version_code} is older than published "
+                    f"versionCode {previous_code} in {previous_path}",
+                )
+            if version_code == previous_code:
+                # A retried workflow may regenerate identical metadata, but it
+                # must never replace the same version with a different APK.
+                previous_assets = previous_release.get("assets") or []
+                same_asset = len(previous_assets) == 1 and (
+                    previous_assets[0].get("sha256") == digest
+                    and int(previous_assets[0].get("sizeBytes", -1)) == size
+                )
+                if not same_asset:
+                    fail(
+                        f"versionCode {version_code} already exists with a different APK "
+                        f"in {previous_path}",
+                    )
+
     notes_ru = [one_line(n) for n in (args.notes_ru or [
         f"Версия {version_name}. Подробности — на странице релиза GitHub.",
     ])]
@@ -114,8 +153,6 @@ def main() -> int:
     if not 1 <= len(notes_ru) <= MAX_NOTES or not 1 <= len(notes_en) <= MAX_NOTES:
         fail("invalid number of release-note lines")
 
-    digest = hashlib.sha256(apk.read_bytes()).hexdigest()
-    size = apk.stat().st_size
     now = datetime.now(timezone.utc).replace(microsecond=0)
     release_date = args.release_date or now.isoformat().replace("+00:00", "Z")
     if not release_date.endswith("Z"):

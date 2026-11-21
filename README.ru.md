@@ -2,7 +2,7 @@
 
 **Лаунчер для Android TV, заточенный под пульт: Главная в духе tvOS, реальные рекомендации Watch Next, Aerial-заставка и локальные резервные копии.**
 
-[English version](README.md) · [Скачать AURE TV 0.6.1](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
+[English version](README.md) · [Скачать AURE TV 0.6.2](https://github.com/whatuneeed/AureTV/releases/latest) · [Интерактивное превью](https://whatuneeed.github.io/AureTV/) · Android TV 9+ (API 28) · Kotlin + Jetpack Compose · Apache-2.0
 
 ![AURE TV](GITHUB_RELEASE/screenshots/00-cover.png)
 
@@ -129,16 +129,18 @@ AURE TV — это Главная, а не ещё один каталог стр
 
 ### Обновления
 
-Сборки начиная с 0.6.1 проверяют подписанные метаданные релиза по адресу
-`https://whatuneeed.github.io/AureTV/update.json`. Workflow
+Сборки начиная с 0.6.1 проверяют HTTPS-метаданные релиза по адресу
+`https://whatuneeed.github.io/AureTV/update.json`. Сам JSON криптографически не
+подписан: доверие дают HTTPS, строгий allowlist хостов, заявленные размер и
+SHA-256, а также сверка подписи APK с установленным приложением. Workflow
 `.github/workflows/publish-update.yml` пересоздаёт этот файл из APK,
 прикреплённого к опубликованному GitHub-релизу, а GitHub Pages его отдаёт.
 Лаунчер скачивает только по HTTPS с разрешённых хостов GitHub, проверяет
-SHA-256 и передаёт финальную установку системному PackageInstaller — тихих
-обновлений нет.
+SHA-256 и подпись APK, затем передаёт финальную установку системному
+PackageInstaller — тихих обновлений нет.
 
-Артефакт 0.6.1 — первая сборка с этим каналом. Её нужно один раз установить
-вручную; после этого новые версии ставятся из
+Канал появился в 0.6.1. Если у вас 0.6.0, один раз установите 0.6.1 или
+новее вручную; после этого новые версии ставятся из
 **«Настройки → Устройство → Обновление ПО»** не выходя из лаунчера.
 
 ## Установка
@@ -146,11 +148,11 @@ SHA-256 и передаёт финальную установку системн
 **Требования:** Android TV 9 или новее (API 28+). Для самого лаунчера аккаунт
 Google не нужен.
 
-1. Скачайте `AURE-TV-0.6.1.apk` из GitHub Release.
+1. Скачайте `AURE-TV-0.6.2.apk` из GitHub Release.
 2. Установите через ADB:
 
    ```bash
-   adb install AURE-TV-0.6.1.apk
+   adb install AURE-TV-0.6.2.apk
    ```
 
    Либо откройте APK файловым менеджером на телевизоре и подтвердите установку
@@ -166,16 +168,16 @@ Google не нужен.
 
 ## Проверка
 
-Релиз 0.6.1 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
+Релиз 0.6.2 проверен на эмуляторе Android TV `hume-tv` (API 34, x86,
 1920×1080):
 
 | Проверка | Результат |
 | --- | --- |
-| JVM unit-тесты | 583 / 583 |
-| Connected instrumentation | 305 / 305 на 0.6.0; для 0.6.1 не перезапускались |
-| Android lint | 0 ошибок, 17 предупреждений на 0.6.0 |
+| JVM unit-тесты | 588 / 588 |
+| Connected instrumentation | 305 / 305 на 0.6.2 |
+| Android lint | 0 ошибок, 17 предупреждений на 0.6.2 |
 | Release APK | подписан, APK Signature Scheme v2 |
-| Пакет / версия | `app.aure.tv`, 0.6.1 (versionCode 155) |
+| Пакет / версия | `app.aure.tv`, 0.6.2 (versionCode 156) |
 
 **Не проверено на физическом железе:** реальные ИК/BT-пульты, HDMI-CEC,
 декодирование 4K/HDR на реальной панели, голос TalkBack, файловые пикеры

@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
+import java.util.concurrent.atomic.AtomicBoolean
 import app.aure.tv.backup.BackupRecovery
 import app.aure.tv.data.StartupPreferences
 import kotlinx.coroutines.CoroutineScope
@@ -33,8 +34,7 @@ class OVisionAccessibilityService : AccessibilityService() {
     // PackageManager queries are IO-bound; the accessibility event thread must
     // never wait for a slow package scan while the user is pressing Home.
     private val homesWorker = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    @Volatile
-    private var homesWarming = false
+    private val homesWarming = AtomicBoolean(false)
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -110,13 +110,12 @@ class OVisionAccessibilityService : AccessibilityService() {
     }
 
     private fun requestStockHomesRefresh() {
-        if (homesWarming || !stockHomesAreStale()) return
-        homesWarming = true
+        if (!stockHomesAreStale() || !homesWarming.compareAndSet(false, true)) return
         homesWorker.launch {
             try {
                 refreshStockHomes(this@OVisionAccessibilityService)
             } finally {
-                homesWarming = false
+                homesWarming.set(false)
             }
         }
     }
@@ -150,23 +149,21 @@ class OVisionAccessibilityService : AccessibilityService() {
         private const val HOMES_TTL_MS = 60_000L
 
         /** Cached candidates only; the actual query runs on [Dispatchers.IO]. */
-        @Synchronized
-        fun stockHomes(@Suppress("UNUSED_PARAMETER") context: Context): Set<String> {
-            val cached = homes ?: return emptySet()
-            if (SystemClock.elapsedRealtime() - homesAt >= HOMES_TTL_MS) {
-                // Keep the stale set until the worker replaces it: an empty set
-                // here would make every Home press fail while the refresh runs.
-                return cached
-            }
-            return cached
+        fun stockHomes(@Suppress("UNUSED_PARAMETER") context: Context): Set<String> =
+            // Keep the stale set until the worker replaces it: an empty set
+            // here would make every Home press fail while the refresh runs.
+            snapshot?.entries ?: emptySet()
+
+        fun stockHomesAreStale(): Boolean {
+            val current = snapshot ?: return true
+            return SystemClock.elapsedRealtime() - current.at >= HOMES_TTL_MS
         }
 
-        @Synchronized
-        fun stockHomesAreStale(): Boolean =
-            homes == null || SystemClock.elapsedRealtime() - homesAt >= HOMES_TTL_MS
-
-        /** Must be called from an IO worker, never from the event thread. */
-        @Synchronized
+        /**
+         * Must be called from an IO worker, never from the event thread. The
+         * PackageManager query deliberately runs without the publish lock: the
+         * accessibility thread must never wait behind a slow package scan.
+         */
         fun refreshStockHomes(context: Context) {
             if (!stockHomesAreStale()) return
             val found = HashSet<String>()
@@ -182,11 +179,19 @@ class OVisionAccessibilityService : AccessibilityService() {
                 found.add("$packageName/$name")
                 activity.targetActivity?.let { found.add("$packageName/$it") }
             }
-            homes = found
-            homesAt = SystemClock.elapsedRealtime()
+            val now = SystemClock.elapsedRealtime()
+            synchronized(lock) {
+                // A parallel refresh may have published a newer snapshot while
+                // the query was running; never replace it with this result.
+                val current = snapshot
+                if (current != null && now - current.at < HOMES_TTL_MS) return
+                snapshot = Snapshot(found, now)
+            }
         }
 
-        private var homes: Set<String>? = null
-        private var homesAt = 0L
+        private data class Snapshot(val entries: Set<String>, val at: Long)
+        private val lock = Any()
+        @Volatile
+        private var snapshot: Snapshot? = null
     }
 }

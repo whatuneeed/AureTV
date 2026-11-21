@@ -23,6 +23,9 @@ internal object BackupEncryption {
     private const val KDF = "PBKDF2-HMAC-SHA256"
     private const val SALT_BYTES = 32
     private const val NONCE_BYTES = 12
+    // A Base64 string for 32 bytes is 44 chars; this cap rejects a malicious
+    // header long before Base64 decoding can allocate an oversized array.
+    private const val MAX_ENCODED_PARAM_CHARS = 256
     private const val TAG_BITS = 128
     private const val KEY_BITS = 256
     private const val AES = "AES"
@@ -73,8 +76,16 @@ internal object BackupEncryption {
         if (!params.isValid()) {
             throw BackupException(BackupStage.CRYPTO, "unsupported encryption parameters")
         }
+        if (params.salt.length > MAX_ENCODED_PARAM_CHARS ||
+            params.nonce.length > MAX_ENCODED_PARAM_CHARS
+        ) {
+            throw BackupException(BackupStage.CRYPTO, "encryption parameters are too large")
+        }
         val salt = decode(params.salt)
         val nonce = decode(params.nonce)
+        if (salt.size != SALT_BYTES) {
+            throw BackupException(BackupStage.CRYPTO, "invalid salt")
+        }
         if (nonce.size != NONCE_BYTES) {
             throw BackupException(BackupStage.CRYPTO, "invalid nonce")
         }

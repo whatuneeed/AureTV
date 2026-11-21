@@ -40,8 +40,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Lint and unit tests
-        run: ./gradlew :app:lintDebug :app:testDebugUnitTest --stacktrace
+      - name: Lint, unit tests and release build
+        run: >-
+          ./gradlew :app:lintDebug :app:testDebugUnitTest
+          :app:assembleRelease :app:lintRelease --stacktrace
 
       - name: Upload reports
         if: always()
